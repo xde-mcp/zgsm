@@ -72,7 +72,11 @@ export function TodoChangeDisplay({ previousTodos, newTodos }: TodoChangeDisplay
 							<li
 								key={todo.id || todo.content}
 								className={`flex flex-row gap-2 items-start ${todo.status === "completed" ? "line-through" : ""} ${
-									status === "completed" ? "text-vscode-charts-green" : (status === "in_progress" ? "text-vscode-charts-yellow" : "")
+									status === "completed"
+										? "text-vscode-charts-green"
+										: status === "in_progress"
+											? "text-vscode-charts-yellow"
+											: ""
 								}`}>
 								{icon}
 								<span>{todo.content}</span>
