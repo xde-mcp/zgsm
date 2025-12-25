@@ -96,7 +96,7 @@ import { getWorkspacePath } from "../../utils/path"
 import { formatResponse } from "../prompts/responses"
 import { SYSTEM_PROMPT } from "../prompts/system"
 import { buildNativeToolsArray } from "./build-tools"
-import { getRooDirectoriesForCwd } from "../../services/roo-config/index.js"
+// import { getRooDirectoriesForCwd } from "../../services/roo-config/index.js"
 
 // core modules
 import { ToolRepetitionDetector } from "../tools/ToolRepetitionDetector"
@@ -3796,6 +3796,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			autoCondenseContext = true,
 			autoCondenseContextPercent = 100,
 			profileThresholds = {},
+			showSpeedInfo = false,
 		} = state ?? {}
 
 		// Get condensing configuration for automatic triggers.
@@ -3997,7 +3998,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// tools continue using XML even if NTC settings have since changed.
 		const modelInfo = this.api.getModel().info
 		const taskProtocol = this._taskToolProtocol ?? TOOL_PROTOCOL.XML
-		const shouldIncludeTools = taskProtocol === TOOL_PROTOCOL.NATIVE && (modelInfo.supportsNativeTools ?? false)
+		const shouldIncludeTools =
+			taskProtocol === TOOL_PROTOCOL.NATIVE &&
+			(modelInfo.supportsNativeTools ?? ["zgsm", "gemini-cli"].includes(apiConfiguration?.apiProvider || ""))
 
 		// Build complete tools array: native tools + dynamic MCP tools, filtered by mode restrictions
 		let allTools: OpenAI.Chat.ChatCompletionTool[] = []
@@ -4043,6 +4046,40 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			language: state?.language,
 			instanceId: this.instanceId,
 			userId: id,
+			onRequestHeadersReady: (headers: Record<string, string>) => {
+				this.lastApiRequestHeaders = headers
+			},
+			onPerformanceTiming:
+				!showSpeedInfo || apiConfiguration?.apiProvider !== "zgsm"
+					? undefined
+					: async (timing: {
+							requestIdTimestamp?: number
+							responseIdTimestamp?: number
+							responseEndTimestamp?: number
+							completionTokens?: number
+						}) => {
+							// Find and update the api_req_started message with raw timing data
+							const lastApiReqIndex = findLastIndex(
+								this.clineMessages,
+								(msg) => msg.type === "say" && msg.say === "api_req_started",
+							)
+							if (lastApiReqIndex >= 0 && this.clineMessages[lastApiReqIndex]) {
+								const existingData = JSON.parse(this.clineMessages[lastApiReqIndex].text || "{}")
+								this.clineMessages[lastApiReqIndex].text = JSON.stringify({
+									...existingData,
+									requestIdTimestamp: timing.requestIdTimestamp,
+									responseIdTimestamp: timing.responseIdTimestamp,
+									responseEndTimestamp: timing.responseEndTimestamp,
+									completionTokens: timing.completionTokens,
+								} satisfies ClineApiReqInfo)
+								// Notify frontend that the message has been updated
+								const provider = this.providerRef.deref()
+								await provider?.postMessageToWebview({
+									type: "messageUpdated",
+									clineMessage: this.clineMessages[lastApiReqIndex],
+								})
+							}
+						},
 			// Include tools and tool protocol when using native protocol and model supports it
 			...(shouldIncludeTools
 				? {
@@ -4065,40 +4102,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		const stream = this.api.createMessage(
 			systemPrompt,
 			cleanConversationHistory as unknown as Anthropic.Messages.MessageParam[],
-			{
-				...metadata,
-				onRequestHeadersReady: (headers: Record<string, string>) => {
-					this.lastApiRequestHeaders = headers
-				},
-				onPerformanceTiming: async (timing: {
-					requestIdTimestamp?: number
-					responseIdTimestamp?: number
-					responseEndTimestamp?: number
-					completionTokens?: number
-				}) => {
-					// Find and update the api_req_started message with raw timing data
-					const lastApiReqIndex = findLastIndex(
-						this.clineMessages,
-						(msg) => msg.type === "say" && msg.say === "api_req_started",
-					)
-					if (lastApiReqIndex >= 0 && this.clineMessages[lastApiReqIndex]) {
-						const existingData = JSON.parse(this.clineMessages[lastApiReqIndex].text || "{}")
-						this.clineMessages[lastApiReqIndex].text = JSON.stringify({
-							...existingData,
-							requestIdTimestamp: timing.requestIdTimestamp,
-							responseIdTimestamp: timing.responseIdTimestamp,
-							responseEndTimestamp: timing.responseEndTimestamp,
-							completionTokens: timing.completionTokens,
-						} satisfies ClineApiReqInfo)
-						// Notify frontend that the message has been updated
-						const provider = this.providerRef.deref()
-						await provider?.postMessageToWebview({
-							type: "messageUpdated",
-							clineMessage: this.clineMessages[lastApiReqIndex],
-						})
-					}
-				},
-			},
+			metadata,
 		)
 		const iterator = stream[Symbol.asyncIterator]()
 

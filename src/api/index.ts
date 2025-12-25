@@ -108,7 +108,7 @@ export interface ApiHandlerCreateMessageMetadata {
 		responseIdTimestamp?: number
 		responseEndTimestamp?: number
 		completionTokens?: number
-	}) => void
+	}) => Promise<void>
 }
 
 export interface ApiHandler {

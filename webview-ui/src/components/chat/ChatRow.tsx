@@ -201,8 +201,16 @@ export const ChatRowContent = ({
 }: ChatRowContentProps) => {
 	const { t, i18n } = useTranslation()
 
-	const { mcpServers, alwaysAllowMcp, currentCheckpoint, mode, apiConfiguration, clineMessages, reviewTask } =
-		useExtensionState()
+	const {
+		mcpServers,
+		alwaysAllowMcp,
+		currentCheckpoint,
+		mode,
+		apiConfiguration,
+		clineMessages,
+		reviewTask,
+		showSpeedInfo,
+	} = useExtensionState()
 	const { logoPic, userInfo } = useZgsmUserInfo(apiConfiguration?.zgsmAccessToken)
 	const { info: model } = useSelectedModel(apiConfiguration)
 	const [showCopySuccess, setShowCopySuccess] = useState(false)
@@ -320,18 +328,7 @@ export const ChatRowContent = ({
 			]
 		}
 
-		return [
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-		]
+		return []
 	}, [message.text, message.say])
 
 	// When resuming task, last wont be api_req_failed but a resume_task
@@ -1285,13 +1282,13 @@ export const ChatRowContent = ({
 							</div>
 							{(selectReason || firstTokenLatency !== undefined || tokensPerSecond !== undefined) && (
 								<div className="mt-2 flex items-center flex-wrap gap-2">
-									{(selectedLLM || originModelId) && (
+									{/* {(selectedLLM || originModelId) && (
 										<div
 											className="text-xs text-vscode-descriptionForeground border-vscode-dropdown-border/50 border px-1.5 py-0.5 rounded-lg"
 											title="Selected Model">
 											{isAuto ? t("chat:autoMode.selectedLLM", { selectedLLM }) : originModelId}
 										</div>
-									)}
+									)} */}
 									{selectReason && (
 										<div
 											className="text-xs text-vscode-descriptionForeground border-vscode-dropdown-border/50 border px-1.5 py-0.5 rounded-lg"
@@ -1299,25 +1296,25 @@ export const ChatRowContent = ({
 											{t("chat:autoMode.selectReason", { selectReason })}
 										</div>
 									)}
-									{firstTokenLatency !== undefined && (
+									{showSpeedInfo && firstTokenLatency !== undefined && (
 										<div
 											className="text-xs text-vscode-descriptionForeground border-vscode-dropdown-border/50 border px-1.5 py-0.5 rounded-lg"
 											title={t("chat:performance.firstToken")}>
 											{t("chat:performance.firstToken")}: {firstTokenLatency}s
 										</div>
 									)}
-									{totalDuration !== undefined && (
+									{showSpeedInfo && totalDuration !== undefined && (
 										<div
 											className="text-xs text-vscode-descriptionForeground border-vscode-dropdown-border/50 border px-1.5 py-0.5 rounded-lg"
 											title={t("chat:performance.totalDuration")}>
 											{t("chat:performance.totalDuration")}: {totalDuration}s
 										</div>
 									)}
-									{tokensPerSecond !== undefined && (
+									{showSpeedInfo && tokensPerSecond !== undefined && (
 										<div
 											className="text-xs text-vscode-descriptionForeground border-vscode-dropdown-border/50 border px-1.5 py-0.5 rounded-lg"
 											title={t("chat:performance.tokensPerSecond")}>
-											{tokensPerSecond} {t("chat:performance.tokensPerSecond")}
+											{t("chat:performance.tokensPerSecond", { time: tokensPerSecond })}
 										</div>
 									)}
 								</div>

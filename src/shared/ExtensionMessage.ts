@@ -321,6 +321,7 @@ export type ExtensionState = Pick<
 	| "openRouterImageGenerationSelectedModel"
 	| "includeTaskHistoryInEnhance"
 	| "reasoningBlockCollapsed"
+	| "showSpeedInfo"
 	| "errorCode"
 	| "enterBehavior"
 	| "includeCurrentTime"
