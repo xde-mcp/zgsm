@@ -312,6 +312,13 @@ describe("read_file tool with maxReadFileLine setting", () => {
 		mockedPathResolve.mockReturnValue(absoluteFilePath)
 		mockedIsBinaryFile.mockResolvedValue(false)
 
+		// Mock fsPromises.stat to return a file (not directory) by default
+		fsPromises.stat.mockResolvedValue({
+			isDirectory: () => false,
+			isFile: () => true,
+			isSymbolicLink: () => false,
+		} as any)
+
 		mockInputContent = fileContent
 
 		// Setup the extractTextFromFile mock implementation with the current mockInputContent
@@ -620,7 +627,12 @@ describe("read_file tool output structure", () => {
 
 		// CRITICAL: Reset fsPromises mocks to prevent cross-test contamination
 		fsPromises.stat.mockClear()
-		fsPromises.stat.mockResolvedValue({ size: 1024 })
+		fsPromises.stat.mockResolvedValue({
+			size: 1024,
+			isDirectory: () => false,
+			isFile: () => true,
+			isSymbolicLink: () => false,
+		} as any)
 		fsPromises.readFile.mockClear()
 
 		// Use shared mock setup function
@@ -860,7 +872,7 @@ describe("read_file tool output structure", () => {
 				fsPromises.stat = vi.fn().mockImplementation((filePath) => {
 					const normalizedFilePath = path.normalize(filePath.toString())
 					const image = smallImages.find((img) => normalizedFilePath.includes(path.normalize(img.path)))
-					return Promise.resolve({ size: (image?.sizeKB || 1024) * 1024 })
+					return Promise.resolve({ size: (image?.sizeKB || 1024) * 1024, isDirectory: () => false })
 				})
 
 				// Mock path.resolve for each image
@@ -936,7 +948,7 @@ describe("read_file tool output structure", () => {
 				fsPromises.stat = vi.fn().mockImplementation((filePath) => {
 					const normalizedFilePath = path.normalize(filePath.toString())
 					const image = largeImages.find((img) => normalizedFilePath.includes(path.normalize(img.path)))
-					return Promise.resolve({ size: (image?.sizeKB || 1024) * 1024 })
+					return Promise.resolve({ size: (image?.sizeKB || 1024) * 1024, isDirectory: () => false })
 				})
 
 				// Mock path.resolve for each image
@@ -1020,9 +1032,9 @@ describe("read_file tool output structure", () => {
 					const normalizedFilePath = path.normalize(filePath.toString())
 					const image = exactLimitImages.find((img) => normalizedFilePath.includes(path.normalize(img.path)))
 					if (image) {
-						return Promise.resolve({ size: image.sizeKB * 1024 })
+						return Promise.resolve({ size: image.sizeKB * 1024, isDirectory: () => false })
 					}
-					return Promise.resolve({ size: 1024 * 1024 }) // Default 1MB
+					return Promise.resolve({ size: 1024 * 1024, isDirectory: () => false }) // Default 1MB
 				})
 
 				// Mock path.resolve
@@ -1093,7 +1105,7 @@ describe("read_file tool output structure", () => {
 					const fileName = path.basename(filePath)
 					const baseName = path.parse(fileName).name
 					const image = mixedImages.find((img) => img.path.includes(baseName))
-					return Promise.resolve({ size: (image?.sizeKB || 1024) * 1024 })
+					return Promise.resolve({ size: (image?.sizeKB || 1024) * 1024, isDirectory: () => false })
 				})
 
 				// Mock provider state with 5MB individual limit
@@ -1147,9 +1159,9 @@ describe("read_file tool output structure", () => {
 					const normalizedFilePath = path.normalize(filePath.toString())
 					const file = testImages.find((f) => normalizedFilePath.includes(path.normalize(f.path)))
 					if (file) {
-						return { size: file.sizeMB * 1024 * 1024 }
+						return { size: file.sizeMB * 1024 * 1024, isDirectory: () => false }
 					}
-					return { size: 1024 * 1024 } // Default 1MB
+					return { size: 1024 * 1024, isDirectory: () => false } // Default 1MB
 				})
 
 				const imagePaths = testImages.map((img) => img.path)
@@ -1209,7 +1221,7 @@ describe("read_file tool output structure", () => {
 				// Setup - first call with images that use memory
 				const firstBatch = [{ path: "test/first.png", sizeKB: 10240 }] // 10MB
 
-				fsPromises.stat = vi.fn().mockResolvedValue({ size: 10240 * 1024 })
+				fsPromises.stat = vi.fn().mockResolvedValue({ size: 10240 * 1024, isDirectory: () => false })
 				mockedPathResolve.mockImplementation((cwd, relPath) => `/${relPath}`)
 
 				// Execute first batch
@@ -1262,7 +1274,7 @@ describe("read_file tool output structure", () => {
 				mockedCountFileLines.mockClear()
 
 				// Reset mocks for second batch
-				fsPromises.stat = vi.fn().mockResolvedValue({ size: 15360 * 1024 })
+				fsPromises.stat = vi.fn().mockResolvedValue({ size: 15360 * 1024, isDirectory: () => false })
 				fsPromises.readFile.mockResolvedValue(
 					Buffer.from(
 						"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
@@ -1311,7 +1323,7 @@ describe("read_file tool output structure", () => {
 				fsPromises.stat = vi.fn().mockImplementation((filePath) => {
 					const normalizedFilePath = path.normalize(filePath.toString())
 					const image = manyImages.find((img) => normalizedFilePath.includes(path.normalize(img.path)))
-					return Promise.resolve({ size: (image?.sizeKB || 1024) * 1024 })
+					return Promise.resolve({ size: (image?.sizeKB || 1024) * 1024, isDirectory: () => false })
 				})
 
 				// Mock path.resolve
@@ -1358,7 +1370,7 @@ describe("read_file tool output structure", () => {
 				// First invocation - use 15MB of memory
 				const firstBatch = [{ path: "test/large1.png", sizeKB: 15360 }] // 15MB
 
-				fsPromises.stat = vi.fn().mockResolvedValue({ size: 15360 * 1024 })
+				fsPromises.stat = vi.fn().mockResolvedValue({ size: 15360 * 1024, isDirectory: () => false })
 				mockedPathResolve.mockImplementation((cwd, relPath) => `/${relPath}`)
 
 				// Execute first batch
@@ -1379,7 +1391,7 @@ describe("read_file tool output structure", () => {
 				fsPromises.readFile.mockClear()
 				mockedPathResolve.mockClear()
 
-				fsPromises.stat = vi.fn().mockResolvedValue({ size: 18432 * 1024 })
+				fsPromises.stat = vi.fn().mockResolvedValue({ size: 18432 * 1024, isDirectory: () => false })
 				fsPromises.readFile.mockResolvedValue(imageBuffer)
 				mockedPathResolve.mockImplementation((cwd, relPath) => `/${relPath}`)
 
@@ -1437,6 +1449,37 @@ describe("read_file tool output structure", () => {
 				`File: ${testFilePath}\nError: Access to ${testFilePath} is blocked by the .rooignore file settings. You must try to continue in the task without using this file, or ask the user to update the .rooignore file.`,
 			)
 		})
+
+		it("should provide helpful error when trying to read a directory", async () => {
+			// Setup - mock fsPromises.stat to indicate the path is a directory
+			const dirPath = "test/my-directory"
+			const absoluteDirPath = "/test/my-directory"
+
+			mockedPathResolve.mockReturnValue(absoluteDirPath)
+
+			// Mock fs/promises stat to return directory
+			fsPromises.stat.mockResolvedValue({
+				isDirectory: () => true,
+				isFile: () => false,
+				isSymbolicLink: () => false,
+			} as any)
+
+			// Mock isBinaryFile won't be called since we check directory first
+			mockedIsBinaryFile.mockResolvedValue(false)
+
+			// Execute
+			const result = await executeReadFileTool({ args: `<file><path>${dirPath}</path></file>` })
+
+			// Verify - native format for error
+			expect(result).toContain(`File: ${dirPath}`)
+			expect(result).toContain(`Error: Error reading file: Cannot read '${dirPath}' because it is a directory`)
+			expect(result).toContain("use the list_files tool instead")
+
+			// Verify that task.say was called with the error
+			expect(mockCline.say).toHaveBeenCalledWith("error", expect.stringContaining("Cannot read"))
+			expect(mockCline.say).toHaveBeenCalledWith("error", expect.stringContaining("is a directory"))
+			expect(mockCline.say).toHaveBeenCalledWith("error", expect.stringContaining("list_files tool"))
+		})
 	})
 })
 
@@ -1468,7 +1511,12 @@ describe("read_file tool with image support", () => {
 
 		// CRITICAL: Reset fsPromises.stat to prevent cross-test contamination
 		fsPromises.stat.mockClear()
-		fsPromises.stat.mockResolvedValue({ size: 1024 })
+		fsPromises.stat.mockResolvedValue({
+			size: 1024,
+			isDirectory: () => false,
+			isFile: () => true,
+			isSymbolicLink: () => false,
+		} as any)
 
 		// Use shared mock setup function with local variables
 		const mocks = createMockCline()
@@ -1808,6 +1856,13 @@ describe("read_file tool concurrent file reads limit", () => {
 		mockedPathResolve.mockImplementation((cwd, relPath) => `/${relPath}`)
 		mockedIsBinaryFile.mockResolvedValue(false)
 		mockedCountFileLines.mockResolvedValue(10)
+
+		// Mock fsPromises.stat to return a file (not directory) by default
+		fsPromises.stat.mockResolvedValue({
+			isDirectory: () => false,
+			isFile: () => true,
+			isSymbolicLink: () => false,
+		} as any)
 
 		toolResult = undefined
 	})
