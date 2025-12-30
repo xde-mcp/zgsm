@@ -3,7 +3,11 @@ import React, { useCallback } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { Trash2, Clock, ListFilter } from "lucide-react"
-import { CleanupStrategy, DEFAULT_AUTO_CLEANUP_SETTINGS, AutoCleanupSettings as AutoCleanupSettingsType } from "@roo-code/types"
+import {
+	CleanupStrategy,
+	DEFAULT_AUTO_CLEANUP_SETTINGS,
+	AutoCleanupSettings as AutoCleanupSettingsType,
+} from "@roo-code/types"
 
 import { cn } from "@/lib/utils"
 import { Slider, Select, SelectContent, SelectItem, SelectItemText, SelectTrigger, Input } from "@/components/ui"
@@ -35,10 +39,13 @@ export const AutoCleanupSettings = ({
 	} = settings
 
 	// 更新设置到 cachedState
-	const handleSettingsUpdate = useCallback((updatedSettings: Partial<typeof settings>) => {
-		const newSettings = { ...settings, ...updatedSettings }
-		setCachedStateField("autoCleanup", newSettings)
-	}, [settings, setCachedStateField])
+	const handleSettingsUpdate = useCallback(
+		(updatedSettings: Partial<typeof settings>) => {
+			const newSettings = { ...settings, ...updatedSettings }
+			setCachedStateField("autoCleanup", newSettings)
+		},
+		[settings, setCachedStateField],
+	)
 
 	return (
 		<div className={cn("flex flex-col gap-2", className)} {...props}>
@@ -57,9 +64,7 @@ export const AutoCleanupSettings = ({
 						handleSettingsUpdate({ enabled: e.target.checked })
 					}}
 					data-testid="auto-cleanup-enabled-checkbox">
-					<label className="block font-medium mb-1">
-						{t("settings:autoCleanup.enabled.label")}
-					</label>
+					<label className="block font-medium mb-1">{t("settings:autoCleanup.enabled.label")}</label>
 				</VSCodeCheckbox>
 				<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
 					{t("settings:autoCleanup.enabled.description")}
@@ -69,22 +74,24 @@ export const AutoCleanupSettings = ({
 					<>
 						{/* Strategy Selection */}
 						<div>
-							<span className="block font-medium mb-1">
-								{t("settings:autoCleanup.strategy.label")}
-							</span>
+							<span className="block font-medium mb-1">{t("settings:autoCleanup.strategy.label")}</span>
 							<Select
 								value={strategy}
 								onValueChange={(value) => handleSettingsUpdate({ strategy: value as CleanupStrategy })}
 								data-testid="auto-cleanup-strategy-select">
 								<SelectTrigger className="w-full">
-									{ strategy === CleanupStrategy.BASED_ON_COUNT ? t("settings:autoCleanup.strategy.basedOnCount.label") : t("settings:autoCleanup.strategy.basedOnTime.label")}
+									{strategy === CleanupStrategy.BASED_ON_COUNT
+										? t("settings:autoCleanup.strategy.basedOnCount.label")
+										: t("settings:autoCleanup.strategy.basedOnTime.label")}
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value={CleanupStrategy.BASED_ON_TIME}>
 										<div className="flex items-center gap-2 w-full">
 											<Clock className="w-4 h-4 shrink-0" />
 											<div className="flex flex-col">
-												<SelectItemText>{t("settings:autoCleanup.strategy.basedOnTime.label")}</SelectItemText>
+												<SelectItemText>
+													{t("settings:autoCleanup.strategy.basedOnTime.label")}
+												</SelectItemText>
 												<span className="text-xs text-vscode-descriptionForeground">
 													{t("settings:autoCleanup.strategy.basedOnTime.description")}
 												</span>
@@ -95,7 +102,9 @@ export const AutoCleanupSettings = ({
 										<div className="flex items-center gap-2 w-full">
 											<ListFilter className="w-4 h-4 shrink-0" />
 											<div className="flex flex-col">
-												<SelectItemText>{t("settings:autoCleanup.strategy.basedOnCount.label")}</SelectItemText>
+												<SelectItemText>
+													{t("settings:autoCleanup.strategy.basedOnCount.label")}
+												</SelectItemText>
 												<span className="text-xs text-vscode-descriptionForeground">
 													{t("settings:autoCleanup.strategy.basedOnCount.description")}
 												</span>

@@ -221,7 +221,7 @@ export const ChatRowContent = ({
 	const [editImages, setEditImages] = useState<string[]>([])
 	const { copyWithFeedback } = useCopyToClipboard()
 	const userEditRef = useRef<HTMLDivElement>(null)
-	
+
 	// Handle message events for image selection during edit mode
 	useEffect(() => {
 		const handleMessage = (event: MessageEvent) => {
@@ -1281,14 +1281,18 @@ export const ChatRowContent = ({
 									style={{ opacity: cost !== null && cost !== undefined && cost > 0 ? 1 : 0 }}>
 									${Number(cost || 0)?.toFixed(4)}
 								</div>
-								{!isApiRequestInProgress && clineMessages.findIndex((m) => m.ts === message.ts) > 1 && <StandardTooltip
-									content={t("common:confirmation.deleteMessage")}>
-									<TimerReset className="size-5 mt-[3px] cursor-pointer" onClick={(e) => {
-										e.preventDefault()
-										e.stopPropagation()
-										vscode.postMessage({ type: "deleteMessage", value: message.ts })
-									}}/>
-								</StandardTooltip>}
+								{!isApiRequestInProgress && clineMessages.findIndex((m) => m.ts === message.ts) > 1 && (
+									<StandardTooltip content={t("common:confirmation.deleteMessage")}>
+										<TimerReset
+											className="size-5 mt-[3px] cursor-pointer"
+											onClick={(e) => {
+												e.preventDefault()
+												e.stopPropagation()
+												vscode.postMessage({ type: "deleteMessage", value: message.ts })
+											}}
+										/>
+									</StandardTooltip>
+								)}
 							</div>
 							{(selectReason || firstTokenLatency !== undefined || tokensPerSecond !== undefined) && (
 								<div className="mt-2 flex items-center flex-wrap gap-2">

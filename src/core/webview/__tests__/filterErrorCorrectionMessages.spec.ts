@@ -28,10 +28,7 @@ describe("filterErrorCorrectionMessages 配置持久化", () => {
 		}
 
 		// 验证配置被正确保存
-		expect(mockContextProxy.setValue).toHaveBeenCalledWith(
-			"filterErrorCorrectionMessages",
-			true
-		)
+		expect(mockContextProxy.setValue).toHaveBeenCalledWith("filterErrorCorrectionMessages", true)
 	})
 
 	it("应该在 getState 中返回正确的 filterErrorCorrectionMessages 值", async () => {

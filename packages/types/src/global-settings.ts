@@ -57,14 +57,16 @@ export const globalSettingsSchema = z.object({
 	listApiConfigMeta: z.array(providerSettingsEntrySchema).optional(),
 	pinnedApiConfigs: z.record(z.string(), z.boolean()).optional(),
 	// Auto cleanup settings
-	autoCleanup: z.object({
-		enabled: z.boolean().optional(),
-		strategy: z.nativeEnum(CleanupStrategy).optional(),
-		retentionDays: z.number().min(1).max(365).optional(),
-		maxHistoryCount: z.number().min(10).max(500).optional(),
-		excludeActive: z.boolean().optional(),
-		cleanupOnStartup: z.boolean().optional(),
-	}).optional(),
+	autoCleanup: z
+		.object({
+			enabled: z.boolean().optional(),
+			strategy: z.nativeEnum(CleanupStrategy).optional(),
+			retentionDays: z.number().min(1).max(365).optional(),
+			maxHistoryCount: z.number().min(10).max(500).optional(),
+			excludeActive: z.boolean().optional(),
+			cleanupOnStartup: z.boolean().optional(),
+		})
+		.optional(),
 
 	lastShownAnnouncementId: z.string().optional(),
 	customInstructions: z.string().optional(),

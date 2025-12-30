@@ -159,9 +159,9 @@ export class AutoCleanupService {
 
 		if (shouldExcludeActive && currentTaskId) {
 			// 找到活跃任务
-			const activeTask = sortedHistory.find(t => t.id === currentTaskId)
+			const activeTask = sortedHistory.find((t) => t.id === currentTaskId)
 			// 其他任务
-			const otherTasks = sortedHistory.filter(t => t.id !== currentTaskId)
+			const otherTasks = sortedHistory.filter((t) => t.id !== currentTaskId)
 
 			if (activeTask) {
 				// 保留活跃任务 + (maxCount - 1) 个其他最新任务
@@ -169,23 +169,14 @@ export class AutoCleanupService {
 				const keepOthers = otherTasks.slice(0, Math.max(0, maxCount - 1))
 				const removeOthers = otherTasks.slice(Math.max(0, maxCount - 1))
 
-				return [
-					[activeTask, ...keepOthers],
-					removeOthers.map(t => t.id)
-				]
+				return [[activeTask, ...keepOthers], removeOthers.map((t) => t.id)]
 			}
 			// 如果活跃任务不存在，正常保留 maxCount 个
-			return [
-				otherTasks.slice(0, maxCount),
-				otherTasks.slice(maxCount).map(t => t.id)
-			]
+			return [otherTasks.slice(0, maxCount), otherTasks.slice(maxCount).map((t) => t.id)]
 		}
 
 		// 不需要保护活跃任务，直接保留最新的 maxCount 个
-		return [
-			sortedHistory.slice(0, maxCount),
-			sortedHistory.slice(maxCount).map(t => t.id)
-		]
+		return [sortedHistory.slice(0, maxCount), sortedHistory.slice(maxCount).map((t) => t.id)]
 	}
 
 	/**

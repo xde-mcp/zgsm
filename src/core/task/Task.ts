@@ -357,7 +357,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	assistantMessageContent: AssistantMessageContent[] = []
 	presentAssistantMessageLocked = false
 	presentAssistantMessageHasPendingUpdates = false
-	userMessageContent: ((Anthropic.TextBlockParam | Anthropic.ImageBlockParam | Anthropic.ToolResultBlockParam) & { __isNoToolsUsed?: boolean; })[] = []
+	userMessageContent: ((Anthropic.TextBlockParam | Anthropic.ImageBlockParam | Anthropic.ToolResultBlockParam) & {
+		__isNoToolsUsed?: boolean
+	})[] = []
 	userMessageContentReady = false
 	didRejectTool = false
 	didAlreadyUseTool = false
@@ -944,9 +946,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					continue
 				}
 
-				const hasNoToolsUsedError = msg.content.some(
-					(block: any) => block.__isNoToolsUsed === true
-				)
+				const hasNoToolsUsedError = msg.content.some((block: any) => block.__isNoToolsUsed === true)
 				if (hasNoToolsUsedError) {
 					errorUserMessageIndices.push(i)
 				}
@@ -963,9 +963,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		const lastMessageIndex = this.apiConversationHistory.length - 1
 		if (lastMessageIndex < 0 || this.apiConversationHistory[lastMessageIndex].role !== "assistant") {
 			// Unexpected state: last message should be the successful assistant response
-			this.providerRef?.deref()?.log(
-				`Warning: markErrorCorrectionPair called but last message is not from assistant`
-			)
+			this.providerRef
+				?.deref()
+				?.log(`Warning: markErrorCorrectionPair called but last message is not from assistant`)
 			return
 		}
 
@@ -1594,6 +1594,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	public async condenseContext(): Promise<void> {
+		// CRITICAL: Flush any pending tool results before condensing
+		// to ensure tool_use/tool_result pairs are complete in history
+		await this.flushPendingToolResultsToHistory()
+
 		const systemPrompt = await this.getSystemPrompt()
 
 		// Get condensing configuration
@@ -2422,7 +2426,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 	// Task Loop
 
-	private async initiateTaskLoop(userContent: Array<Anthropic.Messages.ContentBlockParam & { __isNoToolsUsed?: boolean; }>): Promise<void> {
+	private async initiateTaskLoop(
+		userContent: Array<Anthropic.Messages.ContentBlockParam & { __isNoToolsUsed?: boolean }>,
+	): Promise<void> {
 		// Kicks off the checkpoints initialization process in the background.
 		getCheckpointService(this)
 

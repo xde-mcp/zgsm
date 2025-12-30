@@ -384,7 +384,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 					}
 				: { role: "system" as const, content: systemPrompt }
 
-			convertedMessages = [systemMessage, ...convertToOpenAiMessages(messages, { mergeToolResultText: true })]
+			convertedMessages = [systemMessage, ...convertToOpenAiMessages(messages)]
 		}
 
 		// Apply cache control logic
@@ -481,7 +481,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 				? convertToR1Format([{ role: "user", content: systemPrompt }, ...messages])
 				: isLegacyFormat
 					? [systemMessage, ...convertToSimpleMessages(messages)]
-					: [systemMessage, ...convertToOpenAiMessages(messages, { mergeToolResultText: true })],
+					: [systemMessage, ...convertToOpenAiMessages(messages)],
 			...(isNative
 				? {
 						...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
@@ -825,7 +825,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 						role: "developer",
 						content: `Formatting re-enabled\n${systemPrompt}`,
 					},
-					...convertToOpenAiMessages(messages, { mergeToolResultText: true }),
+					...convertToOpenAiMessages(messages),
 				],
 				stream: true,
 				...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
@@ -865,7 +865,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 						role: "developer",
 						content: `Formatting re-enabled\n${systemPrompt}`,
 					},
-					...convertToOpenAiMessages(messages, { mergeToolResultText: true }),
+					...convertToOpenAiMessages(messages),
 				],
 				reasoning_effort: modelInfo.reasoningEffort as "low" | "medium" | "high" | undefined,
 				temperature: undefined,

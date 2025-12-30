@@ -348,14 +348,12 @@ export class ClineProvider
 			const taskHistory = this.getGlobalState("taskHistory") ?? []
 
 			// Perform cleanup
-			const result = await this.autoCleanupService.performCleanup(
-				taskHistory,
-				settings,
-				currentTask?.taskId,
-			)
+			const result = await this.autoCleanupService.performCleanup(taskHistory, settings, currentTask?.taskId)
 
 			if (result.tasksRemoved > 0) {
-				this.log(`Auto cleanup removed ${result.tasksRemoved} tasks, freed ${AutoCleanupService.formatBytes(result.spaceFreed)}`)
+				this.log(
+					`Auto cleanup removed ${result.tasksRemoved} tasks, freed ${AutoCleanupService.formatBytes(result.spaceFreed)}`,
+				)
 
 				// Delete task files for each removed task
 				for (const taskId of result.removedTaskIds) {
@@ -2083,7 +2081,7 @@ export class ClineProvider
 			featureRoomoteControlEnabled,
 			isBrowserSessionActive,
 			autoCleanup,
-			filterErrorCorrectionMessages
+			filterErrorCorrectionMessages,
 		} = await this.getState()
 
 		// let cloudOrganizations: CloudOrganizationMembership[] = []

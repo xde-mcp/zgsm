@@ -674,7 +674,8 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		autoCleanup: state.autoCleanup ?? DEFAULT_AUTO_CLEANUP_SETTINGS,
 		setAutoCleanup: (value) => setState((prevState) => ({ ...prevState, autoCleanup: value })),
 		filterErrorCorrectionMessages: state.filterErrorCorrectionMessages ?? false,
-		setFilterErrorCorrectionMessages: (value) => setState((prevState) => ({ ...prevState, filterErrorCorrectionMessages: value })),
+		setFilterErrorCorrectionMessages: (value) =>
+			setState((prevState) => ({ ...prevState, filterErrorCorrectionMessages: value })),
 		setCustomCondensingPrompt: (value) =>
 			setState((prevState) => ({ ...prevState, customCondensingPrompt: value })),
 		setProfileThresholds: (value) => setState((prevState) => ({ ...prevState, profileThresholds: value })),

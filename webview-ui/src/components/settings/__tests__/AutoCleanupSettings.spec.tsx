@@ -18,7 +18,8 @@ vi.mock("@/hooks/useAppTranslation", () => ({
 				"settings:sections.autoCleanup": "Auto Cleanup",
 				"settings:autoCleanup.description": "Automatically clean up old task history",
 				"settings:autoCleanup.enabled.label": "Enable Auto Cleanup",
-				"settings:autoCleanup.enabled.description": "When enabled, extension will automatically remove old tasks based on your settings",
+				"settings:autoCleanup.enabled.description":
+					"When enabled, extension will automatically remove old tasks based on your settings",
 				"settings:autoCleanup.strategy.label": "Cleanup Strategy",
 				"settings:autoCleanup.strategy.basedOnTime.label": "Based on Time",
 				"settings:autoCleanup.strategy.basedOnCount.label": "Based on Count",
@@ -69,7 +70,12 @@ vi.mock("@/components/ui", () => ({
 vi.mock("@vscode/webview-ui-toolkit/react", () => ({
 	VSCodeCheckbox: ({ checked, onChange, children, "data-testid": dataTestId }: any) => (
 		<label data-testid={dataTestId}>
-			<input type="checkbox" role="checkbox" checked={checked} onChange={(e: any) => onChange?.({ target: { checked: e.target.checked } })} />
+			<input
+				type="checkbox"
+				role="checkbox"
+				checked={checked}
+				onChange={(e: any) => onChange?.({ target: { checked: e.target.checked } })}
+			/>
 			{children}
 		</label>
 	),
@@ -152,7 +158,9 @@ describe("AutoCleanupSettings", () => {
 			setAutoCleanup: vi.fn(),
 		} as any)
 
-		render(<AutoCleanupSettings autoCleanup={countBasedAutoCleanup} setCachedStateField={mockSetCachedStateField} />)
+		render(
+			<AutoCleanupSettings autoCleanup={countBasedAutoCleanup} setCachedStateField={mockSetCachedStateField} />,
+		)
 
 		// Check for max history count input
 		expect(screen.getByTestId("max-history-count-input")).toBeInTheDocument()

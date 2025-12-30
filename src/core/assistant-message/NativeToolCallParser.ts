@@ -595,9 +595,13 @@ export class NativeToolCallParser {
 		let resolvedName = resolveToolAlias(toolCall.name as string) as TName
 
 		// Validate tool name (after alias resolution).
-		const matchBuiltinToolName = (toolNames.find((name) => name === resolvedName || resolvedName.indexOf(name) > -1) ?? "")  as TName
-		const matchCustomToolName = (customToolRegistry.list().find((name) => name === resolvedName || resolvedName.indexOf(name) > -1) ?? "" ) as TName
-		
+		const matchBuiltinToolName = (toolNames.find(
+			(name) => name === resolvedName || resolvedName.indexOf(name) > -1,
+		) ?? "") as TName
+		const matchCustomToolName = (customToolRegistry
+			.list()
+			.find((name) => name === resolvedName || resolvedName.indexOf(name) > -1) ?? "") as TName
+
 		const _resolvedName = matchBuiltinToolName || matchCustomToolName
 
 		if (!_resolvedName) {

@@ -23,9 +23,7 @@ describe("markErrorCorrectionPair 优化验证", () => {
 					continue
 				}
 
-				const hasNoToolsUsedError = msg.content.some(
-					(block: any) => block.__isNoToolsUsed === true
-				)
+				const hasNoToolsUsedError = msg.content.some((block: any) => block.__isNoToolsUsed === true)
 				if (hasNoToolsUsedError) {
 					errorUserMessageIndices.push(i)
 				}

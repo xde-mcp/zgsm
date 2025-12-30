@@ -40,12 +40,12 @@ export function resolveToolProtocol(
 	}
 
 	// 2. User preference - second highest priority
-	if (_providerSettings.toolProtocol) {
+	if (_providerSettings?.toolProtocol) {
 		return _providerSettings.toolProtocol
 	}
 
 	// 5. Final fallback
-	return _providerSettings.apiProvider === "zgsm" ? TOOL_PROTOCOL.XML : TOOL_PROTOCOL.NATIVE
+	return _providerSettings?.apiProvider === "zgsm" ? TOOL_PROTOCOL.XML : TOOL_PROTOCOL.NATIVE
 }
 
 /**
