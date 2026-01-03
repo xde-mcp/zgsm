@@ -144,7 +144,7 @@ export class ErrorCodeManager {
 		this.unknownError.message = rawError
 		let status = error.status as number
 		const { code, headers } = error
-		const requestId = headers?.get("x-request-id") ?? null
+		const requestId = (headers && headers?.get?.("x-request-id")) ?? null
 		const { apiConfiguration, errorCode } = await this.provider.getState()
 		const { zgsmApiKeyExpiredAt, zgsmApiKeyUpdatedAt, isOldModeLoginState } = this.parseZgsmTokenInfo(
 			apiConfiguration.zgsmAccessToken,

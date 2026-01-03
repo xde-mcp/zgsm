@@ -39,6 +39,7 @@ import { getModels } from "./fetchers/modelCache"
 import { ClineApiReqCancelReason } from "../../shared/ExtensionMessage"
 import { getEditorType } from "../../utils/getEditorType"
 import { ChatCompletionChunk } from "openai/resources/index.mjs"
+import { convertToZAiFormat } from "../transform/zai-format"
 
 const autoModeModelId = "Auto"
 const isDev = process.env.NODE_ENV === "development"
@@ -48,6 +49,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 	private client: OpenAI
 	private readonly providerName = "zgsm"
 	private baseURL: string
+	private toolProtocol: "native" | "xml" = "xml"
 	private chatType?: "user" | "system"
 	private modelInfo = {} as ModelInfo
 	private apiResponseRenderModeInfo = renderModes.fast
@@ -104,12 +106,12 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
+		this.setToolProtocol(metadata?.toolProtocol)
 		// Performance monitoring log
 		this.abortController = new AbortController()
 		const requestId = uuidv7()
 		const workflowModes = ["strict", "plan"] as Array<string | undefined>
 		await this.updateModelInfo()
-		const isNative = isNativeProtocol(metadata?.toolProtocol)
 		const fromWorkflow =
 			metadata?.zgsmWorkflowMode ||
 			workflowModes.includes(metadata?.mode) ||
@@ -117,7 +119,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 			workflowModes.includes(metadata?.parentTaskMode) ||
 			workflowModes.includes(metadata?.zgsmCodeMode)
 		this.apiResponseRenderModeInfo = getApiResponseRenderMode()
-		if ("review" === metadata?.mode) {
+		if ("review" === metadata?.mode && this.client) {
 			this.client.maxRetries = 1
 		}
 		// 1. Cache calculation results and configuration
@@ -125,13 +127,14 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 		const modelUrl = this.baseURL || ZgsmAuthConfig.getInstance().getDefaultApiBaseUrl()
 		const enabledR1Format = this.options.openAiR1FormatEnabled ?? false
 		const enabledLegacyFormat = this.options.openAiLegacyFormat ?? false
+		const isNative = isNativeProtocol(this?.toolProtocol)
 
 		// Cache boolean calculation results
 		const isAzureAiInference = this._isAzureAiInference(modelUrl)
 		const isDeepseekReasoner = modelId.includes("deepseek-reasoner")
+		const isMiniMax = modelId.toLowerCase().includes("minimax")
 		const deepseekReasoner = isDeepseekReasoner || enabledR1Format
 		const isArk = modelUrl.includes(".volces.com")
-		const ark = isArk
 		const isGrokXAI = this._isGrokXAI(this.baseURL)
 		const isO1Family = modelId.includes("o1") || modelId.includes("o3") || modelId.includes("o4")
 
@@ -150,10 +153,12 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 
 		try {
 			const tokens = await ZgsmAuthService.getInstance()?.getTokens()
-			this.client.apiKey = tokens?.access_token || "not-provided"
+			if (this.client) {
+				this.client.apiKey = tokens?.access_token || "not-provided"
+			}
 		} catch (error) {
 			this.logger.info(
-				`[createMessage] getting new tokens failed \n\nuse old tokens: ${this.client.apiKey} \n\n${error.message}`,
+				`[createMessage] getting new tokens failed \n\nuse old tokens: ${this.client?.apiKey} \n\n${error.message}`,
 			)
 		}
 
@@ -164,7 +169,8 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 					systemPrompt,
 					messages,
 					deepseekReasoner,
-					ark,
+					isArk,
+					isMiniMax,
 					enabledLegacyFormat,
 					modelInfo,
 					isNative,
@@ -173,6 +179,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 					convertedMessages,
 					deepseekReasoner,
 					isGrokXAI,
+					isMiniMax,
 					reasoning,
 					modelInfo,
 					metadata,
@@ -193,7 +200,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 						metadata.onRequestHeadersReady(_headers)
 					}
 
-					const { data, response } = await this.client.chat.completions
+					const { data, response } = await (this.client as OpenAI).chat.completions
 						.create(
 							requestOptions,
 							Object.assign(isAzureAiInference ? { path: OPENAI_AZURE_AI_INFERENCE_PATH } : {}, {
@@ -254,7 +261,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 				try {
 					requestIdTimestamp = Date.now()
 					this.logger.info(`[RequestID]:`, requestId)
-					response = await this.client.chat.completions.create(
+					response = await (this.client as OpenAI).chat.completions.create(
 						requestOptions,
 						Object.assign(isAzureAiInference ? { path: OPENAI_AZURE_AI_INFERENCE_PATH } : {}, {
 							headers: _headers,
@@ -360,16 +367,22 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 		messages: Anthropic.Messages.MessageParam[],
 		isDeepseekReasoner: boolean,
 		isArk: boolean,
+		isMiniMax: boolean,
 		isLegacyFormat: boolean,
 		modelInfo: ModelInfo,
 		isNative: boolean,
-	): OpenAI.Chat.ChatCompletionMessageParam[] {
-		let convertedMessages: OpenAI.Chat.ChatCompletionMessageParam[]
-
+	): Array<OpenAI.Chat.ChatCompletionMessageParam | Anthropic.Messages.MessageParam> {
+		let convertedMessages: Array<OpenAI.Chat.ChatCompletionMessageParam | Anthropic.Messages.MessageParam>
+		const _mid = modelInfo.id?.toLowerCase()
 		if (isDeepseekReasoner) {
 			convertedMessages = convertToR1Format([{ role: "user", content: systemPrompt }, ...messages])
 		} else if (isArk || isLegacyFormat) {
 			convertedMessages = [{ role: "system", content: systemPrompt }, ...convertToSimpleMessages(messages)]
+		} else if (_mid?.includes("glm-4.7")) {
+			convertedMessages = [
+				{ role: "system", content: systemPrompt },
+				...convertToZAiFormat(messages, { mergeToolResultText: true }),
+			]
 		} else {
 			const systemMessage = modelInfo.supportsPromptCache
 				? {
@@ -384,7 +397,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 					}
 				: { role: "system" as const, content: systemPrompt }
 
-			convertedMessages = [systemMessage, ...convertToOpenAiMessages(messages)]
+			convertedMessages = [systemMessage, ...convertToOpenAiMessages(messages, { mergeToolResultText: true })]
 		}
 
 		// Apply cache control logic
@@ -396,7 +409,10 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 	/**
 	 * Apply cache control logic (extracted as separate method)
 	 */
-	private applyCacheControlLogic(messages: OpenAI.Chat.ChatCompletionMessageParam[], modelInfo: ModelInfo): void {
+	private applyCacheControlLogic(
+		messages: Array<OpenAI.Chat.ChatCompletionMessageParam | Anthropic.Messages.MessageParam>,
+		modelInfo: ModelInfo,
+	): void {
 		if (!modelInfo.supportsPromptCache) {
 			return
 		}
@@ -426,15 +442,16 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 	 * Build streaming request options
 	 */
 	private buildStreamingRequestOptions(
-		messages: OpenAI.Chat.ChatCompletionMessageParam[],
+		messages: Array<OpenAI.Chat.ChatCompletionMessageParam | Anthropic.Messages.MessageParam>,
 		isDeepseekReasoner: boolean,
 		isGrokXAI: boolean,
+		isMiniMax: boolean,
 		reasoning: any,
 		modelInfo: ModelInfo,
 		metadata?: ApiHandlerCreateMessageMetadata,
 		isNative?: boolean,
 	): OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming & { extra_body: any } {
-		const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
+		let requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming & { extra_body: any } = {
 			model: modelInfo.id,
 			temperature:
 				this.options.modelTemperature ?? (isDeepseekReasoner ? DEEP_SEEK_DEFAULT_TEMPERATURE : undefined),
@@ -442,16 +459,19 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 			stream: true as const,
 			...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
 			...(reasoning && reasoning),
-			...(isNative
-				? {
-						...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
-						...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
-						...{ parallel_tool_calls: metadata?.parallelToolCalls ?? false },
-					}
-				: undefined),
-			extra_body: {
-				mode: metadata?.mode,
-			},
+		}
+
+		if (isNative) {
+			requestOptions = {
+				...requestOptions,
+				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
+				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
+				...{ parallel_tool_calls: metadata?.parallelToolCalls ?? false },
+			}
+		}
+
+		requestOptions.extra_body = {
+			mode: metadata?.mode,
 		}
 
 		this.addMaxTokensIfNeeded(requestOptions, modelInfo)
@@ -601,17 +621,29 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 			}
 
 			// Process reasoning content
-			if ("reasoning_content" in delta && delta.reasoning_content) {
+			if (delta) {
 				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
 				isDev &&
-					this.logger.warn(
-						`[ResponseID ${this.options.zgsmModelId} sse "reasoning_content":`,
+					this.logger.info(
+						`[ResponseID ${this.options.zgsmModelId} sse rendering chunk]:`,
 						requestId,
-						delta.reasoning_content,
+						JSON.stringify(chunk),
 					)
-				yield {
-					type: "reasoning",
-					text: delta.reasoning_content as string,
+				for (const key of ["reasoning_content", "reasoning"] as const) {
+					if (key in delta) {
+						const reasoning_content = ((delta as any)[key] as string | undefined) || ""
+						if (reasoning_content?.trim()) {
+							// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+							isDev &&
+								this.logger.warn(
+									`[ResponseID ${this.options.zgsmModelId} sse "${key} -> reasoning_content":`,
+									requestId,
+									reasoning_content,
+								)
+							yield { type: "reasoning", text: reasoning_content }
+						}
+						break
+					}
 				}
 			}
 
@@ -699,8 +731,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 					this.logger.warn(
 						`[ResponseID ${this.options.zgsmModelId} sse "toolCall arguments":`,
 						requestId,
-						toolCall.function?.name,
-						toolCall.function?.arguments,
+						JSON.stringify(toolCall),
 					)
 				yield {
 					type: "tool_call_partial",
@@ -786,7 +817,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 		// Add max_tokens if needed
 		this.addMaxTokensIfNeeded(requestOptions, modelInfo)
 		try {
-			const response = await this.client.chat.completions.create(
+			const response = await (this.client as OpenAI).chat.completions.create(
 				requestOptions,
 				Object.assign(isAzureAiInference ? { path: OPENAI_AZURE_AI_INFERENCE_PATH } : {}, {
 					headers: {
@@ -850,7 +881,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 			this.addMaxTokensIfNeeded(requestOptions, modelInfo)
 			let stream
 			try {
-				stream = await this.client.chat.completions.create(
+				stream = await (this.client as OpenAI).chat.completions.create(
 					requestOptions,
 					Object.assign(methodIsAzureAiInference ? { path: OPENAI_AZURE_AI_INFERENCE_PATH } : {}, {
 						signal: this.abortController?.signal,
@@ -889,7 +920,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 
 			let response
 			try {
-				response = await this.client.chat.completions.create(
+				response = await (this.client as OpenAI).chat.completions.create(
 					requestOptions,
 					Object.assign(methodIsAzureAiInference ? { path: OPENAI_AZURE_AI_INFERENCE_PATH } : {}, {
 						signal: this.abortController?.signal,
@@ -1023,6 +1054,10 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 
 	setChatType(type: "user" | "system"): void {
 		this.chatType = type
+	}
+	setToolProtocol(toolProtocol?: "native" | "xml"): void {
+		if (!toolProtocol) return
+		this.toolProtocol = toolProtocol
 	}
 
 	getChatType() {

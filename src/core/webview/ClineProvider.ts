@@ -2081,7 +2081,7 @@ export class ClineProvider
 			featureRoomoteControlEnabled,
 			isBrowserSessionActive,
 			autoCleanup,
-			filterErrorCorrectionMessages,
+			// Messages,
 		} = await this.getState()
 
 		// let cloudOrganizations: CloudOrganizationMembership[] = []
@@ -2120,7 +2120,6 @@ export class ClineProvider
 			version: this.context.extension?.packageJSON?.version ?? "",
 			apiConfiguration,
 			autoCleanup,
-			filterErrorCorrectionMessages,
 			customInstructions,
 			alwaysAllowReadOnly: alwaysAllowReadOnly ?? false,
 			alwaysAllowReadOnlyOutsideWorkspace: alwaysAllowReadOnlyOutsideWorkspace ?? false,
@@ -2382,7 +2381,6 @@ export class ClineProvider
 		providerSettings.openAiHeaders = providerSettings.openAiHeaders ?? {}
 		return {
 			autoCleanup: stateValues.autoCleanup ?? DEFAULT_AUTO_CLEANUP_SETTINGS,
-			filterErrorCorrectionMessages: stateValues.filterErrorCorrectionMessages ?? false,
 			apiConfiguration: providerSettings,
 			lastShownAnnouncementId: stateValues.lastShownAnnouncementId,
 			customInstructions: stateValues.customInstructions,

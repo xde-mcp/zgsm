@@ -722,10 +722,6 @@
 			"inheritDescription": "This profile inherits the global default threshold ({{threshold}}%)",
 			"usesGlobal": "(uses global {{threshold}}%)"
 		},
-		"filterErrorCorrection": {
-			"name": "Filter error-correction message pairs",
-			"description": "When enabled, the system will automatically filter out model errors (like failed tool usage) and their correction responses from the context after the model successfully corrects itself. This reduces token usage and noise in the conversation history."
-		},
 		"includeCurrentTime": {
 			"label": "Include current time in context",
 			"description": "When enabled, the current time and timezone information will be included in the system prompt. Disable this if models are stopping work due to time concerns."

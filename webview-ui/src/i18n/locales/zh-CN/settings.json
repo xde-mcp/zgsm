@@ -665,10 +665,6 @@
 			"inheritDescription": "此配置文件继承全局默认阈值（{{threshold}}%）",
 			"usesGlobal": "（使用全局 {{threshold}}%）"
 		},
-		"filterErrorCorrection": {
-			"name": "过滤错误纠正消息对",
-			"description": "启用后，系统会在模型成功自我纠正后，自动从上下文中过滤掉模型错误（如工具使用失败）及其纠正响应。这可以减少 token 使用量和对话历史中的噪音。"
-		},
 		"maxImageFileSize": {
 			"label": "最大图像文件大小",
 			"mb": "MB",

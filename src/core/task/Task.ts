@@ -238,6 +238,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	 * @private
 	 */
 	private _taskToolProtocol: ToolProtocol | undefined
+	private _taskToolProtocolChange: boolean | undefined
 
 	/**
 	 * Promise that resolves when the task mode has been initialized.
@@ -281,6 +282,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	// API
 	api: ApiHandler & {
 		setChatType?: (type: "user" | "system") => void
+		setToolProtocol?: (toolProtocol?: "native" | "xml") => void
 		getChatType?: () => "user" | "system"
 		cancelChat?: (cancelType?: ClineApiReqCancelReason) => void
 	}
@@ -357,9 +359,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	assistantMessageContent: AssistantMessageContent[] = []
 	presentAssistantMessageLocked = false
 	presentAssistantMessageHasPendingUpdates = false
-	userMessageContent: ((Anthropic.TextBlockParam | Anthropic.ImageBlockParam | Anthropic.ToolResultBlockParam) & {
-		__isNoToolsUsed?: boolean
-	})[] = []
+	userMessageContent: Array<
+		(Anthropic.TextBlockParam | Anthropic.ImageBlockParam | Anthropic.ToolResultBlockParam) & {
+			__isNoToolsUsed?: boolean
+		}
+	> = []
 	userMessageContentReady = false
 	didRejectTool = false
 	didAlreadyUseTool = false
@@ -917,89 +921,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 	async overwriteApiConversationHistory(newHistory: ApiMessage[]) {
 		this.apiConversationHistory = newHistory
-		await this.saveApiConversationHistory()
-	}
-
-	/**
-	 * Mark recent error-correction message pairs when the model successfully uses tools after an error.
-	 * This allows the system to filter out error messages and their corrections to reduce context.
-	 *
-	 * When enabled, this will tag:
-	 * 1. The assistant message that failed to use tools
-	 * 2. The user message with the error correction prompt
-	 * 3. Mark the current successful assistant message as a correction marker
-	 */
-	private async markErrorCorrectionPair(): Promise<void> {
-		// Check if error correction filtering is enabled
-		const state = await this.providerRef.deref()?.getState()
-		if (!state?.filterErrorCorrectionMessages) {
-			return // Feature is disabled, do nothing
-		}
-
-		// Find all unmarked error messages (with __isNoToolsUsed that haven't been tagged yet)
-		const errorUserMessageIndices: number[] = []
-		for (let i = this.apiConversationHistory.length - 1; i >= 0; i--) {
-			const msg = this.apiConversationHistory[i]
-			if (msg.role === "user" && Array.isArray(msg.content)) {
-				// Skip messages that are already marked as part of an error-correction pair
-				if (msg.errorCorrectionParent) {
-					continue
-				}
-
-				const hasNoToolsUsedError = msg.content.some((block: any) => block.__isNoToolsUsed === true)
-				if (hasNoToolsUsedError) {
-					errorUserMessageIndices.push(i)
-				}
-			}
-		}
-
-		// If no unmarked error messages found, nothing to do
-		if (errorUserMessageIndices.length === 0) {
-			return
-		}
-
-		// Verify that the last message in history is an assistant message
-		// This is a safety check to ensure we're in the expected state
-		const lastMessageIndex = this.apiConversationHistory.length - 1
-		if (lastMessageIndex < 0 || this.apiConversationHistory[lastMessageIndex].role !== "assistant") {
-			// Unexpected state: last message should be the successful assistant response
-			this.providerRef
-				?.deref()
-				?.log(`Warning: markErrorCorrectionPair called but last message is not from assistant`)
-			return
-		}
-
-		// Avoid marking the same assistant message as a correction marker multiple times
-		if (this.apiConversationHistory[lastMessageIndex].isErrorCorrectionMarker) {
-			// This assistant message is already marked as a correction marker
-			return
-		}
-
-		// Generate a single errorCorrectionId for all the error-correction pairs
-		const errorCorrectionId = crypto.randomUUID()
-
-		// Mark all found error messages and their preceding assistant messages
-		for (const errorUserMessageIndex of errorUserMessageIndices) {
-			// Mark the error user message
-			this.apiConversationHistory[errorUserMessageIndex].errorCorrectionParent = errorCorrectionId
-
-			// Find and mark the assistant message that triggered the error (the one before the error user message)
-			for (let i = errorUserMessageIndex - 1; i >= 0; i--) {
-				if (this.apiConversationHistory[i].role === "assistant") {
-					// Only mark if not already marked (defensive check)
-					if (!this.apiConversationHistory[i].errorCorrectionParent) {
-						this.apiConversationHistory[i].errorCorrectionParent = errorCorrectionId
-					}
-					break
-				}
-			}
-		}
-
-		// Mark the current (most recent) assistant message as the correction marker
-		this.apiConversationHistory[lastMessageIndex].isErrorCorrectionMarker = true
-		this.apiConversationHistory[lastMessageIndex].errorCorrectionId = errorCorrectionId
-
-		// Save the updated history
 		await this.saveApiConversationHistory()
 	}
 
@@ -1940,7 +1861,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// If we don't have a persisted tool protocol (old tasks before this feature),
 		// detect it from the API history. This ensures tasks that previously used
 		// XML tools will continue using XML even if NTC is now enabled.
-		if (!this._taskToolProtocol) {
+		if (!this._taskToolProtocol || this._taskToolProtocolChange) {
+			this._taskToolProtocolChange = false
 			const detectedProtocol = detectToolProtocolFromHistory(this.apiConversationHistory)
 			if (detectedProtocol) {
 				// Found tool calls in history - lock to that protocol
@@ -2463,13 +2385,18 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				) as { type: string; text: string }
 
 				// Use the task's locked protocol, NOT the current settings (fallback to xml if not set)
-				nextUserContent = [
-					{
-						type: "text",
-						__isNoToolsUsed: true,
-						text: formatResponse.noToolsUsed(this._taskToolProtocol ?? "xml", _nextUserContent?.text),
-					},
-				]
+				const content = {
+					type: "text",
+					text: formatResponse.noToolsUsed(this._taskToolProtocol ?? "xml", _nextUserContent?.text),
+				} as Anthropic.Messages.ContentBlockParam & { __isNoToolsUsed?: boolean }
+
+				Object.defineProperty(content, "__isNoToolsUsed", {
+					value: true,
+					enumerable: false, // 不可枚举，JSON 序列化时会被忽略
+					writable: false,
+					configurable: false,
+				})
+				nextUserContent = [content]
 			}
 		}
 	}
@@ -2543,6 +2470,18 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			// Determine API protocol based on provider and model
 			const modelId = getModelId(this.apiConfiguration)
 			const apiProtocol = getApiProtocol(this.apiConfiguration.apiProvider, modelId)
+
+			// Respect user-configured provider rate limiting BEFORE we emit api_req_started.
+			// This prevents the UI from showing an "API Request..." spinner while we are
+			// intentionally waiting due to the rate limit slider.
+			//
+			// NOTE: We also set Task.lastGlobalApiRequestTime here to reserve this slot
+			// before we build environment details (which can take time).
+			// This ensures subsequent requests (including subtasks) still honour the
+			// provider rate-limit window.
+			await this.maybeWaitForProviderRateLimit(currentItem.retryAttempt ?? 0)
+			Task.lastGlobalApiRequestTime = performance.now()
+
 			await this.say(
 				"api_req_started",
 				JSON.stringify({
@@ -2758,12 +2697,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					streamModelInfo,
 					this._taskToolProtocol,
 				)
-				const shouldUseXmlParser = streamProtocol === "xml"
+				let shouldUseXmlParser = streamProtocol === "xml"
 
 				// Yields only if the first chunk is successful, otherwise will
 				// allow the user to retry the request (most likely due to rate
 				// limit error, which gets thrown on the first chunk).
-				const stream = this.attemptApiRequest()
+				const stream = this.attemptApiRequest(currentItem.retryAttempt ?? 0, { skipProviderRateLimit: true })
 				let assistantMessage = ""
 				let reasoningMessage = ""
 				let streamingFailedMessage: string | undefined = ""
@@ -3003,7 +2942,18 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							}
 							case "text": {
 								assistantMessage += chunk.text
+								if (this._taskToolProtocolChange) {
+									shouldUseXmlParser =
+										resolveToolProtocol(
+											this.apiConfiguration,
+											streamModelInfo,
+											this._taskToolProtocol,
+										) === "xml"
 
+									if (shouldUseXmlParser) {
+										this._taskToolProtocolChange = false
+									}
+								}
 								// Use the protocol determined at the start of streaming
 								// Don't rely solely on parser existence - parser might exist from previous state
 								if (shouldUseXmlParser && this.assistantMessageParser) {
@@ -3321,6 +3271,28 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							this.abortReason = cancelReason
 							await this.abortTask()
 						} else {
+							// Handle tool protocol errors with immediate retry
+							if (this.isToolProtocolError(error, this.apiConfiguration)) {
+								await this.rollbackXmlToolProtocol(error)
+
+								// Protocol switched successfully, retry immediately without backoff
+								console.log(
+									`[Task#${this.taskId}.${this.instanceId}] Protocol switched to XML, retrying immediately`,
+								)
+
+								// Push back onto stack with userMessageWasRemoved flag
+								// rollbackXmlToolProtocol already removed the user message from history,
+								// so we need to signal that it should be re-added on retry
+								stack.push({
+									userContent: currentUserContent,
+									includeFileDetails: false,
+									retryAttempt: 0,
+									userMessageWasRemoved: true,
+								})
+								// Continue immediately to next iteration
+								continue
+							}
+
 							// Stream failed - log the error and retry with the same content
 							// The existing rate limiting will prevent rapid retries
 							console.error(
@@ -3566,22 +3538,28 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						}
 
 						// Use the task's locked protocol for consistent behavior
-						this.userMessageContent.push({
+						const _content = {
 							type: "text",
-							__isNoToolsUsed: true,
 							text: formatResponse.noToolsUsed(
 								this._taskToolProtocol ?? "xml",
 								undefined,
 								preAssistantMessage,
 							),
+						} as (Anthropic.TextBlockParam | Anthropic.ImageBlockParam | Anthropic.ToolResultBlockParam) & {
+							__isNoToolsUsed?: boolean
+						}
+
+						Object.defineProperty(_content, "__isNoToolsUsed", {
+							value: true,
+							enumerable: false, // 不可枚举，JSON 序列化时会被忽略
+							writable: false,
+							configurable: false,
 						})
+
+						this.userMessageContent.push(_content)
 					} else {
 						// Reset counter when tools are used successfully
 						this.consecutiveNoToolUseCount = 0
-
-						// Mark error-correction pairs if this is a successful response after an error
-						// This allows filtering out the error and its correction from context
-						await this.markErrorCorrectionPair()
 					}
 
 					// Push to stack if there's content OR if we're paused waiting for a subtask.
@@ -3944,7 +3922,44 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		await this.providerRef.deref()?.postMessageToWebview({ type: "condenseTaskContextResponse", text: this.taskId })
 	}
 
-	public async *attemptApiRequest(retryAttempt: number = 0): ApiStream {
+	/**
+	 * Enforce the user-configured provider rate limit.
+	 *
+	 * NOTE: This is intentionally treated as expected behavior and is surfaced via
+	 * the `api_req_rate_limit_wait` say type (not an error).
+	 */
+	private async maybeWaitForProviderRateLimit(retryAttempt: number): Promise<void> {
+		const state = await this.providerRef.deref()?.getState()
+		const rateLimitSeconds =
+			state?.apiConfiguration?.rateLimitSeconds ?? this.apiConfiguration?.rateLimitSeconds ?? 0
+
+		if (rateLimitSeconds <= 0 || !Task.lastGlobalApiRequestTime) {
+			return
+		}
+
+		const now = performance.now()
+		const timeSinceLastRequest = now - Task.lastGlobalApiRequestTime
+		const rateLimitDelay = Math.ceil(
+			Math.min(rateLimitSeconds, Math.max(0, rateLimitSeconds * 1000 - timeSinceLastRequest) / 1000),
+		)
+
+		// Only show the countdown UX on the first attempt. Retry flows have their own delay messaging.
+		if (rateLimitDelay > 0 && retryAttempt === 0) {
+			for (let i = rateLimitDelay; i > 0; i--) {
+				// Send structured JSON data for i18n-safe transport
+				const delayMessage = JSON.stringify({ seconds: i })
+				await this.say("api_req_rate_limit_wait", delayMessage, undefined, true)
+				await delay(1000)
+			}
+			// Finalize the partial message so the UI doesn't keep rendering an in-progress spinner.
+			await this.say("api_req_rate_limit_wait", undefined, undefined, false)
+		}
+	}
+
+	public async *attemptApiRequest(
+		retryAttempt: number = 0,
+		options: { skipProviderRateLimit?: boolean } = {},
+	): ApiStream {
 		const state = await this.providerRef.deref()?.getState()
 
 		const {
@@ -3983,29 +3998,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			}
 		}
 
-		let rateLimitDelay = 0
-
-		// Use the shared timestamp so that subtasks respect the same rate-limit
-		// window as their parent tasks.
-		if (Task.lastGlobalApiRequestTime) {
-			const now = performance.now()
-			const timeSinceLastRequest = now - Task.lastGlobalApiRequestTime
-			const rateLimit = apiConfiguration?.rateLimitSeconds ?? 1
-			rateLimitDelay = Math.ceil(Math.min(rateLimit, Math.max(0, rateLimit * 1000 - timeSinceLastRequest) / 1000))
+		if (!options.skipProviderRateLimit) {
+			await this.maybeWaitForProviderRateLimit(retryAttempt)
 		}
 
-		// Only show rate limiting message if we're not retrying. If retrying, we'll include the delay there.
-		if (rateLimitDelay > 0 && retryAttempt === 0) {
-			// Show countdown timer
-			for (let i = rateLimitDelay; i > 0; i--) {
-				const delayMessage = `Rate limiting for ${i} seconds...`
-				this.providerRef?.deref()?.log(`"api_req_retry_delayed" ${delayMessage}`)
-				await delay(1000)
-			}
-		}
-
-		// Update last request time before making the request so that subsequent
+		// Update last request time right before making the request so that subsequent
 		// requests — even from new subtasks — will honour the provider's rate-limit.
+		//
+		// NOTE: When recursivelyMakeClineRequests handles rate limiting, it sets the
+		// timestamp earlier to include the environment details build. We still set it
+		// here for direct callers (tests) and for the case where we didn't rate-limit
+		// in the caller.
 		Task.lastGlobalApiRequestTime = performance.now()
 
 		const systemPrompt = await this.getSystemPrompt()
@@ -4300,6 +4303,23 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			this.currentRequestAbortController = undefined
 			const isContextWindowExceededError = checkContextWindowExceededError(error)
 
+			// Automatic protocol fallback: If using native protocol and error is protocol-related,
+			// switch to XML protocol and retry. This only happens once per task.
+			if (this.isToolProtocolError(error, this.apiConfiguration)) {
+				console.log(
+					`[Task#${this.taskId}] Protocol error detected on attempt ${retryAttempt + 1}. ` +
+						`Falling back to XML protocol...`,
+				)
+
+				await this.rollbackXmlToolProtocol(error)
+
+				// Set chat type for system message
+				this.api?.setChatType?.("system")
+
+				yield* this.attemptApiRequest()
+				return
+			}
+
 			// If it's a context window error and we haven't exceeded max retries for this error type
 			if (isContextWindowExceededError && retryAttempt < MAX_CONTEXT_WINDOW_RETRIES) {
 				console.warn(
@@ -4585,6 +4605,261 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		return cleanConversationHistory
 	}
+
+	async rollbackXmlToolProtocol(error: Error) {
+		console.log(`[Task#${this.taskId}] Switching from native to XML tool protocol due to API error`)
+
+		// Update protocol flag
+		this._taskToolProtocol = "xml"
+		this._taskToolProtocolChange = true
+		// Notify API provider about protocol change
+		this.api?.setToolProtocol?.(this._taskToolProtocol)
+
+		// Update system prompt to reflect new protocol (if exists in conversation history)
+		const firstMessage = this.apiConversationHistory[0] as any
+		let lastMessage = this.apiConversationHistory[this.apiConversationHistory.length - 1]
+		let userFeedback = ""
+		if (lastMessage?.role === "user") {
+			if (Array.isArray(lastMessage.content)) {
+				this.apiConversationHistory.pop()
+				const lastMessageToolcontent = (
+					lastMessage.content.find((block: any) => block.type === "tool_result") as any
+				)?.content as string
+
+				if (
+					lastMessageToolcontent.includes("<task>") ||
+					lastMessageToolcontent.includes("<feedback>") ||
+					lastMessageToolcontent.includes("<answer>") ||
+					lastMessageToolcontent.includes("<user_message>")
+				) {
+					userFeedback = lastMessageToolcontent
+				}
+			}
+		}
+
+		if (
+			firstMessage?.role === "system" &&
+			firstMessage?.content &&
+			Array.isArray(firstMessage.content) &&
+			firstMessage.content[1]?.type === "text"
+		) {
+			firstMessage.content[1].text = firstMessage.content[1].text.replace(
+				"<tool_format>native</tool_format>",
+				"<tool_format>xml</tool_format>",
+			)
+		}
+
+		// Find the first user message (skip system prompt if it exists)
+		const startIndex = (this.apiConversationHistory[0] as any)?.role === "system" ? 1 : 0
+		const originalUserMessage = this.apiConversationHistory[startIndex]
+
+		// If no user message exists, can't proceed - just clear history
+		if (!originalUserMessage || originalUserMessage.role !== "user") {
+			console.warn(`[Task#${this.taskId}] No original user message found, resetting to empty history`)
+			this.apiConversationHistory =
+				(this.apiConversationHistory[0] as any)?.role === "system" ? [this.apiConversationHistory[0]] : []
+
+			// Reset parser and state
+			this.resetParserAndState()
+			await this.say("rollback_xml_tool", error?.message)
+			return
+		}
+
+		// Collect all tool calls and their results
+		const toolUseMap = new Map<string, string>() // toolCallId -> toolName
+		const toolResults: string[] = []
+
+		for (let i = startIndex + 1; i < this.apiConversationHistory.length; i++) {
+			const message = this.apiConversationHistory[i]
+
+			if (message?.role === "assistant" && Array.isArray(message.content)) {
+				// Record all tool_use IDs and names for later matching
+				for (const block of message.content) {
+					if (block.type === "tool_use" && (block as any).id && (block as any).name) {
+						toolUseMap.set((block as any).id, (block as any).name)
+					}
+				}
+			} else if (message?.role === "user" && Array.isArray(message.content)) {
+				// Match tool_result with corresponding tool_use
+				for (const block of message.content) {
+					if (block.type === "tool_result") {
+						const toolResultBlock = block as any
+						const toolCallId = toolResultBlock.tool_use_id
+						const toolName = toolCallId ? toolUseMap.get(toolCallId) : undefined
+
+						// Format content based on its type
+						let contentStr = ""
+						if (typeof toolResultBlock.content === "string") {
+							contentStr = toolResultBlock.content
+						} else if (Array.isArray(toolResultBlock.content)) {
+							// Handle content array (e.g., [{ type: "text", text: "..." }])
+							contentStr = toolResultBlock.content
+								.map((c: any) => (c.type === "text" ? c.text : JSON.stringify(c)))
+								.join("\n")
+						} else if (toolResultBlock.content) {
+							contentStr = JSON.stringify(toolResultBlock.content)
+						}
+
+						if (contentStr) {
+							const resultText = toolName ? `["${toolName}" tool result]\n${contentStr}` : contentStr
+							toolResults.push(resultText)
+						}
+					}
+				}
+			}
+		}
+
+		// Build new assistant message content
+		const assistantContent: any[] = []
+
+		// Preserve non-tool text blocks from the first assistant message
+		const firstAssistantIndex = startIndex + 1
+		const firstAssistant = this.apiConversationHistory[firstAssistantIndex]
+		if (firstAssistant?.role === "assistant" && Array.isArray(firstAssistant.content)) {
+			const textBlocks = firstAssistant.content.filter((block: any) => block.type === "text")
+			if (textBlocks.length > 0) {
+				assistantContent.push(...textBlocks)
+			}
+		}
+
+		// Add tool results summary if any exist
+		if (toolResults.length > 0) {
+			assistantContent.push({
+				type: "text",
+				text: toolResults.join("\n\n"),
+			})
+		}
+
+		// Rebuild conversation history
+		const newHistory: any[] = []
+
+		// Keep system prompt if it exists
+		if ((this.apiConversationHistory[0] as any)?.role === "system") {
+			newHistory.push(this.apiConversationHistory[0])
+		}
+
+		// Add original user message
+		newHistory.push(originalUserMessage)
+
+		// Add assistant message only if it has content
+		if (assistantContent.length > 0) {
+			newHistory.push({
+				role: "assistant",
+				content: assistantContent,
+			})
+		}
+
+		if (userFeedback?.length) {
+			newHistory.push({
+				role: "user",
+				content: userFeedback,
+			})
+		}
+
+		this.apiConversationHistory = newHistory
+
+		// Reset parser and state
+		this.resetParserAndState()
+
+		console.log(
+			`[Task#${this.taskId}] Rolled back to ${newHistory.length} messages ` +
+				`(${toolResults.length} tool results preserved)`,
+		)
+		await this.say("rollback_xml_tool", error?.message)
+	}
+
+	/**
+	 * Helper method to reset XML parser and streaming state
+	 */
+	private resetParserAndState() {
+		// Force reset XML parser to ensure clean state for first retry
+		if (this.assistantMessageParser) {
+			this.assistantMessageParser.reset()
+			console.log(`[Task#${this.taskId}] Reset existing XML parser state`)
+		} else {
+			this.assistantMessageParser = new AssistantMessageParser(this.getCustomToolNames())
+			console.log(`[Task#${this.taskId}] Initialized new XML parser`)
+		}
+
+		// Clear all streaming state to prevent interference with XML parsing
+		this.assistantMessageContent = []
+		this.streamingToolCallIndices.clear()
+		this.currentStreamingContentIndex = 0
+		this.consecutiveMistakeCount = 0
+		this.didCompleteReadingStream = false
+
+		console.log(`[Task#${this.taskId}] Cleared all streaming state for protocol switch`)
+	}
+	/**
+	 * Detects if an error is related to tool protocol incompatibility.
+	 * This enables automatic fallback from native to XML tool protocol when errors occur.
+	 *
+	 * @param error - The error object to analyze
+	 * @returns true if the error is related to tool protocol incompatibility, false otherwise
+	 *
+	 * Common tool protocol errors detected:
+	 * - Missing or invalid tool_call_id in tool_result messages
+	 * - Invalid tool call format or structure
+	 * - Tool use blocks without proper ID fields
+	 * - Mismatched tool call and result references
+	 * - Malformed tool call syntax
+	 *
+	 * Performance optimization: Uses regex pattern matching instead of multiple string comparisons
+	 */
+	private isToolProtocolError(error: any, apiConfiguration: ProviderSettings): boolean {
+		if (this._taskToolProtocol !== "native" || !error?.message) {
+			return false
+		}
+
+		const errorMessage = error.message.toLowerCase()
+
+		if (
+			apiConfiguration.apiProvider === "zgsm" &&
+			apiConfiguration.zgsmModelId?.toLowerCase().includes("claude") &&
+			errorMessage.includes("provider returned error")
+		) {
+			return true
+		}
+
+		// Optimized regex pattern covering all common tool protocol errors
+		// This single regex is more performant than multiple string.includes() calls
+		const toolProtocolErrorPattern = new RegExp(
+			[
+				// Missing or invalid tool_call_id
+				"no previous assistant message with a tool call",
+				"tool_call_id\\s+is not found",
+				"tool_call_id is required",
+				"invalid tool_call_id",
+				"tool_result requires tool_call_id",
+
+				// Tool use format errors
+				"tool use must have an id",
+				"tool_use blocks must have an id field",
+				"missing id in tool_use",
+
+				// Tool call/result mismatch
+				"tool result does not match any tool call",
+				"unexpected tool_result",
+				"tool_result without matching tool call",
+
+				// Invalid tool structure
+				"invalid tool format",
+				"tool calls must be in the correct format",
+				"malformed tool call",
+
+				"message content parts cannot be empty",
+			].join("|"),
+			"i", // case-insensitive flag
+		)
+
+		const isProtocolError = toolProtocolErrorPattern.test(errorMessage)
+
+		if (isProtocolError) {
+			console.warn(`[Task#${this.taskId}] Tool protocol error detected: ${error.message.slice(0, 200)}...`)
+		}
+
+		return isProtocolError
+	}
 	public async checkpointRestore(options: CheckpointRestoreOptions) {
 		return checkpointRestore(this, options)
 	}
@@ -4774,7 +5049,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			const errorCodeManager = ErrorCodeManager.getInstance()
 			errorMsg = await errorCodeManager.parseResponse(error, isZgsm, this.taskId, this.instanceId)
 
-			const requestId = error.headers?.get("x-request-id") || this?.lastApiRequestHeaders?.["X-Request-ID"]
+			const requestId =
+				(error.headers && error.headers?.get?.("x-request-id")) || this?.lastApiRequestHeaders?.["X-Request-ID"]
 			if (requestId) {
 				// Store raw error
 				errorCodeManager.setRawError(requestId, error)

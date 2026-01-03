@@ -48,6 +48,7 @@ import BrowserActionRow from "./BrowserActionRow"
 import BrowserSessionStatusRow from "./BrowserSessionStatusRow"
 import ChatRow from "./ChatRow"
 import { ChatTextArea } from "./ChatTextArea"
+import { markdownExpandingRef } from "./Markdown"
 import TaskHeader from "./TaskHeader"
 import SystemPromptWarning from "./SystemPromptWarning"
 import ProfileViolationWarning from "./ProfileViolationWarning"
@@ -172,6 +173,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const stickyFollowRef = useRef<boolean>(false)
 	const [showScrollToBottom, setShowScrollToBottom] = useState(false)
 	const [isAtBottom, setIsAtBottom] = useState(false)
+	const userExpandingRef = useRef<boolean>(false)
 	const lastTtsRef = useRef<string>("")
 	const [wasStreaming, setWasStreaming] = useState<boolean>(false)
 	const [checkpointWarning, setCheckpointWarning] = useState<
@@ -429,6 +431,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					// an "ask" while ask is waiting for response.
 					switch (lastMessage.say) {
 						case "api_req_retry_delayed":
+						case "api_req_rate_limit_wait":
 							setSendingDisabled(true)
 							break
 						case "api_req_started":
@@ -1005,6 +1008,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				case "api_req_deleted":
 					return false
 				case "api_req_retry_delayed":
+				case "api_req_rate_limit_wait":
 					const last1 = modifiedMessages.at(-1)
 					const last2 = modifiedMessages.at(-2)
 					if (last1?.ask === "resume_task" && last2 === message) {
@@ -1062,7 +1066,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		// labeled as `user_feedback`.
 		if (lastMessage && messages.length > 1) {
 			if (
-				lastMessage.text && // has text
+				typeof lastMessage.text === "string" && // has text (must be string for startsWith)
 				(lastMessage.say === "text" || lastMessage.say === "completion_result") && // is a text message
 				!lastMessage.partial && // not a partial message
 				!lastMessage.text.startsWith("{") // not a json object
@@ -1206,15 +1210,32 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	// Scroll when user toggles certain rows.
 	const toggleRowExpansion = useCallback(
 		(ts: number) => {
+			// Mark that user is actively expanding/collapsing content
+			userExpandingRef.current = true
+			// Immediately disable sticky follow to prevent Virtuoso from auto-scrolling
+			stickyFollowRef.current = false
 			handleSetExpandedRow(ts)
 			// The logic to set disableAutoScrollRef.current = true on expansion
 			// is now handled by the useEffect hook that observes expandedRows.
+
+			// Clear the flag after content has had time to render and settle
+			// Increased timeout to handle large content blocks
+			setTimeout(() => {
+				userExpandingRef.current = false
+			}, 1000)
 		},
 		[handleSetExpandedRow],
 	)
 
 	const handleRowHeightChange = useCallback(
 		(isTaller: boolean) => {
+			// Don't auto-scroll if the user is actively expanding/collapsing content
+			// This prevents scroll conflicts when user manually expands the last message
+			// or expands Markdown content
+			if (userExpandingRef.current || markdownExpandingRef.current) {
+				return
+			}
+
 			if (isAtBottom) {
 				if (isTaller) {
 					scrollToBottomSmooth()
@@ -1649,7 +1670,14 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							increaseViewportBy={{ top: 3_000, bottom: 1000 }}
 							data={groupedMessages}
 							itemContent={itemContent}
-							followOutput={(isAtBottom: boolean) => isAtBottom || stickyFollowRef.current}
+							followOutput={(isAtBottom: boolean) => {
+								// Disable auto-scrolling when user is manually expanding/collapsing content
+								// This prevents scroll jumping when expanding the last message or Markdown content
+								if (userExpandingRef.current || markdownExpandingRef.current) {
+									return false
+								}
+								return isAtBottom || stickyFollowRef.current
+							}}
 							atBottomStateChange={(isAtBottom: boolean) => {
 								setIsAtBottom(isAtBottom)
 								// Only show the scroll-to-bottom button if not at bottom

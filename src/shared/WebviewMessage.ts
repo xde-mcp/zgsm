@@ -265,7 +265,6 @@ export interface WebviewMessage {
 	organizationId?: string | null // For organization switching
 	useProviderSignup?: boolean // For rooCloudSignIn to use provider signup flow
 	autoCleanup?: AutoCleanupSettings
-	filterErrorCorrectionMessages?: boolean
 	codeIndexSettings?: {
 		// Global state settings
 		zgsmCodebaseIndexEnabled: boolean

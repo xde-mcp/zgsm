@@ -69,6 +69,7 @@ export const toolParamNames = [
 	"todos",
 	"prompt",
 	"image",
+	"line_ranges",
 	"files", // Native protocol parameter for read_file
 	"operations", // search_and_replace parameter for multiple operations
 	"patch", // apply_patch parameter
@@ -121,6 +122,7 @@ export type NativeToolArgs = {
 	update_todo_list: { todos: string }
 	use_mcp_tool: { server_name: string; tool_name: string; arguments?: Record<string, unknown> }
 	write_to_file: { path: string; content: string }
+	list_files: { path: string; recursive?: boolean }
 	// Add more tools as they are migrated to native protocol
 }
 

@@ -63,7 +63,6 @@ export const formatResponse = {
 	},
 
 	noToolsUsed: (protocol?: ToolProtocol, preUserContent?: string, preAssistantMessage?: string) => {
-		// const instructions = getToolInstructionsReminder(protocol)
 		return `SYSTEM NOTICE (MUST COMPLY):
 
 In the previous turn, no tool was called.
@@ -75,19 +74,9 @@ In this turn:
 - Do NOT repeat previous content.
 - Do NOT respond conversationally.
 - If you have completed the user's task, use the attempt_completion tool.`
+		// const instructions = getToolInstructionsReminder(protocol)
 
-		// 		return `SYSTEM NOTICE (MUST COMPLY):
-
-		// In the previous turn, no tool was called.
-		// This violates a system rule: EVERY assistant turn MUST include at least one tool call.
-
-		// In this turn:
-		// - You MUST call one appropriate tool.
-		// - Do NOT explain or justify the previous response.
-		// - Do NOT repeat previous content.
-		// - Do NOT respond conversationally.
-		// - If you have completed the user's task, use the attempt_completion tool.
-
+		// 		return `[ERROR] You did not use a tool in your previous response! Please retry with a tool use.
 		// ${instructions}
 
 		// # Next Steps

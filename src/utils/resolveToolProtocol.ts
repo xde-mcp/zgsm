@@ -44,7 +44,7 @@ export function resolveToolProtocol(
 		return _providerSettings.toolProtocol
 	}
 
-	// 5. Final fallback
+	// 3. Final fallback
 	return _providerSettings?.apiProvider === "zgsm" ? TOOL_PROTOCOL.XML : TOOL_PROTOCOL.NATIVE
 }
 

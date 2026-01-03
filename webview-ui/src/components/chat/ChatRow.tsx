@@ -45,6 +45,7 @@ import { BatchFilePermission } from "./BatchFilePermission"
 import { BatchDiffApproval } from "./BatchDiffApproval"
 import { ProgressIndicator } from "./ProgressIndicator"
 import { Markdown } from "./Markdown"
+import { CollapsibleMarkdownBlock } from "./CollapsibleMarkdownBlock"
 import { CommandExecution } from "./CommandExecution"
 import { CommandExecutionError } from "./CommandExecutionError"
 import { AutoApprovedRequestLimitWarning } from "./AutoApprovedRequestLimitWarning"
@@ -422,6 +423,8 @@ export const ChatRowContent = ({
 						)}
 					</span>,
 				]
+			case "api_req_rate_limit_wait":
+				return []
 			case "api_req_retry_delayed":
 				return []
 			case "api_req_started":
@@ -436,8 +439,10 @@ export const ChatRowContent = ({
 						getIconSpan("arrow-swap", normalColor)
 					) : apiRequestFailedMessage ? (
 						getIconSpan("error", errorColor)
-					) : (
+					) : isLast ? (
 						<ProgressIndicator />
+					) : (
+						getIconSpan("arrow-swap", normalColor)
 					),
 					apiReqCancelReason !== null && apiReqCancelReason !== undefined ? (
 						apiReqCancelReason === "user_cancelled" ? (
@@ -484,13 +489,13 @@ export const ChatRowContent = ({
 		type,
 		isCommandExecuting,
 		t,
-		message.text,
-		message.ts,
 		isMcpServerResponding,
 		reviewTask.status,
 		apiReqCancelReason,
 		cost,
 		apiRequestFailedMessage,
+		message,
+		isLast,
 	])
 
 	const headerStyle: React.CSSProperties = {
@@ -1173,6 +1178,15 @@ export const ChatRowContent = ({
 	switch (message.type) {
 		case "say":
 			switch (message.say) {
+				case "rollback_xml_tool":
+					return (
+						<ErrorRow
+							type="rollback_xml_tool"
+							message={message.text || ""}
+							expandable={true}
+							isLast={isLast}
+						/>
+					)
 				case "diff_error":
 					return (
 						<ErrorRow
@@ -1228,7 +1242,7 @@ export const ChatRowContent = ({
 										padding: "12px 16px",
 										backgroundColor: "var(--vscode-editor-background)",
 									}}>
-									<MarkdownBlock markdown={message.text} />
+									<CollapsibleMarkdownBlock markdown={message.text} />
 								</div>
 							</div>
 						</div>
@@ -1455,6 +1469,35 @@ export const ChatRowContent = ({
 							}
 						/>
 					)
+				case "api_req_rate_limit_wait": {
+					const isWaiting = message.partial === true
+
+					const waitSeconds = (() => {
+						if (!message.text) return undefined
+						try {
+							const data = JSON.parse(message.text)
+							return typeof data.seconds === "number" ? data.seconds : undefined
+						} catch {
+							return undefined
+						}
+					})()
+
+					return isWaiting && waitSeconds !== undefined ? (
+						<div
+							className={`group text-sm transition-opacity opacity-100`}
+							style={{
+								...headerStyle,
+								marginBottom: 0,
+								justifyContent: "space-between",
+							}}>
+							<div style={{ display: "flex", alignItems: "center", gap: "10px", flexGrow: 1 }}>
+								<ProgressIndicator />
+								<span style={{ color: normalColor }}>{t("chat:apiRequest.rateLimitWait")}</span>
+							</div>
+							<span className="text-xs font-light text-vscode-descriptionForeground">{waitSeconds}s</span>
+						</div>
+					) : null
+				}
 				case "api_req_finished":
 					return null // we should never see this message type
 				case "text":
@@ -1633,7 +1676,7 @@ export const ChatRowContent = ({
 					}
 
 					// Fallback for generic errors
-					return <ErrorRow type="error" message={message.text || t("chat:error")} />
+					return <ErrorRow type="error" message={message.text || t("chat:error")} isLast={isLast} />
 				case "completion_result":
 					return (
 						<>
@@ -1844,7 +1887,7 @@ export const ChatRowContent = ({
 		case "ask":
 			switch (message.ask) {
 				case "mistake_limit_reached":
-					return <ErrorRow type="mistake_limit" message={message.text || ""} />
+					return <ErrorRow type="mistake_limit" message={message.text || ""} isLast={isLast} />
 				case "command":
 					return (
 						<CommandExecution

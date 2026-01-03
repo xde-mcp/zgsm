@@ -851,7 +851,14 @@ export class NativeToolCallParser {
 						} as NativeArgsFor<TName>
 					}
 					break
-
+				case "list_files":
+					if (args.path !== undefined && args.recursive !== undefined) {
+						nativeArgs = {
+							path: args.path,
+							recursive: args.recursive,
+						} as NativeArgsFor<TName>
+					}
+					break
 				default:
 					if (customToolRegistry.has(resolvedName)) {
 						nativeArgs = args as NativeArgsFor<TName>

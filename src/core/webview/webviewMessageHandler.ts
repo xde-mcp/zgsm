@@ -3415,7 +3415,7 @@ export const webviewMessageHandler = async (
 		}
 		case "copyApiError": {
 			const { message: errorMessage, originModelId, selectedLLM } = message.values ?? {}
-			const { apiConfiguration } = await provider.getState()
+			const { apiConfiguration, currentTaskItem } = await provider.getState()
 			const httpProxy = process.env.http_proxy || process.env.HTTP_PROXY
 			const httpsProxy = process.env.https_proxy || process.env.HTTPS_PROXY
 
@@ -3446,6 +3446,7 @@ export const webviewMessageHandler = async (
 					editorType: ${editorType}
 					httpProxy: ${httpProxy}
 					httpsProxy: ${httpsProxy}
+					toolProtocol: ${currentTaskItem?.toolProtocol || apiConfiguration?.toolProtocol}
 					${rawErrorMessage ? `${rawErrorMessage}` : ""}
 				`)
 				vscode.window.showInformationMessage(t("common:window.success.copy_success"))

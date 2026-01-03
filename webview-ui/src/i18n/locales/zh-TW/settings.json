@@ -665,10 +665,6 @@
 			"inheritDescription": "此檔案繼承全域預設閾值（{{threshold}}%）",
 			"usesGlobal": "（使用全域 {{threshold}}%）"
 		},
-		"filterErrorCorrection": {
-			"name": "過濾錯誤糾正訊息對",
-			"description": "啟用後，系統會在模型成功自我糾正後，自動從上下文中過濾掉模型錯誤（如工具使用失敗）及其糾正回應。這可以減少 token 使用量和對話歷史中的噪音。"
-		},
 		"maxImageFileSize": {
 			"label": "最大圖片檔案大小",
 			"mb": "MB",

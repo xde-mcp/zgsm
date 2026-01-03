@@ -169,8 +169,6 @@ export interface ExtensionStateContextType extends ExtensionState {
 	routerModels?: RouterModels
 	autoCleanup?: AutoCleanupSettings
 	setAutoCleanup: (value: AutoCleanupSettings) => void
-	filterErrorCorrectionMessages?: boolean
-	setFilterErrorCorrectionMessages: (value: boolean) => void
 	includeDiagnosticMessages?: boolean
 	setIncludeDiagnosticMessages: (value: boolean) => void
 	maxDiagnosticMessages?: number
@@ -213,7 +211,6 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		apiConfiguration: {},
 		version: "",
 		autoCleanup: DEFAULT_AUTO_CLEANUP_SETTINGS,
-		filterErrorCorrectionMessages: false, // 默认禁用错误纠正消息过滤
 		clineMessages: [],
 		taskHistory: [],
 		shouldShowAnnouncement: false,
@@ -673,9 +670,6 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setCondensingApiConfigId: (value) => setState((prevState) => ({ ...prevState, condensingApiConfigId: value })),
 		autoCleanup: state.autoCleanup ?? DEFAULT_AUTO_CLEANUP_SETTINGS,
 		setAutoCleanup: (value) => setState((prevState) => ({ ...prevState, autoCleanup: value })),
-		filterErrorCorrectionMessages: state.filterErrorCorrectionMessages ?? false,
-		setFilterErrorCorrectionMessages: (value) =>
-			setState((prevState) => ({ ...prevState, filterErrorCorrectionMessages: value })),
 		setCustomCondensingPrompt: (value) =>
 			setState((prevState) => ({ ...prevState, customCondensingPrompt: value })),
 		setProfileThresholds: (value) => setState((prevState) => ({ ...prevState, profileThresholds: value })),
