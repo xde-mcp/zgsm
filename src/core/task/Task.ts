@@ -3758,6 +3758,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			maxReadFileLine,
 			apiConfiguration,
 			terminalShellIntegrationDisabled,
+			enableSubfolderRules,
 		} = state ?? {}
 
 		return await (async () => {
@@ -3811,6 +3812,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					browserToolEnabled: browserToolEnabled ?? true,
 					useAgentRules:
 						vscode.workspace.getConfiguration(Package.name).get<boolean>("useAgentRules") ?? true,
+					enableSubfolderRules: enableSubfolderRules ?? false,
 					newTaskRequireTodos: vscode.workspace
 						.getConfiguration(Package.name)
 						.get<boolean>("newTaskRequireTodos", false),
@@ -4181,6 +4183,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				experiments: state?.experiments,
 				apiConfiguration,
 				maxReadFileLine: state?.maxReadFileLine ?? -1,
+				maxConcurrentFileReads: state?.maxConcurrentFileReads ?? 5,
 				browserToolEnabled: state?.browserToolEnabled ?? true,
 				modelInfo,
 				diffEnabled: this.diffEnabled,

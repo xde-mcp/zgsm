@@ -28,6 +28,7 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 		maxReadFileLine,
 		maxConcurrentFileReads,
 		terminalShellIntegrationDisabled,
+		enableSubfolderRules,
 	} = await provider.getState()
 
 	// Check experiment to determine which diff strategy to use
@@ -95,6 +96,7 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 			maxConcurrentFileReads: maxConcurrentFileReads ?? 5,
 			todoListEnabled: apiConfiguration?.todoListEnabled ?? true,
 			useAgentRules: vscode.workspace.getConfiguration(Package.name).get<boolean>("useAgentRules") ?? true,
+			enableSubfolderRules: enableSubfolderRules ?? false,
 			newTaskRequireTodos: vscode.workspace
 				.getConfiguration(Package.name)
 				.get<boolean>("newTaskRequireTodos", false),

@@ -8,6 +8,8 @@ export interface SystemPromptSettings {
 	todoListEnabled: boolean
 	browserToolEnabled?: boolean
 	useAgentRules: boolean
+	/** When true, recursively discover and load .roo/rules from subdirectories */
+	enableSubfolderRules?: boolean
 	newTaskRequireTodos: boolean
 	terminalShellIntegrationDisabled?: boolean
 	toolProtocol?: ToolProtocol

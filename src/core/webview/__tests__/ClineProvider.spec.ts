@@ -606,6 +606,7 @@ describe("ClineProvider", () => {
 			// showRooIgnoredFiles: true,
 			telemetrySetting: "disabled",
 			showRooIgnoredFiles: false,
+			enableSubfolderRules: false,
 			renderContext: "sidebar",
 			maxReadFileLine: 500,
 			maxImageFileSize: 5,
