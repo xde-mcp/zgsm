@@ -31,6 +31,7 @@ import { delay } from "lodash-es"
 
 type OpenAICompatibleProps = {
 	fromWelcomeView?: boolean
+	debug?: boolean
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
 	organizationAllowList: OrganizationAllowList
@@ -42,6 +43,7 @@ type OpenAICompatibleProps = {
 
 export const ZgsmAI = ({
 	apiConfiguration,
+	debug,
 	fromWelcomeView,
 	setApiConfigurationField,
 	setCachedStateField,
@@ -215,17 +217,19 @@ export const ZgsmAI = ({
 							{t("settings:providers.refreshModels.label")}
 						</div>
 					</Button>
-					<div>
-						<VSCodeCheckbox
-							checked={useZgsmCustomConfig}
-							onChange={(e: any) => {
-								setCachedStateField("useZgsmCustomConfig", e.target.checked)
-							}}>
-							<label className="block font-medium mb-1">
-								{t("settings:providers.useZgsmCustomConfig")}
-							</label>
-						</VSCodeCheckbox>
-					</div>
+					{debug && (
+						<div>
+							<VSCodeCheckbox
+								checked={useZgsmCustomConfig}
+								onChange={(e: any) => {
+									setCachedStateField("useZgsmCustomConfig", e.target.checked)
+								}}>
+								<label className="block font-medium mb-1">
+									{t("settings:providers.useZgsmCustomConfig")}
+								</label>
+							</VSCodeCheckbox>
+						</div>
+					)}
 				</>
 			)}
 			{!fromWelcomeView && useZgsmCustomConfig && (

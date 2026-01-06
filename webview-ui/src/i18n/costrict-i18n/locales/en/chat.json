@@ -5,7 +5,7 @@
 		"wantsToFetch": "CoStrict wants to fetch detailed instructions to assist with the current task"
 	},
 	"about": "AI-Powered Strict Coding Assistant for Enterprises",
-	"error": "CoStrict will automatically fix",
+	"error": "CoStrict will automatically plan the next step",
 	"text": {
 		"rooSaid": "CoStrict said"
 	},

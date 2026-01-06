@@ -8,6 +8,7 @@ import { BaseTerminalProcess } from "./BaseTerminalProcess"
 import { getIdeaShellEnvWithUpdatePath } from "../../utils/ideaShellEnvLoader"
 import { isJetbrainsPlatform } from "../../utils/platform"
 import { t } from "../../i18n"
+import delay from "delay"
 
 export class ExecaTerminalProcess extends BaseTerminalProcess {
 	private terminalRef: WeakRef<RooTerminal>
@@ -52,6 +53,8 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 					// Ensure UTF-8 encoding for Ruby, CocoaPods, etc.
 					LANG: "en_US.UTF-8",
 					LC_ALL: "en_US.UTF-8",
+					LANGUAGE: "en_US.UTF-8",
+					PYTHONIOENCODING: "utf-8",
 				},
 			})`${command}`
 
@@ -89,23 +92,30 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 			})()
 
 			await this.terminal.setActiveStream(stream, Promise.resolve(this.pid))
-
+			let outputIndex = 0
 			for await (const line of stream) {
 				if (this.aborted) {
 					break
 				}
-
+				outputIndex++
 				this.fullOutput += line
 
 				const now = Date.now()
 
-				if (this.isListening && (now - this.lastEmitTime_ms > 500 || this.lastEmitTime_ms === 0)) {
+				if (
+					this.isListening &&
+					(now - this.lastEmitTime_ms > 600 || this.lastEmitTime_ms === 0 || outputIndex < 3)
+				) {
 					this.emitRemainingBufferIfListening()
 					this.lastEmitTime_ms = now
 				}
 
 				this.startHotTimer(line)
 			}
+
+			await delay(500)
+			this.emitRemainingBufferIfListening()
+			this.startHotTimer(this.fullOutput.slice(-2000))
 
 			if (this.aborted) {
 				let timeoutId: NodeJS.Timeout | undefined
@@ -150,8 +160,10 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 			this.subprocess = undefined
 		}
 
-		await this.terminal.setActiveStream(undefined, Promise.resolve(this.pid))
-		this.emitRemainingBufferIfListening()
+		await Promise.all([
+			this.terminal.setActiveStream(undefined, Promise.resolve(this.pid)),
+			this.emitRemainingBufferIfListening(),
+		])
 		this.stopHotTimer()
 		this.emit("completed", this.fullOutput)
 		this.emit("continue")
@@ -218,7 +230,6 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 			psTree(this.pid, async (err, children) => {
 				if (!err) {
 					const pids = children.map((p) => parseInt(p.PID))
-					console.error(`[ExecaTerminalProcess#abort] SIGKILL children -> ${pids.join(", ")}`)
 
 					for (const pid of pids) {
 						try {

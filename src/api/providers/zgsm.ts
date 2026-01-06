@@ -40,6 +40,7 @@ import { ClineApiReqCancelReason } from "../../shared/ExtensionMessage"
 import { getEditorType } from "../../utils/getEditorType"
 import { ChatCompletionChunk } from "openai/resources/index.mjs"
 import { convertToZAiFormat } from "../transform/zai-format"
+import { isDebug } from "../../utils/getDebugState"
 
 const autoModeModelId = "Auto"
 const isDev = process.env.NODE_ENV === "development"
@@ -345,7 +346,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 		return {
 			"Accept-Language": metadata?.language || "en",
 			...COSTRICT_DEFAULT_HEADERS,
-			...(this.options.useZgsmCustomConfig ? (this.options.openAiHeaders ?? {}) : {}),
+			...(this.options.useZgsmCustomConfig && isDebug() ? (this.options.openAiHeaders ?? {}) : {}),
 			"x-quota-identity": chatType || "system",
 			"X-Request-ID": requestId,
 			"x-user-id": metadata?.userId || "",
@@ -378,7 +379,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 			convertedMessages = convertToR1Format([{ role: "user", content: systemPrompt }, ...messages])
 		} else if (isArk || isLegacyFormat) {
 			convertedMessages = [{ role: "system", content: systemPrompt }, ...convertToSimpleMessages(messages)]
-		} else if (_mid?.includes("glm") || isMiniMax || _mid?.includes("claude")) {
+		} else if (isNative && (_mid?.includes("glm") || isMiniMax || _mid?.includes("claude"))) {
 			convertedMessages = [
 				{ role: "system", content: systemPrompt },
 				...convertToZAiFormat(messages, { mergeToolResultText: true }),
@@ -397,7 +398,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 					}
 				: { role: "system" as const, content: systemPrompt }
 
-			convertedMessages = [systemMessage, ...convertToOpenAiMessages(messages, { mergeToolResultText: true })]
+			convertedMessages = [systemMessage, ...convertToOpenAiMessages(messages, { mergeToolResultText: isNative })]
 		}
 
 		// Apply cache control logic
@@ -775,14 +776,18 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 	override getModel() {
 		const id = this.options.zgsmModelId ?? zgsmDefaultModelId
 		const defaultInfo = this.modelInfo
-		const info = this.options.useZgsmCustomConfig
-			? {
-					...NATIVE_TOOL_DEFAULTS,
-					...defaultInfo,
-					...(this.options.zgsmAiCustomModelInfo ?? {}),
-				}
-			: defaultInfo
+		const info =
+			this.options.useZgsmCustomConfig && isDebug()
+				? {
+						...NATIVE_TOOL_DEFAULTS,
+						...defaultInfo,
+						...(this.options.zgsmAiCustomModelInfo ?? {}),
+					}
+				: defaultInfo
 		const params = getModelParams({ format: "zgsm", modelId: id, model: info, settings: this.options })
+		if (!info.id) {
+			info.id = id
+		}
 		return { id, info, ...params }
 	}
 
@@ -1021,7 +1026,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 		const isAutoMode = modelInfo.id === "Auto" || modelInfo.id === "auto"
 
 		// Only add max_completion_tokens if includeMaxTokens is true
-		if (this.options.useZgsmCustomConfig) {
+		if (this.options.useZgsmCustomConfig && isDebug()) {
 			const maxTokens = this.options.modelMaxTokens || modelInfo.maxTokens
 			// Use user-configured modelMaxTokens if available, otherwise fall back to model's default maxTokens
 			// Using max_completion_tokens as max_tokens is deprecated

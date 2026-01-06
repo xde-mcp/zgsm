@@ -47,7 +47,7 @@ import { getPanel } from "../../activate/registerCommands"
 import { t } from "../../i18n"
 import prettyBytes from "pretty-bytes"
 import { ensureProjectWikiSubtasksExists } from "./wiki/projectWikiHelpers"
-import { isJetbrainsPlatform } from "../../utils/platform"
+import { isCliPatform, isJetbrainsPlatform } from "../../utils/platform"
 import type { ModelRecord } from "../../shared/api"
 import type { ModelInfo } from "@roo-code/types"
 
@@ -94,7 +94,8 @@ export async function activate(
 	await initialize(provider, logger)
 	startIPCServer()
 	connectIPC()
-	if (!isJetbrains) {
+
+	if (!isJetbrains && !isCliPatform()) {
 		registerAutoCompletionProvider(context, provider)
 	}
 	const completionStatusBar = CompletionStatusBar.getInstance()
@@ -164,18 +165,20 @@ export async function activate(
 	initCodeReview(context, provider, outputChannel)
 	initTelemetry(provider)
 
-	context.subscriptions.push(
-		// Register codelens related commands
-		vscode.commands.registerTextEditorCommand(
-			codeLensCallBackCommand.command,
-			codeLensCallBackCommand.callback(context),
-		),
-		// Construct instruction set
-		vscode.commands.registerTextEditorCommand(
-			codeLensCallBackMoreCommand.command,
-			codeLensCallBackMoreCommand.callback(context),
-		),
-	)
+	if (!isCliPatform()) {
+		context.subscriptions.push(
+			// Register codelens related commands
+			vscode.commands.registerTextEditorCommand(
+				codeLensCallBackCommand.command,
+				codeLensCallBackCommand.callback(context),
+			),
+			// Construct instruction set
+			vscode.commands.registerTextEditorCommand(
+				codeLensCallBackMoreCommand.command,
+				codeLensCallBackMoreCommand.callback(context),
+			),
+		)
+	}
 
 	if (!isJetbrains) {
 		context.subscriptions.push(

@@ -13,6 +13,7 @@ import { inspect } from "util"
 import type { ExitCodeDetails } from "./types"
 import { BaseTerminalProcess } from "./BaseTerminalProcess"
 import { Terminal } from "./Terminal"
+import delay from "delay"
 
 export class TerminalProcess extends BaseTerminalProcess {
 	private terminalRef: WeakRef<Terminal>
@@ -132,6 +133,9 @@ export class TerminalProcess extends BaseTerminalProcess {
 				commandToExecute += ` ; start-sleep -milliseconds ${Terminal.getCommandDelay()}`
 			}
 
+			// Set UTF-8 encoding for PowerShell
+			commandToExecute = `$OutputEncoding = [System.Text.Encoding]::UTF8 ; [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 ; ${commandToExecute}`
+
 			terminal.shellIntegration.executeCommand(commandToExecute)
 		} else if (isCmd) {
 			// For Windows cmd, do not use chcp as it's unreliable
@@ -168,7 +172,7 @@ export class TerminalProcess extends BaseTerminalProcess {
 
 		let preOutput = ""
 		let commandOutputStarted = false
-
+		let outputIndex = 0
 		/*
 		 * Extract clean output from raw accumulated output. FYI:
 		 * ]633 is a custom sequence number used by VSCode shell integration:
@@ -181,6 +185,7 @@ export class TerminalProcess extends BaseTerminalProcess {
 
 		// Process stream data
 		for await (let data of stream) {
+			outputIndex++
 			// Check for command output start marker
 			if (!commandOutputStarted) {
 				preOutput += data
@@ -207,13 +212,20 @@ export class TerminalProcess extends BaseTerminalProcess {
 			// as soon as we get any output we emit to let webview know to show spinner
 			const now = Date.now()
 
-			if (this.isListening && (now - this.lastEmitTime_ms > 100 || this.lastEmitTime_ms === 0)) {
+			if (
+				this.isListening &&
+				(now - this.lastEmitTime_ms > 150 || this.lastEmitTime_ms === 0 || outputIndex < 3)
+			) {
 				this.emitRemainingBufferIfListening()
 				this.lastEmitTime_ms = now
 			}
 
 			this.startHotTimer(data)
 		}
+
+		await delay(500)
+		this.emitRemainingBufferIfListening()
+		this.startHotTimer(this.fullOutput.slice(-2000))
 
 		// Set streamClosed immediately after stream ends.
 		await this.terminal.setActiveStream(undefined, this.terminal?.terminal?.processId)
@@ -273,7 +285,7 @@ export class TerminalProcess extends BaseTerminalProcess {
 		this.removeAllListeners("line")
 		this.emit("continue")
 	}
-	public userInput (input: string) {
+	public userInput(input: string) {
 		this.terminal.terminal.sendText(input)
 	}
 

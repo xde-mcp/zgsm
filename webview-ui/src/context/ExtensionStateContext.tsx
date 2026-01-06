@@ -159,6 +159,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setReasoningBlockCollapsed: (value: boolean) => void
 	setShowSpeedInfo: (value: boolean) => void
 	showSpeedInfo?: boolean
+	setAutomaticallyFocus: (value: boolean) => void
+	automaticallyFocus?: boolean
 	enterBehavior?: "send" | "newline"
 	setEnterBehavior: (value: "send" | "newline") => void
 	autoCondenseContext: boolean
@@ -272,6 +274,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		historyPreviewCollapsed: false, // Initialize the new state (default to expanded)
 		reasoningBlockCollapsed: true, // Default to collapsed
 		showSpeedInfo: false, // Default to not showing speed info
+		automaticallyFocus: false, // Default to not showing speed info
 		enterBehavior: "send", // Default: Enter sends, Shift+Enter creates newline
 		cloudUserInfo: null,
 		cloudIsAuthenticated: false,
@@ -526,6 +529,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		...state,
 		reasoningBlockCollapsed: state.reasoningBlockCollapsed ?? true,
 		showSpeedInfo: state.showSpeedInfo ?? false,
+		automaticallyFocus: state.automaticallyFocus ?? false,
 		didHydrateState,
 		showWelcome,
 		theme,
@@ -652,6 +656,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setReasoningBlockCollapsed: (value) =>
 			setState((prevState) => ({ ...prevState, reasoningBlockCollapsed: value })),
 		setShowSpeedInfo: (value) => setState((prevState) => ({ ...prevState, showSpeedInfo: value })),
+		setAutomaticallyFocus: (value) => setState((prevState) => ({ ...prevState, automaticallyFocus: value })),
 		enterBehavior: state.enterBehavior ?? "send",
 		setEnterBehavior: (value) => setState((prevState) => ({ ...prevState, enterBehavior: value })),
 		setHasOpenedModeSelector: (value) => setState((prevState) => ({ ...prevState, hasOpenedModeSelector: value })),

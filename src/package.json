@@ -798,6 +798,21 @@
 					"type": "boolean",
 					"default": false,
 					"description": "%settings.debug.description%"
+				},
+				"zgsm.debugProxy.enabled": {
+					"type": "boolean",
+					"default": false,
+					"markdownDescription": "%settings.debugProxy.enabled.description%"
+				},
+				"zgsm.debugProxy.serverUrl": {
+					"type": "string",
+					"default": "http://127.0.0.1:8888",
+					"markdownDescription": "%settings.debugProxy.serverUrl.description%"
+				},
+				"zgsm.debugProxy.tlsInsecure": {
+					"type": "boolean",
+					"default": false,
+					"markdownDescription": "%settings.debugProxy.tlsInsecure.description%"
 				}
 			}
 		}
@@ -852,6 +867,7 @@
 		"fzf": "^0.5.2",
 		"get-folder-size": "^5.0.0",
 		"get-port": "^7.1.0",
+		"global-agent": "^3.0.0",
 		"google-auth-library": "^9.15.1",
 		"gray-matter": "^4.0.3",
 		"i18next": "^25.0.0",
@@ -900,6 +916,7 @@
 		"tree-sitter-wasms": "^0.1.12",
 		"turndown": "^7.2.0",
 		"uri-js": "^4.4.1",
+		"undici": "^6.21.3",
 		"uuid": "^11.1.0",
 		"vscode-material-icons": "^0.1.1",
 		"web-tree-sitter": "^0.25.6",

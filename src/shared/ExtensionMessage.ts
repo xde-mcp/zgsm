@@ -322,6 +322,7 @@ export type ExtensionState = Pick<
 	| "includeTaskHistoryInEnhance"
 	| "reasoningBlockCollapsed"
 	| "showSpeedInfo"
+	| "automaticallyFocus"
 	| "errorCode"
 	| "enterBehavior"
 	| "includeCurrentTime"

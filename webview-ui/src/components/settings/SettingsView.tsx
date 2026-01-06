@@ -219,6 +219,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		openRouterImageGenerationSelectedModel,
 		reasoningBlockCollapsed,
 		showSpeedInfo,
+		automaticallyFocus,
 		enterBehavior,
 		includeCurrentTime,
 		includeCurrentCost,
@@ -421,6 +422,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					includeTaskHistoryInEnhance: includeTaskHistoryInEnhance ?? true,
 					reasoningBlockCollapsed: reasoningBlockCollapsed ?? true,
 					showSpeedInfo: showSpeedInfo ?? false,
+					automaticallyFocus: automaticallyFocus ?? false,
 					enterBehavior: enterBehavior ?? "send",
 					includeCurrentTime: includeCurrentTime ?? true,
 					includeCurrentCost: includeCurrentCost ?? true,
@@ -893,6 +895,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 						<UISettings
 							reasoningBlockCollapsed={reasoningBlockCollapsed ?? true}
 							showSpeedInfo={showSpeedInfo ?? false}
+							automaticallyFocus={automaticallyFocus ?? false}
 							enterBehavior={enterBehavior ?? "send"}
 							apiConfiguration={apiConfiguration}
 							setCachedStateField={setCachedStateField}

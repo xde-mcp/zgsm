@@ -997,6 +997,10 @@
 			"label": "顯示速度資訊",
 			"description": "啟用後，在訊息中顯示 token 生成速度指標"
 		},
+		"automaticallyFocus": {
+			"label": "自動聚焦",
+			"description": "視窗重新獲得焦點時自動聚焦到文字框"
+		},
 		"requireCtrlEnterToSend": {
 			"label": "需要 {{primaryMod}}+Enter 傳送訊息",
 			"description": "啟用後，必須按 {{primaryMod}}+Enter 傳送訊息，而不只是 Enter"

@@ -29,7 +29,6 @@ const mapModeToDisplay = (mode: ExtensionState["zgsmCodeMode"]): "vibe" | "plan"
 const SwitchContainer = styled.div<{ disabled: boolean }>`
 	display: flex;
 	align-items: center;
-	background-color: transparent;
 	border: 1px solid var(--vscode-input-border);
 	border-radius: 12px;
 	overflow: hidden;

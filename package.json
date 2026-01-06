@@ -64,6 +64,7 @@
 			"glob": ">=11.1.0"
 		},
 		"onlyBuiltDependencies": [
+			"@vscode/ripgrep",
 			"@tailwindcss/oxide",
 			"@vscode/vsce-sign",
 			"better-sqlite3",

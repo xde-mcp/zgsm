@@ -240,7 +240,7 @@ export const ModelPicker = ({
 
 	return (
 		<>
-			<div>
+			<div className="opacity-90 hover:opacity-100 bg-vscode-input-background hover:border-[rgba(255,255,255,0.15)] cursor-pointer">
 				{showLabel && <label className="block font-medium mb-1">{t("settings:modelPicker.label")}</label>}
 				<Popover open={open} onOpenChange={onOpenChange}>
 					{tooltip ? (

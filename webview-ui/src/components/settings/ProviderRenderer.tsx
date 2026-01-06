@@ -253,7 +253,7 @@ const ProviderRenderer: React.FC<ProviderRendererProps> = ({
 								}}>
 								<SelectTrigger
 									className={cn(
-										"rounded-md w-full h-6 px-1.5 opacity-90 hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
+										"rounded-md w-full h-6 px-1.5 opacity-90 hover:opacity-100 bg-vscode-input-background hover:border-[rgba(255,255,255,0.15)]",
 									)}
 									showIcon={false}>
 									<span className=" overflow-hidden text-ellipsis whitespace-nowrap">

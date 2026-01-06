@@ -71,6 +71,10 @@
 			"label": "Show speed info",
 			"description": "When enabled, shows token generation speed metrics in messages"
 		},
+		"automaticallyFocus": {
+			"label": "Automatically focus",
+			"description": "Automatically focus on the text box when the window regains focus"
+		},
 		"requireCtrlEnterToSend": {
 			"label": "Require {{primaryMod}}+Enter to send messages",
 			"description": "When enabled, you must press {{primaryMod}}+Enter to send messages instead of just Enter"

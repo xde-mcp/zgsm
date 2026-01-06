@@ -139,6 +139,7 @@ import { AutoApprovalHandler, checkAutoApproval } from "../auto-approval"
 import psTree from "ps-tree"
 import { MessageManager } from "../message-manager"
 import { validateAndFixToolResultIds } from "./validateToolResultIds"
+import { fixNativeToolname } from "../../utils/fixNativeToolname"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
@@ -1127,7 +1128,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					// state.
 					askTs = Date.now()
 					this.lastMessageTs = askTs
-					console.log(`Task#ask: new partial ask -> ${type} @ ${askTs}`)
 					await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, partial, isProtected })
 					// console.log("Task#ask: current ask promise was ignored (#2)")
 					throw new AskIgnoredError("new partial")
@@ -1152,7 +1152,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					// So in this case we must make sure that the message ts is
 					// never altered after first setting it.
 					askTs = lastMessage.ts
-					console.log(`Task#ask: updating previous partial ask -> ${type} @ ${askTs}`)
 					this.lastMessageTs = askTs
 					lastMessage.text = text
 					lastMessage.partial = false
@@ -1166,7 +1165,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					this.askResponseText = undefined
 					this.askResponseImages = undefined
 					askTs = Date.now()
-					console.log(`Task#ask: new complete ask -> ${type} @ ${askTs}`)
 					this.lastMessageTs = askTs
 					await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, isProtected })
 				}
@@ -1177,7 +1175,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			this.askResponseText = undefined
 			this.askResponseImages = undefined
 			askTs = Date.now()
-			console.log(`Task#ask: new complete ask -> ${type} @ ${askTs}`)
 			this.lastMessageTs = askTs
 			await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, isProtected })
 		}
@@ -1207,15 +1204,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// block (via the `pWaitFor`).
 		const isBlocking = !(this.askResponse !== undefined || this.lastMessageTs !== askTs)
 		const isMessageQueued = !this.messageQueueService.isEmpty()
-
 		const isStatusMutable = !partial && isBlocking && !isMessageQueued && approval.decision === "ask"
 
-		if (isBlocking) {
-			console.log(`Task#ask will block -> type: ${type}`)
-		}
-
 		if (isStatusMutable) {
-			console.log(`Task#ask: status is mutable -> type: ${type}`)
 			const statusMutationTimeout = 2_000
 
 			if (isInteractiveAsk(type)) {
@@ -1254,8 +1245,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				)
 			}
 		} else if (isMessageQueued) {
-			console.log(`Task#ask: will process message queue -> type: ${type}`)
-
 			const message = this.messageQueueService.dequeueMessage()
 
 			if (message) {
@@ -1317,7 +1306,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			// Could happen if we send multiple asks in a row i.e. with
 			// command_output. It's important that when we know an ask could
 			// fail, it is handled gracefully.
-			console.log("Task#ask: current ask promise was ignored")
 			throw new AskIgnoredError("superseded")
 		}
 
@@ -2652,7 +2640,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						// lastMessage.ts = Date.now() DO NOT update ts since it is used as a key for virtuoso list
 						lastMessage.partial = false
 						// instead of streaming partialMessage events, we do a save and post like normal to persist to disk
-						console.log("updating partial message", lastMessage)
 					}
 
 					// Update `api_req_started` to have cancelled and cost, so that
@@ -2811,7 +2798,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 										// Create initial partial tool use
 										const partialToolUse: ToolUse = {
 											type: "tool_use",
-											name: event.name as ToolName,
+											name: fixNativeToolname(event.name as ToolName),
 											params: {},
 											partial: true,
 										}
@@ -3978,6 +3965,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			autoCondenseContextPercent = 100,
 			profileThresholds = {},
 			showSpeedInfo = false,
+			automaticallyFocus = false,
 		} = state ?? {}
 
 		// Get condensing configuration for automatic triggers.

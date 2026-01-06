@@ -12,6 +12,7 @@ import { ExtensionStateContextType } from "@/context/ExtensionStateContext"
 interface UISettingsProps extends HTMLAttributes<HTMLDivElement> {
 	reasoningBlockCollapsed: boolean
 	showSpeedInfo: boolean
+	automaticallyFocus: boolean
 	enterBehavior: "send" | "newline"
 	apiConfiguration?: any
 	setCachedStateField: SetCachedStateField<keyof ExtensionStateContextType>
@@ -20,6 +21,7 @@ interface UISettingsProps extends HTMLAttributes<HTMLDivElement> {
 export const UISettings = ({
 	reasoningBlockCollapsed,
 	showSpeedInfo,
+	automaticallyFocus,
 	enterBehavior,
 	apiConfiguration,
 	setCachedStateField,
@@ -49,6 +51,15 @@ export const UISettings = ({
 		// Track telemetry event
 		telemetryClient.capture("ui_settings_show_speed_info_changed", {
 			enabled: showSpeedInfo,
+		})
+	}
+	// automaticallyFocus
+	const handleAutomaticallyFocusChange = (automaticallyFocus: boolean) => {
+		setCachedStateField("automaticallyFocus", automaticallyFocus)
+
+		// Track telemetry event
+		telemetryClient.capture("ui_settings_automatically_focus_changed", {
+			enabled: automaticallyFocus,
 		})
 	}
 
@@ -100,6 +111,18 @@ export const UISettings = ({
 							</div>
 						</div>
 					)}
+					{/* Show Speed Info Setting */}
+					<div className="flex flex-col gap-1">
+						<VSCodeCheckbox
+							checked={automaticallyFocus}
+							onChange={(e: any) => handleAutomaticallyFocusChange(e.target.checked)}
+							data-testid="show-speed-info-checkbox">
+							<span className="font-medium">{t("settings:ui.automaticallyFocus.label")}</span>
+						</VSCodeCheckbox>
+						<div className="text-vscode-descriptionForeground text-sm ml-5 mt-1">
+							{t("settings:ui.automaticallyFocus.description")}
+						</div>
+					</div>
 					{/* Enter Key Behavior Setting */}
 					<div className="flex flex-col gap-1">
 						<VSCodeCheckbox

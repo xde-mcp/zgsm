@@ -95,6 +95,7 @@ function getOrCreateRenamedTool(
  */
 export function resolveToolAlias(toolName: string): string {
 	const canonical = ALIAS_TO_CANONICAL.get(toolName)
+
 	return canonical ?? toolName
 }
 

@@ -5,7 +5,7 @@
 		"wantsToFetch": "CoStrict 想要獲取詳細指令以協助當前任務"
 	},
 	"about": "企業嚴肅開發的AI智慧夥伴",
-	"error": "CoStrict 將自動修復",
+	"error": "CoStrict 將自動規劃下一步處理",
 	"text": {
 		"rooSaid": "CoStrict 說"
 	},

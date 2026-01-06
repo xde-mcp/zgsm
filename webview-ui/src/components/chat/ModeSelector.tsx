@@ -221,7 +221,7 @@ export const ModeSelector = ({
 						"transition-all duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder focus-visible:ring-inset",
 						disabled
 							? "opacity-50 cursor-not-allowed"
-							: "opacity-90 hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)] cursor-pointer",
+							: "opacity-90 hover:opacity-100 bg-vscode-input-background hover:border-[rgba(255,255,255,0.15)] cursor-pointer",
 						triggerClassName,
 						!disabled && !hasOpenedModeSelector
 							? "bg-primary opacity-90 hover:bg-primary-hover text-vscode-button-foreground"
@@ -232,7 +232,7 @@ export const ModeSelector = ({
 							Review...
 						</span>
 					) : (
-						<span className="truncate">
+						<span className="truncate bg-vscode-input-background">
 							{selectedMode?.name || t("chat:selectMode")}
 							{selectedMode?.name ? ` (${zgsmCodeMode})` : ""}
 						</span>

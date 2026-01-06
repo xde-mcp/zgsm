@@ -6,6 +6,7 @@ describe("UISettings", () => {
 	const defaultProps = {
 		reasoningBlockCollapsed: false,
 		showSpeedInfo: false,
+		automaticallyFocus: false,
 		apiConfiguration: {
 			apiProvider: "zgsm",
 		},

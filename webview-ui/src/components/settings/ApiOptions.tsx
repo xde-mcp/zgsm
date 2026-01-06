@@ -153,7 +153,7 @@ const ApiOptions = ({
 	setCachedStateField,
 }: ApiOptionsProps) => {
 	const { t } = useAppTranslation()
-	const { setZgsmCodeMode, organizationAllowList, claudeCodeIsAuthenticated /* cloudIsAuthenticated */ } =
+	const { setZgsmCodeMode, organizationAllowList, claudeCodeIsAuthenticated /* cloudIsAuthenticated */, debug } =
 		useExtensionState()
 
 	const [customHeaders, setCustomHeaders] = useState<[string, string][]>(() => {
@@ -565,6 +565,7 @@ const ApiOptions = ({
 			{errorMessage && <ApiErrorMessage errorMessage={errorMessage} />}
 			{!fromWelcomeView && selectedProvider === "zgsm" && (
 				<ZgsmAI
+					debug={debug}
 					fromWelcomeView={fromWelcomeView}
 					apiConfiguration={apiConfiguration}
 					setApiConfigurationField={setApiConfigurationField}
