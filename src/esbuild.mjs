@@ -31,8 +31,8 @@ async function main() {
 		platform: "node",
 		define: {
 			"process.env.NODE_ENV": production ? '"production"' : '"development"',
-			"process.env.ZGSM_BASE_URL": JSON.stringify(process.env.ZGSM_BASE_URL || ""),
-			"process.env.ZGSM_PUBLIC_KEY": JSON.stringify(process.env.ZGSM_PUBLIC_KEY || ""),
+			"process.env.COSTRICT_BASE_URL": JSON.stringify(process.env.COSTRICT_BASE_URL || ""),
+			"process.env.COSTRICT_PUBLIC_KEY": JSON.stringify(process.env.COSTRICT_PUBLIC_KEY || process.env.ZGSM_PUBLIC_KEY || ""),
 		},
 		banner: {
 			js: networkInterfacesCompatible,

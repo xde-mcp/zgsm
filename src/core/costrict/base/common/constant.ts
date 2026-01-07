@@ -207,6 +207,6 @@ export const OPENAI_REQUEST_ABORTED = "Request was aborted"
 
 export const NOT_PROVIDERED = "not-provided"
 
-export const ZGSM_API_KEY = "zgsmRefreshToken" // zgsmRefreshToken
-export const ZGSM_BASE_URL = "zgsmBaseUrl"
-export const ZGSM_COMPLETION_URL = "zgsmCompletionUrl"
+export const COSTRICT_API_KEY = "zgsmRefreshToken" // zgsmRefreshToken
+export const COSTRICT_BASE_URL = "zgsmBaseUrl"
+export const COSTRICT_COMPLETION_URL = "zgsmCompletionUrl"

@@ -26,7 +26,7 @@ export class ZgsmAuthConfig {
 	 * Get default API base URL
 	 */
 	public getDefaultApiBaseUrl(): string {
-		return "https://zgsm.sangfor.com"
+		return process.env.COSTRICT_BASE_URL || "https://zgsm.sangfor.com"
 	}
 
 	/**

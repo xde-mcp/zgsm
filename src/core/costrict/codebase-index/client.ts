@@ -68,7 +68,7 @@ export class CodebaseIndexClient {
 		this.logger = createLogger(Package.outputChannel)
 		this.config = {
 			downloadTimeout: config.downloadTimeout || 30_000,
-			publicKey: config.publicKey || process.env.ZGSM_PUBLIC_KEY!,
+			publicKey: config.publicKey || process.env.COSTRICT_PUBLIC_KEY! || process.env.ZGSM_PUBLIC_KEY!,
 			getLocalVersion: config.getLocalVersion,
 		}
 
