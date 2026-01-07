@@ -79,6 +79,8 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 				})
 			}
 
+			// Check if this is a background command (ends with &)
+			const isBackgroundCommand = /&\s*(#.*)?$/.test(command.trim())
 			const rawStream = this.subprocess.iterable({ from: "all", preserveNewlines: true })
 			const decoder = new TextDecoder("utf-8")
 			const stream = (async function* () {
@@ -92,7 +94,20 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 			})()
 
 			await this.terminal.setActiveStream(stream, Promise.resolve(this.pid))
+
 			let outputIndex = 0
+			if (isBackgroundCommand) {
+				delay(10_000).then(() => {
+					if (this.aborted || outputIndex > 0) {
+						return
+					}
+
+					const warning = `background command running [${command.length > 30 ? `${command.slice(0, 30)}...` : command}]\n`
+					this.emit("line", warning)
+					this.startHotTimer(warning)
+				})
+			}
+
 			for await (const line of stream) {
 				if (this.aborted) {
 					break

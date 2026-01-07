@@ -1438,7 +1438,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							<ProviderRenderer
 								isEditMode={isEditMode}
 								isStreaming={isStreaming}
-								className="min-w-12 text-ellipsis overflow-hidden flex-shrink"
+								className="min-w-12 text-ellipsis overflow-hidden flex-shrink bg-vscode-input-background"
 								selectedProvider={apiConfiguration.apiProvider || "zgsm"}
 								apiConfiguration={apiConfiguration}
 								organizationAllowList={organizationAllowList}

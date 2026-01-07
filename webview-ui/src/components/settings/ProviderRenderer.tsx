@@ -213,6 +213,7 @@ const ProviderRenderer: React.FC<ProviderRendererProps> = ({
 		<div className={cn(className, config?.modelIdKey || selectedProviderModels.length > 0 ? "" : "hidden")}>
 			{config?.modelIdKey ? (
 				<ModelPicker
+					isChatBox={true}
 					modelPickerId={isEditMode ? "modelPickerEdit" : "modelPicker"}
 					apiConfiguration={apiConfiguration}
 					setApiConfigurationField={setApiConfigurationField}

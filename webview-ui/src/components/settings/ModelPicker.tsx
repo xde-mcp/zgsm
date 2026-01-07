@@ -62,6 +62,7 @@ interface ModelPickerProps {
 	errorMessage?: string
 	showInfoView?: boolean
 	showLabel?: boolean
+	isChatBox?: boolean
 	isStreaming?: boolean
 	triggerClassName?: string
 	popoverContentClassName?: string
@@ -72,6 +73,7 @@ interface ModelPickerProps {
 }
 
 export const ModelPicker = ({
+	isChatBox = false,
 	modelPickerId = "",
 	defaultModelId,
 	models,
@@ -240,7 +242,8 @@ export const ModelPicker = ({
 
 	return (
 		<>
-			<div className="opacity-90 hover:opacity-100 bg-vscode-input-background hover:border-[rgba(255,255,255,0.15)] cursor-pointer">
+			<div
+				className={`opacity-90 hover:opacity-100 ${isChatBox ? "bg-vscode-input-background" : ""} hover:border-[rgba(255,255,255,0.15)] cursor-pointer`}>
 				{showLabel && <label className="block font-medium mb-1">{t("settings:modelPicker.label")}</label>}
 				<Popover open={open} onOpenChange={onOpenChange}>
 					{tooltip ? (
