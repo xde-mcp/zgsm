@@ -17,9 +17,29 @@ vi.mock("vscode", () => ({
 	window: {
 		showInformationMessage: vi.fn(),
 		showErrorMessage: vi.fn(),
+		createOutputChannel: vi.fn().mockReturnValue({
+			appendLine: vi.fn(),
+			append: vi.fn(),
+			clear: vi.fn(),
+			show: vi.fn(),
+			hide: vi.fn(),
+			dispose: vi.fn(),
+		}),
+		createTextEditorDecorationType: vi.fn().mockReturnValue({
+			dispose: vi.fn(),
+		}),
 	},
 	workspace: {
 		workspaceFolders: [{ uri: { fsPath: "/mock/workspace" } }],
+	},
+	extensions: {
+		getExtension: vi.fn().mockReturnValue({
+			extensionUri: { fsPath: "/mock/extension/path", path: "/mock/extension/path" },
+		}),
+	},
+	env: {
+		uriScheme: "vscode",
+		language: "en",
 	},
 }))
 

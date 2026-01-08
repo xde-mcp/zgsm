@@ -18,7 +18,7 @@ export const renderModes = {
 
 export function getApiResponseRenderMode() {
 	if (isJetbrainsPlatform()) {
-		return renderModes.fast
+		return renderModes.slow
 	}
 	const apiResponseRenderMode = vscode.workspace
 		.getConfiguration("zgsm")

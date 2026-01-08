@@ -43,6 +43,14 @@ vi.mock("vscode", () => {
 			createTextEditorDecorationType: vi.fn().mockReturnValue({
 				dispose: vi.fn(),
 			}),
+			createOutputChannel: vi.fn().mockReturnValue({
+				appendLine: vi.fn(),
+				append: vi.fn(),
+				clear: vi.fn(),
+				show: vi.fn(),
+				hide: vi.fn(),
+				dispose: vi.fn(),
+			}),
 			visibleTextEditors: [mockTextEditor],
 			tabGroups: {
 				all: [mockTabGroup],
@@ -70,6 +78,11 @@ vi.mock("vscode", () => {
 				stat: vi.fn().mockResolvedValue({ type: 1 }),
 			},
 			onDidSaveTextDocument: vi.fn(() => mockDisposable),
+		},
+		extensions: {
+			getExtension: vi.fn().mockReturnValue({
+				extensionUri: { fsPath: "/mock/extension/path", path: "/mock/extension/path" },
+			}),
 		},
 		env: {
 			uriScheme: "vscode",
