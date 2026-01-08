@@ -897,8 +897,10 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							showSpeedInfo={showSpeedInfo ?? false}
 							automaticallyFocus={automaticallyFocus ?? false}
 							enterBehavior={enterBehavior ?? "send"}
+							experiments={experiments}
 							apiConfiguration={apiConfiguration}
 							setCachedStateField={setCachedStateField}
+							setExperimentEnabled={setExperimentEnabled}
 						/>
 					)}
 

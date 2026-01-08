@@ -365,7 +365,7 @@ export const ZgsmAI = ({
 								}}
 								modelInfo={{
 									...(apiConfiguration.zgsmAiCustomModelInfo || zgsmModels.default),
-									supportsReasoningEffort: true,
+									supportsReasoningEffort: ["low", "medium", "high", "xhigh"],
 								}}
 							/>
 						)}

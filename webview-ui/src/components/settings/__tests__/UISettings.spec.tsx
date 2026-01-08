@@ -11,7 +11,9 @@ describe("UISettings", () => {
 			apiProvider: "zgsm",
 		},
 		enterBehavior: "send" as const,
+		experiments: {},
 		setCachedStateField: vi.fn(),
+		setExperimentEnabled: vi.fn(),
 	}
 
 	it("renders the collapse thinking checkbox", () => {

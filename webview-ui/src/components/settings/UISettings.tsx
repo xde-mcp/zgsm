@@ -3,8 +3,10 @@ import { useAppTranslation } from "@/i18n/TranslationContext"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { Glasses } from "lucide-react"
 import { telemetryClient } from "@/utils/TelemetryClient"
+import type { Experiments } from "@roo-code/types"
+import { EXPERIMENT_IDS } from "@roo/experiments"
 
-import { SetCachedStateField } from "./types"
+import { SetCachedStateField, SetExperimentEnabled } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import { ExtensionStateContextType } from "@/context/ExtensionStateContext"
@@ -14,8 +16,10 @@ interface UISettingsProps extends HTMLAttributes<HTMLDivElement> {
 	showSpeedInfo: boolean
 	automaticallyFocus: boolean
 	enterBehavior: "send" | "newline"
+	experiments: Experiments
 	apiConfiguration?: any
 	setCachedStateField: SetCachedStateField<keyof ExtensionStateContextType>
+	setExperimentEnabled: SetExperimentEnabled
 }
 
 export const UISettings = ({
@@ -23,8 +27,10 @@ export const UISettings = ({
 	showSpeedInfo,
 	automaticallyFocus,
 	enterBehavior,
+	experiments,
 	apiConfiguration,
 	setCachedStateField,
+	setExperimentEnabled,
 	...props
 }: UISettingsProps) => {
 	const { t } = useAppTranslation()
@@ -70,6 +76,15 @@ export const UISettings = ({
 		// Track telemetry event
 		telemetryClient.capture("ui_settings_enter_behavior_changed", {
 			behavior: newBehavior,
+		})
+	}
+
+	const handleChatSearchChange = (enabled: boolean) => {
+		setExperimentEnabled(EXPERIMENT_IDS.CHAT_SEARCH, enabled)
+
+		// Track telemetry event
+		telemetryClient.capture("ui_settings_chat_search_changed", {
+			enabled,
 		})
 	}
 
@@ -135,6 +150,18 @@ export const UISettings = ({
 						</VSCodeCheckbox>
 						<div className="text-vscode-descriptionForeground text-sm ml-5 mt-1">
 							{t("settings:ui.requireCtrlEnterToSend.description", { primaryMod })}
+						</div>
+					</div>
+					{/* Chat Search Setting */}
+					<div className="flex flex-col gap-1">
+						<VSCodeCheckbox
+							checked={experiments[EXPERIMENT_IDS.CHAT_SEARCH] ?? false}
+							onChange={(e: any) => handleChatSearchChange(e.target.checked)}
+							data-testid="chat-search-checkbox">
+							<span className="font-medium">{t("settings:experimental.CHAT_SEARCH.name")}</span>
+						</VSCodeCheckbox>
+						<div className="text-vscode-descriptionForeground text-sm ml-5 mt-1">
+							{t("settings:experimental.CHAT_SEARCH.description")}
 						</div>
 					</div>
 				</div>

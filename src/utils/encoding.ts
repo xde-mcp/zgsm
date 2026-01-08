@@ -242,7 +242,6 @@ export async function isBinaryFileWithEncodingDetection(filePath: string, size?:
 	} catch (error) {
 		// File read error, assume it's binary
 		return false
-		return true
 	}
 }
 
