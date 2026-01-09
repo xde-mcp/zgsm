@@ -600,7 +600,10 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 				}
 				const now = Date.now()
 				// Process in batch when threshold is reached
-				if (time + this.apiResponseRenderModeInfo.interval <= now) {
+				if (
+					time + this.apiResponseRenderModeInfo.interval <= now &&
+					contentBuffer.length >= this.apiResponseRenderModeInfo.limit
+				) {
 					const batchedContent = contentBuffer.join("")
 					for (const processedChunk of matcher.update(batchedContent)) {
 						if (this.abortController?.signal.aborted) {

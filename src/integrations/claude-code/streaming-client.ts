@@ -166,7 +166,7 @@ export const CLAUDE_CODE_API_CONFIG = {
 		"interleaved-thinking-2025-05-14",
 		"fine-grained-tool-streaming-2025-05-14",
 	],
-	userAgent: `Costrict/${Package.version}`,
+	userAgent: "claude-cli/2.1.2 (external, cli)",
 } as const
 
 /**

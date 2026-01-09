@@ -1,24 +1,30 @@
 import * as vscode from "vscode"
 import { isJetbrainsPlatform } from "../../../utils/platform"
 
+const isJetbrains = isJetbrainsPlatform()
+
 export const renderModes = {
 	noLimit: {
+		limit: 0,
 		interval: 5,
 	},
 	fast: {
-		interval: 10,
+		limit: isJetbrains ? 2 : 1,
+		interval: isJetbrains ? 30 : 15,
 	},
 	medium: {
-		interval: 20,
+		limit: isJetbrains ? 3 : 1,
+		interval: isJetbrains ? 60 : 30,
 	},
 	slow: {
-		interval: 40,
+		limit: isJetbrains ? 4 : 1,
+		interval: isJetbrains ? 100 : 60,
 	},
 }
 
 export function getApiResponseRenderMode() {
-	if (isJetbrainsPlatform()) {
-		return renderModes.slow
+	if (isJetbrains) {
+		return renderModes.medium
 	}
 	const apiResponseRenderMode = vscode.workspace
 		.getConfiguration("zgsm")

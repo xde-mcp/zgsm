@@ -329,7 +329,7 @@ export class ExtensionHost extends EventEmitter {
 
 		// Update vscode-shim runtime configuration so
 		// vscode.workspace.getConfiguration() returns correct values.
-		setRuntimeConfigValues("roo-cline", settings as Record<string, unknown>)
+		setRuntimeConfigValues("zgsm", settings as Record<string, unknown>)
 	}
 
 	/**

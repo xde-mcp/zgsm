@@ -88,6 +88,7 @@ export async function activate(
 	outputChannel: vscode.OutputChannel,
 ) {
 	const isJetbrains = isJetbrainsPlatform()
+	const isVscodePlatform = !isJetbrains && !isCliPatform()
 	const logger = createLogger(Package.outputChannel)
 	initErrorCodeManager(provider)
 	initGitCheckoutDetector(context, logger)
@@ -95,7 +96,7 @@ export async function activate(
 	startIPCServer()
 	connectIPC()
 
-	if (!isJetbrains && !isCliPatform()) {
+	if (isVscodePlatform) {
 		registerAutoCompletionProvider(context, provider)
 	}
 	const completionStatusBar = CompletionStatusBar.getInstance()
@@ -180,7 +181,7 @@ export async function activate(
 		)
 	}
 
-	if (!isJetbrains) {
+	if (isVscodePlatform) {
 		context.subscriptions.push(
 			// Register function header menu
 			vscode.languages.registerCodeLensProvider("*", new CostrictCodeLensProvider()),
@@ -203,7 +204,7 @@ export async function activate(
 
 	// Get zgsmRefreshToken without webview resolve
 	const tokens = await ZgsmAuthStorage.getInstance().getTokens()
-	if (!isJetbrains) {
+	if (isVscodePlatform) {
 		if (tokens?.access_token) {
 			// CompletionStatusBar.initByConfig()
 			completionStatusBar.setEnableState()
