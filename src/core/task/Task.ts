@@ -2553,20 +2553,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// the user hits max requests and denies resetting the count.
 				break
 			} else {
-				const _nextUserContent = findLast(
-					nextUserContent,
-					(block) => block.type === "text" && typeof block.text === "string",
-				) as { type: string; text: string }
-
 				// Use the task's locked protocol, NOT the current settings (fallback to xml if not set)
 				const content = {
 					type: "text",
-					text: formatResponse.noToolsUsed(this._taskToolProtocol ?? "xml", _nextUserContent?.text),
+					text: formatResponse.noToolsUsed(this._taskToolProtocol ?? "xml"),
 				} as Anthropic.Messages.ContentBlockParam & { __isNoToolsUsed?: boolean }
 
 				Object.defineProperty(content, "__isNoToolsUsed", {
 					value: true,
-					enumerable: false, // 不可枚举，JSON 序列化时会被忽略
+					enumerable: false,
 					writable: false,
 					configurable: false,
 				})
@@ -3436,6 +3431,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							: await this.convertErrorMessage(error, () => {
 									shouldStop = true
 								})
+						if (streamingFailedMessage) {
+							streamingFailedMessage = `${t("common:interruption.streamTerminatedByProvider")}: ${streamingFailedMessage}`
+						}
 						// Clean up partial state
 						await abortStream(cancelReason, streamingFailedMessage)
 
@@ -3693,12 +3691,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					const didToolUse = this.assistantMessageContent.some(
 						(block) => block.type === "tool_use" || block.type === "mcp_tool_use",
 					)
-					const preAssistantMessage =
-						this.assistantMessageContent[0] &&
-						["text", "reasoning"].includes(this.assistantMessageContent[0].type)
-							? (this.assistantMessageContent[0] as any).content ||
-								(this.assistantMessageContent[0] as any).text
-							: undefined
+
 					if (!didToolUse) {
 						// Increment consecutive no-tool-use counter
 						this.consecutiveNoToolUseCount++
@@ -3713,18 +3706,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						// Use the task's locked protocol for consistent behavior
 						const _content = {
 							type: "text",
-							text: formatResponse.noToolsUsed(
-								this._taskToolProtocol ?? "xml",
-								undefined,
-								preAssistantMessage,
-							),
+							text: formatResponse.noToolsUsed(this._taskToolProtocol ?? "xml"),
 						} as (Anthropic.TextBlockParam | Anthropic.ImageBlockParam | Anthropic.ToolResultBlockParam) & {
 							__isNoToolsUsed?: boolean
 						}
 
 						Object.defineProperty(_content, "__isNoToolsUsed", {
 							value: true,
-							enumerable: false, // 不可枚举，JSON 序列化时会被忽略
+							enumerable: false,
 							writable: false,
 							configurable: false,
 						})
@@ -5242,7 +5231,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				pauseHandler?.()
 			}
 		} else {
-			errorMsg = error.message
+			errorMsg = error.message ?? JSON.stringify(serializeError(error), null, 2)
 		}
 
 		return errorMsg

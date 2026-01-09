@@ -62,29 +62,18 @@ export const formatResponse = {
 		return `Access to ${path} is blocked by the .rooignore file settings. You must try to continue in the task without using this file, or ask the user to update the .rooignore file.`
 	},
 
-	noToolsUsed: (protocol?: ToolProtocol, preUserContent?: string, preAssistantMessage?: string) => {
-		return `SYSTEM NOTICE (MUST COMPLY):
+	noToolsUsed: (protocol?: ToolProtocol) => {
+		const instructions = getToolInstructionsReminder(protocol)
 
-In the previous turn, no tool was called.
-This violates a system rule: EVERY assistant turn MUST include at least one tool call.
+		return `[ERROR] You did not use a tool in your previous response! Please retry with a tool use.
+${instructions}
 
-In this turn:
-- You MUST call one appropriate tool.
-- Do NOT explain or justify the previous response.
-- Do NOT repeat previous content.
-- Do NOT respond conversationally.
-- If you have completed the user's task, use the attempt_completion tool.`
-		// const instructions = getToolInstructionsReminder(protocol)
+# Next Steps
 
-		// 		return `[ERROR] You did not use a tool in your previous response! Please retry with a tool use.
-		// ${instructions}
-
-		// # Next Steps
-
-		// If you have completed the user's task, use the attempt_completion tool.
-		// If you require additional information from the user, use the ask_followup_question tool.
-		// Otherwise, if you have not completed the task and do not need additional information, then proceed with the next step of the task.
-		// (This is an automated message, so do not respond to it conversationally.)`
+If you have completed the user's task, use the attempt_completion tool.
+If you require additional information from the user, use the ask_followup_question tool.
+Otherwise, if you have not completed the task and do not need additional information, then proceed with the next step of the task.
+(This is an automated message, so do not respond to it conversationally.)`
 	},
 
 	tooManyMistakes: (feedback?: string, protocol?: ToolProtocol) => {
