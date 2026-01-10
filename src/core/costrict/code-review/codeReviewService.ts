@@ -15,7 +15,7 @@ import * as vscode from "vscode"
 import path from "node:path"
 import type { AxiosRequestConfig } from "axios"
 import { v7 as uuidv7 } from "uuid"
-import { RooCodeEventName, type TaskEvents } from "@roo-code/types"
+import { ExtensionMessage, RooCodeEventName, type TaskEvents } from "@roo-code/types"
 
 import { ReviewTask } from "./types"
 import { updateIssueStatusAPI, getPrompt, reportIssue } from "./api"
@@ -30,7 +30,6 @@ import {
 	ReviewTaskData,
 	ReviewTargetType,
 } from "../../../shared/codeReview"
-import { ExtensionMessage } from "../../../shared/ExtensionMessage"
 import { Package } from "../../../shared/package"
 
 import { createLogger, ILogger } from "../../../utils/logger"

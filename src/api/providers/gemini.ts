@@ -16,16 +16,15 @@ import {
 	geminiModels,
 	ApiProviderError,
 } from "@roo-code/types"
+import { safeJsonParse } from "@roo-code/core"
 import { TelemetryService } from "@roo-code/telemetry"
 
 import type { ApiHandlerOptions } from "../../shared/api"
-import { safeJsonParse } from "../../shared/safeJsonParse"
 
 import { convertAnthropicMessageToGemini } from "../transform/gemini-format"
 import { t } from "i18next"
 import type { ApiStream, GroundingSource } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
-import { handleProviderError } from "./utils/error-handler"
 
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { BaseProvider } from "./base-provider"
@@ -91,10 +90,11 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 			? (this.options.modelMaxTokens ?? maxTokens ?? undefined)
 			: (maxTokens ?? undefined)
 
-		// Only forward encrypted reasoning continuations (thoughtSignature) when we are
-		// using reasoning (thinkingConfig is present). Both effort-based (thinkingLevel)
-		// and budget-based (thinkingBudget) models require this for active loops.
-		const includeThoughtSignatures = Boolean(thinkingConfig)
+		// Gemini 3 validates thought signatures for tool/function calling steps.
+		// We must round-trip the signature when tools are in use, even if the user chose
+		// a minimal thinking level (or thinkingConfig is otherwise absent).
+		const usingNativeTools = Boolean(metadata?.tools && metadata.tools.length > 0)
+		const includeThoughtSignatures = Boolean(thinkingConfig) || usingNativeTools
 
 		// The message list can include provider-specific meta entries such as
 		// `{ type: "reasoning", ... }` that are intended only for providers like
@@ -237,9 +237,10 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 						}>) {
 							// Capture thought signatures so they can be persisted into API history.
 							const thoughtSignature = part.thoughtSignature
-							// Persist encrypted reasoning when using reasoning. Both effort-based
-							// and budget-based models require this for active loops.
-							if (thinkingConfig && thoughtSignature) {
+							// Persist thought signatures so they can be round-tripped in the next step.
+							// Gemini 3 requires this during tool calling; other Gemini thinking models
+							// benefit from it for continuity.
+							if (includeThoughtSignatures && thoughtSignature) {
 								this.lastThoughtSignature = thoughtSignature
 							}
 
@@ -456,10 +457,7 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 	}
 
 	public getThoughtSignature(): string | undefined {
-		// Disabled to prevent "Corrupted thought signature" errors on task resumption.
-		// Gemini thought signatures are session-specific and cannot be reliably reused
-		// across API calls or after task resumption from history.
-		return undefined
+		return this.lastThoughtSignature
 	}
 
 	public getResponseId(): string | undefined {

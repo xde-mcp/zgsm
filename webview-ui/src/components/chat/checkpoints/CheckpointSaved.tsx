@@ -11,9 +11,10 @@ type CheckpointSavedProps = {
 	commitHash: string
 	currentHash?: string
 	checkpoint?: Record<string, unknown>
+	isLast?: boolean
 }
 
-export const CheckpointSaved = ({ checkpoint, currentHash, ...props }: CheckpointSavedProps) => {
+export const CheckpointSaved = ({ checkpoint, currentHash, isLast, ...props }: CheckpointSavedProps) => {
 	const { t } = useTranslation()
 	const isCurrent = currentHash === props.commitHash
 	const [isPopoverOpen, setIsPopoverOpen] = useState(false)
@@ -87,7 +88,7 @@ export const CheckpointSaved = ({ checkpoint, currentHash, ...props }: Checkpoin
 				{isCurrent && <span className="text-muted">({t("chat:checkpoint.current")})</span>}
 			</div>
 			<span
-				className="block w-full h-[2px] mt-[2px] text-xs"
+				className={cn("block w-full h-[2px] mt-[2px] text-xs", isLast && "animate-pulse")}
 				style={{
 					backgroundImage:
 						"linear-gradient(90deg, rgba(0, 188, 255, .65), rgba(0, 188, 255, .65) 80%, rgba(0, 188, 255, 0) 99%)",

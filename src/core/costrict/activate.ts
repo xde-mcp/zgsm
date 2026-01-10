@@ -48,8 +48,7 @@ import { t } from "../../i18n"
 import prettyBytes from "pretty-bytes"
 import { ensureProjectWikiSubtasksExists } from "./wiki/projectWikiHelpers"
 import { isCliPatform, isJetbrainsPlatform } from "../../utils/platform"
-import type { ModelRecord } from "../../shared/api"
-import type { ModelInfo } from "@roo-code/types"
+import type { ModelInfo, ModelRecord } from "@roo-code/types"
 
 const HISTORY_WARN_SIZE = 1000 * 1000 * 1000 * 3
 
@@ -93,7 +92,7 @@ export async function activate(
 	initErrorCodeManager(provider)
 	initGitCheckoutDetector(context, logger)
 	await initialize(provider, logger)
-	startIPCServer()
+	await startIPCServer()
 	connectIPC()
 
 	if (isVscodePlatform) {

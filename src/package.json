@@ -331,7 +331,7 @@
 		"menus": {
 			"editor/context": [
 				{
-					"submenu": "zhuge-shenma",
+					"submenu": "zgsm",
 					"group": "0_chatGpt@1"
 				}
 			],
@@ -352,26 +352,26 @@
 					"when": "!explorerResourceIsFolder"
 				}
 			],
-			"zhuge-shenma": [
+			"zgsm": [
 				{
 					"command": "zgsm.addToContext",
-					"group": "zhuge-shenma@1"
+					"group": "zgsm@1"
 				},
 				{
 					"command": "zgsm.explainCode",
-					"group": "zhuge-shenma@2"
+					"group": "zgsm@2"
 				},
 				{
 					"command": "zgsm.fixCode",
-					"group": "zhuge-shenma@3"
+					"group": "zgsm@3"
 				},
 				{
 					"command": "zgsm.improveCode",
-					"group": "zhuge-shenma@4"
+					"group": "zgsm@4"
 				},
 				{
 					"command": "zgsm.codeReview",
-					"group": "zhuge-shenma@5",
+					"group": "zgsm@5",
 					"when": "editorHasSelection && workbenchState != 'empty'"
 				},
 				{
@@ -534,7 +534,7 @@
 				"label": "%views.contextMenu.label%"
 			},
 			{
-				"id": "zhuge-shenma",
+				"id": "zgsm",
 				"label": "%extension.displayName%"
 			},
 			{
@@ -963,7 +963,6 @@
 		"rimraf": "^6.0.1",
 		"tsup": "^8.4.0",
 		"tsx": "^4.19.3",
-		"typescript": "5.8.3",
 		"vitest": "^3.2.3",
 		"zod-to-ts": "^1.2.0"
 	}

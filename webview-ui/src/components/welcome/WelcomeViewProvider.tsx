@@ -130,8 +130,8 @@ const WelcomeViewProvider = () => {
 								(e.target as HTMLInputElement)) as HTMLInputElement
 							setSelectedProvider(target.value as ProviderOption)
 						}}>
-						<VSCodeRadio value="zgsm" className="flex items-start gap-2 w-full">
-							<div className="flex-1 space-y-1 cursor-pointer w-full">
+						<VSCodeRadio value="zgsm" className="flex items-start gap-2">
+							<div className="flex-1 space-y-1 cursor-pointer">
 								<p className="text-lg font-semibold block -mt-1">
 									{t("welcome:providerSignup.rooCloudProvider")}&nbsp;
 									<VSCodeLink href="https://costrict.ai" className="cursor-pointer">

@@ -1,24 +1,24 @@
 import path from "path"
 import delay from "delay"
-import * as vscode from "vscode"
 import fs from "fs/promises"
 
+import { type ClineSayTool, DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
+
 import { Task } from "../task/Task"
-import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { formatResponse } from "../prompts/responses"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
-import { fileExistsAtPath, createDirectoriesForFile, isFile } from "../../utils/fs"
+import { createDirectoriesForFile, isFile } from "../../utils/fs"
 import { stripLineNumbers, everyLineHasLineNumbers } from "../../integrations/misc/extract-text"
 import { getReadablePath } from "../../utils/path"
 import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 import { unescapeHtmlEntities } from "../../utils/text-normalization"
-import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { convertNewFileToUnifiedDiff, computeDiffStats, sanitizeUnifiedDiff } from "../diff/stats"
-import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
 import { TelemetryService } from "@roo-code/telemetry"
 import { getLanguage } from "../../utils/file"
+
+import { BaseTool, ToolCallbacks } from "./BaseTool"
 
 interface WriteToFileParams {
 	path: string
@@ -40,6 +40,9 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 		const relPath = params.path
 		let newContent = params.content
 
+		if (newContent && newContent === "object") {
+			newContent = JSON.stringify(newContent)
+		}
 		if (!relPath) {
 			task.consecutiveMistakeCount++
 			task.recordToolError("write_to_file")
@@ -69,22 +72,10 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 		let fileExists: boolean
 		const absolutePath = path.resolve(task.cwd, relPath)
 
-		if ((await fileExistsAtPath(absolutePath)) && !(await isFile(absolutePath))) {
-			// throw new Error(`Path "${relPath}" is a directory, not a file. Please provide a file path instead of a directory path.`)
-			await handleError(
-				"writing file",
-				new Error(
-					`Path "${relPath}" is a directory, not a file. Please provide a file path instead of a directory path.`,
-				),
-			)
-			await task.diffViewProvider.reset()
-			return
-		}
-
 		if (task.diffViewProvider.editType !== undefined) {
 			fileExists = task.diffViewProvider.editType === "modify"
 		} else {
-			fileExists = await fileExistsAtPath(absolutePath)
+			fileExists = await isFile(absolutePath)
 			task.diffViewProvider.editType = fileExists ? "modify" : "create"
 		}
 
@@ -128,8 +119,8 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 				state?.experiments ?? {},
 				EXPERIMENT_IDS.PREVENT_FOCUS_DISRUPTION,
 			)
-			const language = await getLanguage(absolutePath)
-			const changedLines = newContent.split("\n").length
+			let language = relPath
+			let changedLines = 0
 			if (isPreventFocusDisruptionEnabled) {
 				task.diffViewProvider.editType = fileExists ? "modify" : "create"
 				if (fileExists) {
@@ -152,6 +143,8 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 				const didApprove = await askApproval("tool", completeMessage, undefined, isWriteProtected)
 
 				if (!didApprove) {
+					language = await getLanguage(absolutePath)
+					changedLines = newContent.split("\n").length
 					TelemetryService.instance.captureCodeReject(language, changedLines)
 					return
 				}
@@ -186,6 +179,8 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 
 				if (!didApprove) {
 					await task.diffViewProvider.revertChanges()
+					language = await getLanguage(absolutePath)
+					changedLines = newContent.split("\n").length
 					TelemetryService.instance.captureCodeReject(language, changedLines)
 					return
 				}
@@ -199,8 +194,6 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 
 			task.didEditFile = true
 
-			TelemetryService.instance.captureCodeAccept(language, changedLines)
-
 			const message = await task.diffViewProvider.pushToolWriteResult(task, task.cwd, !fileExists)
 
 			pushToolResult(message)
@@ -209,7 +202,7 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 			this.resetPartialState()
 
 			task.processQueuedMessages()
-
+			TelemetryService.instance.captureCodeAccept(language, changedLines)
 			return
 		} catch (error) {
 			await handleError("writing file", error as Error)
@@ -243,19 +236,10 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 		let fileExists: boolean
 		const absolutePath = path.resolve(task.cwd, relPath!)
 
-		if ((await fileExistsAtPath(absolutePath)) && !(await isFile(absolutePath))) {
-			provider?.log(
-				`Path "${relPath}" is a directory, not a file. Please provide a file path instead of a directory path.`,
-				"info",
-				"WriteToFileTool",
-			)
-			return
-		}
-
 		if (task.diffViewProvider.editType !== undefined) {
 			fileExists = task.diffViewProvider.editType === "modify"
 		} else {
-			fileExists = await fileExistsAtPath(absolutePath)
+			fileExists = await isFile(absolutePath)
 			task.diffViewProvider.editType = fileExists ? "modify" : "create"
 		}
 

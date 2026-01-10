@@ -2,20 +2,24 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "
 import { useSize } from "react-use"
 import { useTranslation, Trans } from "react-i18next"
 import deepEqual from "fast-deep-equal"
-import { VSCodeBadge, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react"
 import { type SearchResult } from "./hooks/useChatSearch"
+import { VSCodeBadge, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react"
+
 import type {
 	ClineMessage,
 	FollowUpData,
+	SuggestionItem,
+	ClineApiReqInfo,
+	ClineAskUseMcpServer,
+	ClineSayTool,
 	MultipleChoiceData,
 	MultipleChoiceResponse,
-	SuggestionItem,
 } from "@roo-code/types"
+
 import { Mode } from "@roo/modes"
 
-import { ClineApiReqInfo, ClineAskUseMcpServer, ClineSayTool } from "@roo/ExtensionMessage"
 import { COMMAND_OUTPUT_STRING } from "@roo/combineCommandSequences"
-import { safeJsonParse } from "@roo/safeJsonParse"
+import { safeJsonParse } from "@roo/core"
 
 import { useCopyToClipboard } from "@src/utils/clipboard"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
@@ -1701,6 +1705,7 @@ export const ChatRowContent = ({
 					return (
 						<CheckpointSaved
 							ts={message.ts!}
+							isLast={isLast}
 							commitHash={message.text!}
 							currentHash={currentCheckpoint}
 							checkpoint={message.checkpoint}

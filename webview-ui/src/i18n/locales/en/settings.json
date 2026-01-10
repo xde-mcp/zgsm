@@ -57,7 +57,11 @@
 		},
 		"community": "Want tips or to just hang out with other CoStrict users? Contacts CoStrict Assistant on WeChat to join the group",
 		"contactAndCommunity": "Contact & Community",
-		"manageSettings": "Manage Settings"
+		"manageSettings": "Manage Settings",
+		"debugMode": {
+			"label": "Enable debug mode",
+			"description": "Enable debug mode to show additional buttons in the task header for viewing API conversation history and UI messages as prettified JSON in temporary files."
+		}
 	},
 	"slashCommands": {
 		"description": "Manage your slash commands to quickly execute custom workflows and actions. <DocsLink>Learn more</DocsLink>"
@@ -332,7 +336,6 @@
 		"useCustomBaseUrl": "Use custom base URL",
 		"useReasoning": "Enable reasoning",
 		"useHostHeader": "Use custom Host header",
-		"useLegacyFormat": "Use legacy OpenAI API format",
 		"customHeaders": "Custom Headers",
 		"headerName": "Header name",
 		"headerValue": "Header value",

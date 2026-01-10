@@ -1,12 +1,12 @@
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import styled from "styled-components"
 import { cn } from "@src/lib/utils"
-import { type ExtensionState } from "@roo/ExtensionMessage"
 import { StandardTooltip } from "@src/components/ui"
 import { useTranslation } from "react-i18next"
 import { vscode } from "@/utils/vscode"
 import { type ZgsmCodeMode } from "@roo/modes"
 import { useCallback } from "react"
+import { ExtensionState } from "@roo-code/types"
 
 interface ModeSwitchProps {
 	isStreaming?: boolean

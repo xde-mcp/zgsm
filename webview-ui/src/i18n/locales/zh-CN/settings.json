@@ -57,7 +57,11 @@
 		},
 		"community": "想要获取使用技巧或与其他 CoStrict 用户交流？添加 CoStrict 小助手微信进群",
 		"contactAndCommunity": "联系与社区",
-		"manageSettings": "管理设置"
+		"manageSettings": "管理设置",
+		"debugMode": {
+			"label": "启用调试模式",
+			"description": "启用调试模式以在任务标题栏显示额外按钮，用于在临时文件中查看 API 对话历史和 UI 消息的格式化 JSON。"
+		}
 	},
 	"slashCommands": {
 		"description": "管理您的斜杠命令，以快速执行自定义工作流和操作。 <DocsLink>了解更多</DocsLink>"
@@ -280,7 +284,6 @@
 		"useCustomBaseUrl": "使用自定义基础 URL",
 		"useReasoning": "启用推理",
 		"useHostHeader": "使用自定义 Host 标头",
-		"useLegacyFormat": "使用传统 OpenAI API 格式",
 		"customHeaders": "自定义标头",
 		"headerName": "标头名称",
 		"headerValue": "标头值",

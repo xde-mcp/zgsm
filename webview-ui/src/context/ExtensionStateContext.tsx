@@ -10,20 +10,24 @@ import {
 	type TelemetrySetting,
 	type OrganizationAllowList,
 	type CloudOrganizationMembership,
+	type ExtensionMessage,
+	type ExtensionState,
+	type MarketplaceInstalledMetadata,
+	type Command,
+	type McpServer,
+	RouterModels,
 	ORGANIZATION_ALLOW_ALL,
 	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
 	type AutoCleanupSettings,
 	DEFAULT_AUTO_CLEANUP_SETTINGS,
 } from "@roo-code/types"
 
-import { ExtensionMessage, ExtensionState, MarketplaceInstalledMetadata, Command } from "@roo/ExtensionMessage"
 import { findLastIndex } from "@roo/array"
-import { McpServer } from "@roo/mcp"
+
 import { checkExistKey } from "@roo/checkExistApiConfig"
 import { Mode, defaultModeSlug, defaultPrompts, ZgsmCodeMode } from "@roo/modes"
 import { CustomSupportPrompts } from "@roo/support-prompt"
 import { experimentDefault } from "@roo/experiments"
-import { RouterModels } from "@roo/api"
 
 import { vscode } from "@src/utils/vscode"
 import { convertTextMateToHljs } from "@src/utils/textMateToHljs"

@@ -1,10 +1,16 @@
 import path from "path"
 import * as fs from "fs/promises"
+import { isBinaryFile } from "isbinaryfile"
+
 import type { FileEntry, LineRange } from "@roo-code/types"
-import { isNativeProtocol, ANTHROPIC_DEFAULT_MAX_TOKENS, DEFAULT_FILE_READ_CHARACTER_LIMIT } from "@roo-code/types"
+import {
+	type ClineSayTool,
+	isNativeProtocol,
+	ANTHROPIC_DEFAULT_MAX_TOKENS,
+	DEFAULT_FILE_READ_CHARACTER_LIMIT,
+} from "@roo-code/types"
 
 import { Task } from "../task/Task"
-import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { formatResponse } from "../prompts/responses"
 import { getModelMaxOutputTokens } from "../../shared/api"
 import { t } from "../../i18n"
@@ -17,6 +23,8 @@ import { extractTextFromFile, addLineNumbers, getSupportedBinaryFormats } from "
 import { parseSourceCodeDefinitionsForFile } from "../../services/tree-sitter"
 import { parseXml } from "../../utils/xml"
 import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
+import type { ToolUse } from "../../shared/tools"
+
 import {
 	DEFAULT_MAX_IMAGE_FILE_SIZE_MB,
 	DEFAULT_MAX_TOTAL_IMAGE_SIZE_MB,
@@ -28,7 +36,6 @@ import {
 import { FILE_READ_BUDGET_PERCENT, readFileWithTokenBudget } from "./helpers/fileTokenBudget"
 import { truncateDefinitionsToLineLimit } from "./helpers/truncateDefinitions"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
-import type { ToolUse } from "../../shared/tools"
 import { isBinaryFileWithEncodingDetection } from "../../utils/encoding"
 import { handleRooCommandsApprovalSkip } from "../costrict/wiki/utils/rooCommandsUtils"
 

@@ -257,7 +257,6 @@ const vertexSchema = apiModelIdProviderModelSchema.extend({
 const openAiSchema = baseProviderSettingsSchema.extend({
 	openAiBaseUrl: z.string().optional(),
 	openAiApiKey: z.string().optional(),
-	openAiLegacyFormat: z.boolean().optional(),
 	openAiR1FormatEnabled: z.boolean().optional(),
 	openAiModelId: z.string().optional(),
 	openAiCustomModelInfo: modelInfoSchema.nullish(),
@@ -425,7 +424,8 @@ const qwenCodeSchema = apiModelIdProviderModelSchema.extend({
 })
 
 const rooSchema = apiModelIdProviderModelSchema.extend({
-	// No additional fields needed - uses cloud authentication.
+	// Can use cloud authentication or provide an API key (cli).
+	rooApiKey: z.string().optional(),
 })
 
 const vercelAiGatewaySchema = baseProviderSettingsSchema.extend({

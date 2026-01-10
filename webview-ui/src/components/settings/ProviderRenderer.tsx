@@ -12,12 +12,12 @@ import {
 	litellmDefaultModelId,
 	openAiModelInfoSaneDefaults,
 	OrganizationAllowList,
+	ExtensionMessage,
+	RouterModels,
 } from "@roo-code/types"
-import { ExtensionMessage } from "@roo/ExtensionMessage"
 import { useDebounce, useEvent } from "react-use"
 import { vscode } from "@/utils/vscode"
 import { convertHeadersToObject } from "./utils/headers"
-import { RouterModels } from "@roo/api"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, StandardTooltip } from "@src/components/ui"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { useSelectedModel } from "../ui/hooks/useSelectedModel"

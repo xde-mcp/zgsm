@@ -1,21 +1,10 @@
 import axios from "axios"
 import * as vscode from "vscode"
+import type { INotice, INoticesResponse } from "@roo-code/types"
 import { ClineProvider } from "../../webview/ClineProvider"
 import { ZgsmAuthConfig } from "../auth"
 import { t } from "../../../i18n"
 import { getClientId } from "../../../utils/getClientId"
-
-export interface INotice {
-	title: string
-	type: "always" | "once"
-	content: string
-	timestamp: number
-	expired: number
-}
-
-export interface INoticesResponse {
-	notices: INotice[]
-}
 
 export class NotificationService {
 	private provider: ClineProvider | null = null

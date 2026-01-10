@@ -166,7 +166,7 @@ export function getCodelensItems() {
 		} as CodelensItem,
 		shenmaInstructSet: {
 			key: "shenmaInstructSet",
-			actionName: `$(zhuge-shenma-icon)$(chevron-down)`,
+			actionName: `$(zgsm-icon)$(chevron-down)`,
 			tooltip: t("common:command.shenma_instruct_set.tip"),
 			command: getCommand("codelens_more_button"),
 			actionType: "ZGSM_EXPLAIN",

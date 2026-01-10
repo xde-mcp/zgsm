@@ -1,5 +1,7 @@
 import * as net from "net"
+import * as vscode from "vscode"
 import { getIPCPath } from "./utils"
+import { t } from "../../../../i18n"
 
 let client: net.Socket | null = null
 const ipcPath = getIPCPath()
@@ -8,6 +10,9 @@ const onLogoutCallbacks: ((sessionId: string) => void)[] = []
 const onCloseWindowCallbacks: ((sessionId: string) => void)[] = []
 let isConnecting = false
 let retryTimeout: NodeJS.Timeout | null = null
+let retryCount = 0
+const MAX_RETRIES = 10
+const INITIAL_RETRY_DELAY = 3000 // 3 seconds
 
 export function connectIPC() {
 	if (client && !client.destroyed) {
@@ -51,7 +56,7 @@ export function connectIPC() {
 		client?.destroy()
 		client = null
 		isConnecting = false
-		retryTimeout = setTimeout(connectIPC, 5000) // Retry after 5 seconds
+		scheduleRetry()
 	})
 
 	client.on("error", (err: NodeJS.ErrnoException) => {
@@ -61,11 +66,56 @@ export function connectIPC() {
 			client.destroy()
 			client = null
 		}
-		// Don't retry immediately on error to avoid tight loops
-		if (err.code !== "ECONNREFUSED") {
-			retryTimeout = setTimeout(connectIPC, 5000)
+		// Retry on most errors with exponential backoff
+		if (err.code === "ECONNREFUSED" || err.code === "ENOENT") {
+			// Server not ready or socket not created yet - retry with backoff
+			scheduleRetry()
+		} else if (err.code === "EACCES") {
+			// Permission error - don't retry
+			console.error("IPC connection failed due to permission error:", err)
+		} else {
+			// Other errors - retry with backoff
+			scheduleRetry()
 		}
 	})
+
+	function scheduleRetry() {
+		if (retryCount >= MAX_RETRIES) {
+			console.error(`IPC connection: Maximum retries (${MAX_RETRIES}) reached. Giving up.`)
+			showRetryFailedNotification()
+			retryCount = 0
+			return
+		}
+
+		const delay = getRetryDelay(retryCount)
+		retryCount++
+		console.log(`IPC connection: Retrying in ${delay}ms (attempt ${retryCount}/${MAX_RETRIES})`)
+
+		if (retryTimeout) clearTimeout(retryTimeout)
+		retryTimeout = setTimeout(() => {
+			retryTimeout = null
+			connectIPC()
+		}, delay)
+	}
+
+	async function showRetryFailedNotification() {
+		const message = t("common:ipc.connectionFailed")
+		const reloadButton = t("common:ipc.reloadWindow")
+		const retryButton = t("common:ipc.manualRetry")
+		const result = await vscode.window.showErrorMessage(message, reloadButton, retryButton)
+
+		if (result === reloadButton) {
+			vscode.commands.executeCommand("workbench.action.reloadWindow")
+		} else if (result === retryButton) {
+			connectIPC()
+		}
+	}
+
+	function getRetryDelay(attempt: number): number {
+		// Exponential backoff: 1s, 2s, 4s, 8s, 16s, max 30s
+		const delay = Math.min(INITIAL_RETRY_DELAY * Math.pow(2, attempt), 30000)
+		return delay
+	}
 }
 
 export function sendZgsmTokens(tokens: { state: string; access_token: string; refresh_token: string }) {
@@ -149,8 +199,13 @@ export function disconnectIPC() {
 		clearTimeout(retryTimeout)
 		retryTimeout = null
 	}
+	retryCount = 0 // Reset retry count on disconnect
 	if (client) {
 		client.destroy()
 		client = null
 	}
+}
+
+export function resetRetryCount() {
+	retryCount = 0
 }

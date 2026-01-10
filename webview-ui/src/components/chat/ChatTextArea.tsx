@@ -4,10 +4,11 @@ import DynamicTextArea from "react-textarea-autosize"
 import { VolumeX, Image, WandSparkles, SendHorizontal /* MessageSquareX */ } from "lucide-react"
 import { ReviewTaskStatus } from "@roo/codeReview"
 
+import type { ExtensionMessage, RouterModels } from "@roo-code/types"
+
 import { mentionRegex, mentionRegexGlobal, commandRegexGlobal, unescapeSpaces } from "@roo/context-mentions"
 import { WebviewMessage } from "@roo/WebviewMessage"
 import { Mode, getAllModes } from "@roo/modes"
-import { ExtensionMessage } from "@roo/ExtensionMessage"
 
 import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
@@ -38,7 +39,6 @@ import { filterModels } from "../settings/utils/organizationFilters"
 import { useRouterModels } from "../ui/hooks/useRouterModels"
 import { ProviderSettings } from "@roo-code/types"
 import ProviderRenderer from "../settings/ProviderRenderer"
-import { RouterModels } from "@roo/api"
 // import { CloudAccountSwitcher } from "../cloud/CloudAccountSwitcher"
 import { ModeSwitch } from "./ModeSwitch"
 

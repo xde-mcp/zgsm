@@ -9,15 +9,15 @@ export const renderModes = {
 		interval: 5,
 	},
 	fast: {
-		limit: isJetbrains ? 1 : 0,
-		interval: isJetbrains ? 25 : 10,
+		limit: isJetbrains ? 10 : 5,
+		interval: isJetbrains ? 20 : 10,
 	},
 	medium: {
-		limit: isJetbrains ? 2 : 0,
-		interval: isJetbrains ? 50 : 20,
+		limit: isJetbrains ? 20 : 10,
+		interval: isJetbrains ? 40 : 20,
 	},
 	slow: {
-		limit: isJetbrains ? 3 : 0,
+		limit: isJetbrains ? 40 : 20,
 		interval: isJetbrains ? 80 : 40,
 	},
 }

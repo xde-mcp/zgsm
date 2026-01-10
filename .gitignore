@@ -55,3 +55,7 @@ openspec
 
 # Architect plans
 plans/
+
+roo-cli-*.tar.gz*
+zgsm-cli-*.tar.gz*
+cos-cli-*.tar.gz*

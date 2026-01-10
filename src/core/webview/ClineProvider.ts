@@ -36,6 +36,9 @@ import {
 	type CreateTaskOptions,
 	type TokenUsage,
 	type ToolUsage,
+	type ExtensionMessage,
+	type ExtensionState,
+	type MarketplaceInstalledMetadata,
 	RooCodeEventName,
 	requestyDefaultModelId,
 	openRouterDefaultModelId,
@@ -56,7 +59,6 @@ import { Package } from "../../shared/package"
 import { findLast } from "../../shared/array"
 import { supportPrompt, type SupportPromptType } from "../../shared/support-prompt"
 import { GlobalFileNames } from "../../shared/globalFileNames"
-import type { ExtensionMessage, ExtensionState, MarketplaceInstalledMetadata } from "../../shared/ExtensionMessage"
 import { Mode, defaultModeSlug, getModeBySlug, ZgsmCodeMode } from "../../shared/modes"
 import { experimentDefault } from "../../shared/experiments"
 import { formatLanguage } from "../../shared/language"
@@ -518,8 +520,9 @@ export class ClineProvider
 					)
 				}
 			} catch (error) {
-				this.log(`Failed to load full model details for LM Studio: ${error}`)
-				vscode.window.showErrorMessage(error.message)
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				this.log(`Failed to load full model details for LM Studio: ${errorMessage}`)
+				vscode.window.showErrorMessage(errorMessage)
 			}
 		}
 	}
@@ -542,8 +545,9 @@ export class ClineProvider
 				// all running promises will exit as well.
 				await task.abortTask(true)
 			} catch (e) {
+				const errorMessage = e instanceof Error ? e.message : String(e)
 				this.log(
-					`[ClineProvider#removeClineFromStack] abortTask() failed ${task.taskId}.${task.instanceId}: ${e.message}`,
+					`[ClineProvider#removeClineFromStack] abortTask() failed ${task.taskId}.${task.instanceId}: ${errorMessage}`,
 				)
 			}
 
@@ -767,7 +771,7 @@ export class ClineProvider
 				filePath,
 				startLine: Number(params.startLine) + 1 + "",
 				endLine: Number(params.endLine) + 1 + "",
-				selectedText: params.selectedText,
+				selectedText: params.selectedText ?? "",
 			})
 			reviewInstance.createReviewTask(chatMessage, {
 				type: ReviewTargetType.CODE,
@@ -1050,7 +1054,18 @@ export class ClineProvider
 
 					if (profile?.name) {
 						try {
-							await this.activateProviderProfile({ name: profile.name })
+							// Check if the profile has actual API configuration (not just an id).
+							// In CLI mode, the ProviderSettingsManager may return empty default profiles
+							// that only contain 'id' and 'name' fields. Activating such a profile would
+							// overwrite the CLI's working API configuration with empty settings.
+							const fullProfile = await this.providerSettingsManager.getProfile({ name: profile.name })
+							const hasActualSettings = !!fullProfile.apiProvider
+
+							if (hasActualSettings) {
+								await this.activateProviderProfile({ name: profile.name })
+							} else {
+								// The task will continue with the current/default configuration.
+							}
 						} catch (error) {
 							// Log the error but continue with task restoration.
 							this.log(
@@ -1138,19 +1153,22 @@ export class ClineProvider
 			const oldTask = this.clineStack[stackIndex]
 
 			// Abort the old task to stop running processes and mark as abandoned
-			try {
-				await oldTask.abortTask(true)
-			} catch (e) {
-				this.log(
-					`[createTaskWithHistoryItem] abortTask() failed for old task ${oldTask.taskId}.${oldTask.instanceId}: ${e.message}`,
-				)
-			}
+			if (oldTask) {
+				try {
+					await oldTask.abortTask(true)
+				} catch (e) {
+					const errorMessage = e instanceof Error ? e.message : String(e)
+					this.log(
+						`[createTaskWithHistoryItem] abortTask() failed for old task ${oldTask.taskId}.${oldTask.instanceId}: ${errorMessage}`,
+					)
+				}
 
-			// Remove event listeners from the old task
-			const cleanupFunctions = this.taskEventListeners.get(oldTask)
-			if (cleanupFunctions) {
-				cleanupFunctions.forEach((cleanup) => cleanup())
-				this.taskEventListeners.delete(oldTask)
+				// Remove event listeners from the old task
+				const cleanupFunctions = this.taskEventListeners.get(oldTask)
+				if (cleanupFunctions) {
+					cleanupFunctions.forEach((cleanup) => cleanup())
+					this.taskEventListeners.delete(oldTask)
+				}
 			}
 
 			// Replace the task in the stack
@@ -1481,14 +1499,29 @@ export class ClineProvider
 			const profile = listApiConfig.find(({ id }) => id === savedConfigId)
 
 			if (profile?.name) {
-				await this.activateProviderProfile({ name: profile.name })
+				// Check if the profile has actual API configuration (not just an id).
+				// In CLI mode, the ProviderSettingsManager may return empty default profiles
+				// that only contain 'id' and 'name' fields. Activating such a profile would
+				// overwrite the CLI's working API configuration with empty settings.
+				// Skip activation if the profile has no apiProvider set - this indicates
+				// an unconfigured/empty profile.
+				const fullProfile = await this.providerSettingsManager.getProfile({ name: profile.name })
+				const hasActualSettings = !!fullProfile.apiProvider
+
+				if (hasActualSettings) {
+					await this.activateProviderProfile({ name: profile.name })
+				} else {
+					// The task will continue with the current/default configuration.
+				}
+			} else {
+				// The task will continue with the current/default configuration.
 			}
 		} else {
 			// If no saved config for this mode, save current config as default.
-			const currentApiConfigName = this.getGlobalState("currentApiConfigName")
+			const currentApiConfigNameAfter = this.getGlobalState("currentApiConfigName")
 
-			if (currentApiConfigName) {
-				const config = listApiConfig.find((c) => c.name === currentApiConfigName)
+			if (currentApiConfigNameAfter) {
+				const config = listApiConfig.find((c) => c.name === currentApiConfigNameAfter)
 
 				if (config?.id) {
 					await this.providerSettingsManager.setModeConfig(newMode, config.id)
@@ -1734,7 +1767,7 @@ export class ClineProvider
 	}
 
 	async ensureSettingsDirectoryExists(): Promise<string> {
-		const { getSettingsDirectoryPath } = await import("../../utils/storage")
+		const { getSettingsDirectoryPath } = await import("../../utils/storage.js")
 		const globalStoragePath = this.contextProxy.globalStorageUri.fsPath
 		return getSettingsDirectoryPath(globalStoragePath)
 	}
@@ -1812,7 +1845,7 @@ export class ClineProvider
 		const historyItem = history.find((item) => item.id === id)
 
 		if (historyItem) {
-			const { getTaskDirectoryPath } = await import("../../utils/storage")
+			const { getTaskDirectoryPath } = await import("../../utils/storage.js")
 			const globalStoragePath = this.contextProxy.globalStorageUri.fsPath
 			const taskDirPath = await getTaskDirectoryPath(globalStoragePath, id)
 			const apiConversationHistoryFilePath = path.join(taskDirPath, GlobalFileNames.apiConversationHistory)
@@ -1865,7 +1898,7 @@ export class ClineProvider
 	async condenseTaskContext(taskId: string) {
 		let task: Task | undefined
 		for (let i = this.clineStack.length - 1; i >= 0; i--) {
-			if (this.clineStack[i].taskId === taskId) {
+			if (this.clineStack[i]?.taskId === taskId) {
 				task = this.clineStack[i]
 				break
 			}
@@ -2197,7 +2230,7 @@ export class ClineProvider
 		// Check if there's a system prompt override for the current mode
 		const currentMode = mode ?? defaultModeSlug
 		const hasSystemPromptOverride = await this.hasFileBasedSystemPromptOverride(currentMode)
-		const debug = vscode.workspace.getConfiguration(Package.name).get<boolean>("debug", isJetbrainsPlatform())
+		const debug = vscode.workspace.getConfiguration(Package.name).get<boolean>("debug", false)
 		if (!debug) {
 			apiConfiguration.useZgsmCustomConfig = false
 		}
@@ -2348,7 +2381,7 @@ export class ClineProvider
 			debug,
 			claudeCodeIsAuthenticated: await (async () => {
 				try {
-					const { claudeCodeOAuthManager } = await import("../../integrations/claude-code/oauth")
+					const { claudeCodeOAuthManager } = await import("../../integrations/claude-code/oauth.js")
 					return await claudeCodeOAuthManager.isAuthenticated()
 				} catch {
 					return false
@@ -2756,7 +2789,7 @@ export class ClineProvider
 
 	// history
 	async clearHistory() {
-		const { getStorageBasePath } = await import("../../utils/storage")
+		const { getStorageBasePath } = await import("../../utils/storage.js")
 		const basePath = await getStorageBasePath(this.contextProxy.globalStorageUri.fsPath)
 		const taskDir = path.join(basePath, "tasks")
 		await fs.rm(taskDir, { recursive: true, force: true })
@@ -3156,7 +3189,9 @@ export class ClineProvider
 	public async clearTask(): Promise<void> {
 		if (this.clineStack.length > 0) {
 			const task = this.clineStack[this.clineStack.length - 1]
-			console.log(`[clearTask] clearing task ${task.taskId}.${task.instanceId}`)
+			if (task) {
+				console.log(`[clearTask] clearing task ${task.taskId}.${task.instanceId}`)
+			}
 			await this.removeClineFromStack()
 		}
 	}
@@ -3220,11 +3255,11 @@ export class ClineProvider
 			const packageJSON = this.context.extension?.packageJSON
 
 			this._appProperties = {
-				appName: packageJSON?.name ?? Package.name,
+				appName: (packageJSON?.name ?? Package.name) as string,
 				appVersion: packageJSON?.version ?? Package.version,
 				vscodeVersion: vscode.version,
 				platform: process.platform,
-				editorName: getAppName(),
+				editorName: getAppName() as string,
 			}
 		}
 

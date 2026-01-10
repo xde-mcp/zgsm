@@ -1,11 +1,9 @@
 import path from "path"
 import fs from "fs/promises"
 
+import { type ClineSayTool, DEFAULT_WRITE_DELAY_MS, isNativeProtocol } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
-import { readFileWithEncodingDetection } from "../../utils/encoding"
-import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 
-import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { getReadablePath } from "../../utils/path"
 import { Task } from "../task/Task"
 import { ToolUse, RemoveClosingTag, AskApproval, HandleError, PushToolResult } from "../../shared/tools"
@@ -17,9 +15,9 @@ import { parseXmlForDiff } from "../../utils/xml"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { applyDiffTool as applyDiffToolClass } from "./ApplyDiffTool"
 import { computeDiffStats, sanitizeUnifiedDiff } from "../diff/stats"
-import { isNativeProtocol } from "@roo-code/types"
 import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 import { getLanguage } from "../../utils/file"
+import { readFileWithEncodingDetection } from "../../utils/encoding"
 
 interface DiffOperation {
 	path: string

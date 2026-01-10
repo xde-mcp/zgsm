@@ -216,5 +216,10 @@
 	},
 	"notification": {
 		"confirm": "确定"
+	},
+	"ipc": {
+		"connectionFailed": "IPC 连接失败，无法连接到本地服务器",
+		"reloadWindow": "重新加载窗口",
+		"manualRetry": "手动重试"
 	}
 }

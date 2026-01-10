@@ -98,8 +98,7 @@ const features: Feature[] = [
 	{
 		icon: Brain,
 		title: "Model Agnostic",
-		description:
-			"Bring your own keys or use the Roo Code Cloud Provider with access to all top models with no markup.",
+		description: "Bring your own keys or use the Roo Code Router with access to all top models with no markup.",
 	},
 	{
 		icon: Github,

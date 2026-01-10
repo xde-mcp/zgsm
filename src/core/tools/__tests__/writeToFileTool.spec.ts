@@ -234,8 +234,8 @@ describe("writeToFileTool", () => {
 		const isPartial = options.isPartial ?? false
 		const accessAllowed = options.accessAllowed ?? true
 
+		mockedIsFile.mockResolvedValue(fileExists)
 		mockedFileExistsAtPath.mockResolvedValue(fileExists)
-		mockedIsFile.mockResolvedValue(true)
 		mockCline.rooIgnoreController.validateAccess.mockReturnValue(accessAllowed)
 
 		// Create a tool use object
@@ -278,14 +278,14 @@ describe("writeToFileTool", () => {
 		it.skipIf(process.platform === "win32")("detects existing file and sets editType to modify", async () => {
 			await executeWriteFileTool({}, { fileExists: true })
 
-			expect(mockedFileExistsAtPath).toHaveBeenCalledWith(absoluteFilePath)
+			expect(mockedIsFile).toHaveBeenCalledWith(absoluteFilePath)
 			expect(mockCline.diffViewProvider.editType).toBe("modify")
 		})
 
 		it.skipIf(process.platform === "win32")("detects new file and sets editType to create", async () => {
 			await executeWriteFileTool({}, { fileExists: false })
 
-			expect(mockedFileExistsAtPath).toHaveBeenCalledWith(absoluteFilePath)
+			expect(mockedIsFile).toHaveBeenCalledWith(absoluteFilePath)
 			expect(mockCline.diffViewProvider.editType).toBe("create")
 		})
 
@@ -294,11 +294,9 @@ describe("writeToFileTool", () => {
 
 			await executeWriteFileTool({}, { fileExists: true })
 
-			// Even with cached editType, we still need to check if the path is a file, not a directory
-			// So fileExistsAtPath is called as part of the directory check
-			expect(mockedFileExistsAtPath).toHaveBeenCalledWith(absoluteFilePath)
-			// isFile is called to verify the path is a file, not a directory
-			expect(mockedIsFile).toHaveBeenCalledWith(absoluteFilePath)
+			// When editType is cached, isFile is NOT called (the cached value is used instead)
+			expect(mockedIsFile).not.toHaveBeenCalled()
+			expect(mockCline.diffViewProvider.editType).toBe("modify")
 		})
 	})
 

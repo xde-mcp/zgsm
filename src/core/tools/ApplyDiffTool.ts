@@ -4,10 +4,9 @@ import * as vscode from "vscode"
 
 import { readFileWithEncodingDetection } from "../../utils/encoding"
 
+import { type ClineSayTool, DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
-import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 
-import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { getReadablePath } from "../../utils/path"
 import { getDiffLines } from "../../utils/diffLines"
 import { getLanguage } from "../../utils/file"
@@ -20,9 +19,10 @@ import { unescapeHtmlEntities } from "../../utils/text-normalization"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { CodeReviewService } from "../costrict/code-review"
 import { computeDiffStats, sanitizeUnifiedDiff } from "../diff/stats"
-import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
 import { getAppName } from "../../utils/getAppName"
+
+import { BaseTool, ToolCallbacks } from "./BaseTool"
 
 interface ApplyDiffParams {
 	path: string

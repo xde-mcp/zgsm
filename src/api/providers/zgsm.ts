@@ -12,6 +12,7 @@ import {
 	zgsmModelsConfig as zgsmModels,
 	// TOOL_PROTOCOL,
 	isNativeProtocol,
+	ClineApiReqCancelReason,
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
@@ -20,7 +21,6 @@ import { XmlMatcher } from "../../utils/xml-matcher"
 
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { convertToR1Format } from "../transform/r1-format"
-import { convertToSimpleMessages } from "../transform/simple-format"
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
 
@@ -36,7 +36,6 @@ import { Package } from "../../shared/package"
 import { COSTRICT_DEFAULT_HEADERS } from "../../shared/headers"
 import { handleOpenAIError } from "./utils/openai-error-handler"
 import { getModels } from "./fetchers/modelCache"
-import { ClineApiReqCancelReason } from "../../shared/ExtensionMessage"
 import { getEditorType } from "../../utils/getEditorType"
 import { ChatCompletionChunk } from "openai/resources/index.mjs"
 import { convertToZAiFormat } from "../transform/zai-format"
@@ -127,7 +126,6 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 		const { info: modelInfo, reasoning, id: modelId } = this.getModel()
 		const modelUrl = this.baseURL || ZgsmAuthConfig.getInstance().getDefaultApiBaseUrl()
 		const enabledR1Format = this.options.openAiR1FormatEnabled ?? false
-		const enabledLegacyFormat = this.options.openAiLegacyFormat ?? false
 		const isNative = isNativeProtocol(this?.toolProtocol)
 
 		// Cache boolean calculation results
@@ -135,7 +133,6 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 		const isDeepseekReasoner = modelId.includes("deepseek-reasoner")
 		const isMiniMax = modelId.toLowerCase().includes("minimax")
 		const deepseekReasoner = isDeepseekReasoner || enabledR1Format
-		const isArk = modelUrl.includes(".volces.com")
 		const isGrokXAI = this._isGrokXAI(this.baseURL)
 		const isO1Family = modelId.includes("o1") || modelId.includes("o3") || modelId.includes("o4")
 
@@ -170,9 +167,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 					systemPrompt,
 					messages,
 					deepseekReasoner,
-					isArk,
 					isMiniMax,
-					enabledLegacyFormat,
 					modelInfo,
 					isNative,
 				)
@@ -251,7 +246,6 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 					systemPrompt,
 					messages,
 					deepseekReasoner,
-					enabledLegacyFormat,
 					modelInfo,
 					metadata,
 				)
@@ -367,9 +361,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
 		isDeepseekReasoner: boolean,
-		isArk: boolean,
 		isMiniMax: boolean,
-		isLegacyFormat: boolean,
 		modelInfo: ModelInfo,
 		isNative: boolean,
 	): Array<OpenAI.Chat.ChatCompletionMessageParam | Anthropic.Messages.MessageParam> {
@@ -377,8 +369,6 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 		const _mid = modelInfo.id?.toLowerCase()
 		if (isDeepseekReasoner) {
 			convertedMessages = convertToR1Format([{ role: "user", content: systemPrompt }, ...messages])
-		} else if (isArk || isLegacyFormat) {
-			convertedMessages = [{ role: "system", content: systemPrompt }, ...convertToSimpleMessages(messages)]
 		} else if (isNative && (_mid?.includes("glm") || isMiniMax || _mid?.includes("claude"))) {
 			convertedMessages = [
 				{ role: "system", content: systemPrompt },
@@ -487,7 +477,6 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
 		isDeepseekReasoner: boolean,
-		isLegacyFormat: boolean,
 		modelInfo: ModelInfo,
 		metadata?: ApiHandlerCreateMessageMetadata,
 		isNative?: boolean,
@@ -500,9 +489,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 			model: modelId,
 			messages: isDeepseekReasoner
 				? convertToR1Format([{ role: "user", content: systemPrompt }, ...messages])
-				: isLegacyFormat
-					? [systemMessage, ...convertToSimpleMessages(messages)]
-					: [systemMessage, ...convertToOpenAiMessages(messages)],
+				: [systemMessage, ...convertToOpenAiMessages(messages)],
 			...(isNative
 				? {
 						...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
@@ -561,8 +548,15 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 
 		// Use content buffer to reduce matcher.update() calls
 		const contentBuffer: string[] = []
+		// Buffer for tool call events to control rendering speed
+		const toolCallBuffer: Array<
+			| { type: "tool_call_partial"; index: number; id?: string; name?: string; arguments?: string }
+			| { type: "tool_call_end"; id: string }
+		> = []
 		let time = Date.now()
+		let toolCallTime = Date.now()
 		let isPrinted = false
+		let shouldAbort = false
 
 		// Yield selected LLM info if available (for Auto model mode)
 		if (isAuto) {
@@ -581,125 +575,228 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 			finishReason?: ChatCompletionChunk.Choice["finish_reason"]
 			activeToolCallIds?: Set<string>
 		}
-		// chunk
-		for await (const chunk of stream) {
-			// Check if request was aborted
-			if (this.abortController?.signal.aborted) {
-				break
-			}
-			const delta = chunk.choices?.[0]?.delta ?? {}
-			const finishReason = chunk.choices?.[0]?.finish_reason
-			lastDeltaInfo.finishReason = finishReason
-			lastDeltaInfo.delta = delta
-			// Cache content for batch processing
-			if (delta.content) {
-				contentBuffer.push(delta.content)
-				if (isDev && !isPrinted && chunk.model && isAuto) {
-					this.logger.info(`[Current Model]: ${chunk.model}`)
-					isPrinted = true
+
+		// Helper function to flush buffer content
+		const flushBuffer = () => {
+			if (contentBuffer.length > 0) {
+				const batchedContent = contentBuffer.join("")
+				const chunks: any[] = []
+				for (const processedChunk of matcher.update(batchedContent)) {
+					chunks.push(processedChunk)
 				}
-				const now = Date.now()
-				// Process in batch when threshold is reached
-				if (
-					time + this.apiResponseRenderModeInfo.interval <= now &&
-					contentBuffer.length >= this.apiResponseRenderModeInfo.limit
-				) {
-					const batchedContent = contentBuffer.join("")
-					for (const processedChunk of matcher.update(batchedContent)) {
-						if (this.abortController?.signal.aborted) {
+				contentBuffer.length = 0 // Clear buffer
+				return chunks
+			}
+			return []
+		}
+
+		// Helper function to flush tool call buffer
+		const flushToolCallBuffer = () => {
+			if (toolCallBuffer.length > 0) {
+				const events = [...toolCallBuffer]
+				toolCallBuffer.length = 0
+				return events
+			}
+			return []
+		}
+
+		// Helper function to collect tool call events into buffer
+		const bufferToolCalls = (
+			delta: OpenAI.Chat.Completions.ChatCompletionChunk.Choice.Delta | undefined,
+			finishReason: string | null | undefined,
+		) => {
+			if (delta?.tool_calls) {
+				for (const toolCall of delta.tool_calls) {
+					if (toolCall.id) {
+						activeToolCallIds.add(toolCall.id)
+					}
+					toolCallBuffer.push({
+						type: "tool_call_partial",
+						index: toolCall.index,
+						id: toolCall.id,
+						name: toolCall.function?.name,
+						arguments: toolCall.function?.arguments,
+					})
+				}
+			}
+
+			if (finishReason === "tool_calls" && activeToolCallIds.size > 0) {
+				for (const id of activeToolCallIds) {
+					toolCallBuffer.push({ type: "tool_call_end", id })
+				}
+				activeToolCallIds.clear()
+			}
+		}
+
+		try {
+			// chunk
+			for await (const chunk of stream) {
+				const delta = chunk.choices?.[0]?.delta ?? {}
+				const finishReason = chunk.choices?.[0]?.finish_reason
+				lastDeltaInfo.finishReason = finishReason
+				lastDeltaInfo.delta = delta
+
+				// Cache content for batch processing
+				if (delta.content) {
+					contentBuffer.push(delta.content)
+					if (isDev && !isPrinted && chunk.model && isAuto) {
+						this.logger.info(`[Current Model]: ${chunk.model}`)
+						isPrinted = true
+					}
+					const now = Date.now()
+					// Process in batch when threshold is reached or buffer is too large
+					const shouldFlush =
+						time + this.apiResponseRenderModeInfo.interval <= now ||
+						contentBuffer.length >= this.apiResponseRenderModeInfo.limit || // Prevent buffer from growing too large
+						this.abortController?.signal.aborted // Flush immediately on abort signal
+
+					if (shouldFlush) {
+						const chunks = flushBuffer()
+						for (const processedChunk of chunks) {
+							// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+							isDev &&
+								this.logger.info(
+									`[ResponseID ${this.options.zgsmModelId} sse rendering]:`,
+									requestId,
+									processedChunk.text?.substring(0, 100),
+								)
+							yield processedChunk
+						}
+						time = now
+					}
+				}
+
+				// Process reasoning content
+				if (delta) {
+					// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+					isDev &&
+						this.logger.info(
+							`[ResponseID ${this.options.zgsmModelId} sse rendering chunk]:`,
+							requestId,
+							JSON.stringify(chunk),
+						)
+					for (const key of ["reasoning_content", "reasoning"] as const) {
+						if (key in delta) {
+							const reasoning_content = ((delta as any)[key] as string | undefined) || ""
+							if (reasoning_content) {
+								// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+								isDev &&
+									this.logger.warn(
+										`[ResponseID ${this.options.zgsmModelId} sse "${key} -> reasoning_content":`,
+										requestId,
+										reasoning_content,
+									)
+								yield { type: "reasoning", text: reasoning_content }
+							}
 							break
 						}
-						// eslint-disable-next-line @typescript-eslint/no-unused-expressions
-						isDev &&
-							this.logger.info(
-								`[ResponseID ${this.options.zgsmModelId} sse rendering]:`,
-								requestId,
-								batchedContent,
-							)
-						yield processedChunk
 					}
-					contentBuffer.length = 0 // Clear buffer
+				}
 
-					time = now
+				// Buffer tool calls instead of yielding immediately (for native protocol)
+				if (isNative) {
+					bufferToolCalls(delta, finishReason)
+					
+					// Flush tool call buffer periodically based on time interval
+					const now = Date.now()
+					const shouldFlushToolCalls =
+						toolCallTime + this.apiResponseRenderModeInfo.interval <= now ||
+						toolCallBuffer.length >= this.apiResponseRenderModeInfo.limit || // Prevent buffer from growing too large
+						this.abortController?.signal.aborted // Flush immediately on abort signal
+
+					if (shouldFlushToolCalls && toolCallBuffer.length > 0) {
+						const events = flushToolCallBuffer()
+						for (const event of events) {
+							yield event
+						}
+						toolCallTime = now
+					}
+				}
+
+				// Cache usage information
+				if (chunk.usage) {
+					lastUsage = chunk.usage
+				}
+
+				// Check if request was aborted after processing current chunk
+				if (this.abortController?.signal.aborted) {
+					shouldAbort = true
+					// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+					isDev &&
+						this.logger.warn(
+							`[Stream aborted with ${contentBuffer.length} chars in buffer, ${toolCallBuffer.length} tool calls]`,
+							requestId,
+						)
+					break
 				}
 			}
-
-			// Process reasoning content
-			if (delta) {
+		} finally {
+			// Always flush remaining content, even on abort
+			// This ensures no content is lost in the buffer
+			if (contentBuffer.length > 0) {
 				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
 				isDev &&
 					this.logger.info(
-						`[ResponseID ${this.options.zgsmModelId} sse rendering chunk]:`,
+						`[Flushing ${contentBuffer.length} remaining chars from buffer]`,
 						requestId,
-						JSON.stringify(chunk),
 					)
-				for (const key of ["reasoning_content", "reasoning"] as const) {
-					if (key in delta) {
-						const reasoning_content = ((delta as any)[key] as string | undefined) || ""
-						if (reasoning_content?.trim()) {
-							// eslint-disable-next-line @typescript-eslint/no-unused-expressions
-							isDev &&
-								this.logger.warn(
-									`[ResponseID ${this.options.zgsmModelId} sse "${key} -> reasoning_content":`,
-									requestId,
-									reasoning_content,
-								)
-							yield { type: "reasoning", text: reasoning_content }
-						}
-						break
+				const chunks = flushBuffer()
+				for (const processedChunk of chunks) {
+					yield processedChunk
+				}
+			}
+
+			// Always flush remaining tool calls
+			if (isNative) {
+				// First, buffer any remaining tool calls from lastDeltaInfo
+				if (lastDeltaInfo.delta || lastDeltaInfo.finishReason) {
+					bufferToolCalls(lastDeltaInfo.delta, lastDeltaInfo.finishReason)
+				}
+				
+				// Then flush all buffered tool calls
+				if (toolCallBuffer.length > 0) {
+					// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+					isDev &&
+						this.logger.info(
+							`[Flushing ${toolCallBuffer.length} remaining tool calls]`,
+							requestId,
+						)
+					const events = flushToolCallBuffer()
+					for (const event of events) {
+						yield event
 					}
 				}
 			}
 
-			yield* this.processToolCalls(delta, finishReason, activeToolCallIds, requestId)
-
-			// Cache usage information
-			if (chunk.usage) {
-				lastUsage = chunk.usage
-			}
-		}
-
-		// Check if request was aborted
-		if (this.abortController?.signal.aborted) {
-			return
-		}
-
-		// Process remaining content
-		if (contentBuffer.length > 0) {
-			const remainingContent = contentBuffer.join("")
-			for (const processedChunk of matcher.update(remainingContent)) {
-				if (this.abortController?.signal.aborted) {
-					break
+			// Always call matcher.final() to ensure proper cleanup
+			// This handles any incomplete XML tags or remaining state
+			try {
+				for (const chunk of matcher.final()) {
+					yield chunk
 				}
-				yield processedChunk
+			} catch (error) {
+				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+				isDev && this.logger.error(`[Error in matcher.final()]:`, error)
 			}
-			contentBuffer.length = 0 // Clear buffer
-			yield* this.processToolCalls(lastDeltaInfo.delta, lastDeltaInfo.finishReason, activeToolCallIds, requestId)
-		}
 
-		// Output final results
-		for (const chunk of matcher.final()) {
-			if (this.abortController?.signal.aborted) {
-				break
-			}
-			yield chunk
-		}
-		// eslint-disable-next-line @typescript-eslint/no-unused-expressions
-		isDev && this.logger.info(`[ResponseID ${this.options.zgsmModelId} sse render end]:`, requestId)
-		// Process usage metrics
-		if (lastUsage) {
-			yield this.processUsageMetrics(lastUsage, modelInfo)
+			// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+			isDev && this.logger.info(`[ResponseID ${this.options.zgsmModelId} sse render end]:`, requestId)
 
-			// Emit performance timing data via callback (frontend will calculate metrics)
-			const responseEndTimestamp = Date.now()
-			if (onPerformanceTiming && responseIdTimestamp && requestIdTimestamp && lastUsage.completion_tokens) {
-				// Emit timing data via callback
-				onPerformanceTiming({
-					requestIdTimestamp,
-					responseIdTimestamp,
-					responseEndTimestamp,
-					completionTokens: lastUsage.completion_tokens,
-				}).catch(() => {})
+			// Process usage metrics
+			if (lastUsage) {
+				yield this.processUsageMetrics(lastUsage, modelInfo)
+
+				// Emit performance timing data via callback (frontend will calculate metrics)
+				const responseEndTimestamp = Date.now()
+				if (onPerformanceTiming && responseIdTimestamp && requestIdTimestamp && lastUsage.completion_tokens) {
+					// Emit timing data via callback
+					onPerformanceTiming({
+						requestIdTimestamp,
+						responseIdTimestamp,
+						responseEndTimestamp,
+						completionTokens: lastUsage.completion_tokens,
+					}).catch(() => {})
+				}
 			}
 		}
 	}
