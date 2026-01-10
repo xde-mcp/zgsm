@@ -56,6 +56,7 @@ export const globalSettingsSchema = z.object({
 	currentApiConfigName: z.string().optional(),
 	listApiConfigMeta: z.array(providerSettingsEntrySchema).optional(),
 	pinnedApiConfigs: z.record(z.string(), z.boolean()).optional(),
+	debug: z.boolean().optional(),
 	// Auto cleanup settings
 	autoCleanup: z
 		.object({

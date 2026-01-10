@@ -1,23 +1,3 @@
-// import type {
-// 	GlobalSettings,
-// 	ProviderSettingsEntry,
-// 	ProviderSettings,
-// 	HistoryItem,
-// 	ModeConfig,
-// 	TelemetrySetting,
-// 	Experiments,
-// 	ClineMessage,
-// 	ModelInfo,
-// 	MarketplaceItem,
-// 	TodoItem,
-// 	CloudUserInfo,
-// 	CloudOrganizationMembership,
-// 	OrganizationAllowList,
-// 	ShareVisibility,
-// 	QueuedMessage,
-// 	IZgsmModelResponseData,
-// 	SerializedCustomToolDefinition,
-// } from "@roo-code/types"
 import { z } from "zod"
 
 import type { GlobalSettings, RooCodeSettings } from "./global-settings.js"
@@ -248,6 +228,7 @@ export type ExtensionState = Pick<
 	| "alwaysAllowReadOnlyOutsideWorkspace"
 	| "alwaysAllowWrite"
 	| "autoCleanup"
+	| "debug"
 	| "alwaysAllowWriteOutsideWorkspace"
 	| "alwaysAllowWriteProtected"
 	| "alwaysAllowBrowser"

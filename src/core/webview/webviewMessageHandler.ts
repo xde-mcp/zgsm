@@ -82,6 +82,7 @@ import delay from "delay"
 // import { ensureProjectWikiSubtasksExists } from "../costrict/wiki/projectWikiHelpers"
 import { setPendingTodoList } from "../tools/UpdateTodoListTool"
 import { getEditorType } from "../../utils/getEditorType"
+import { updateDefaultDebug } from "../../utils/getDebugState"
 
 export const webviewMessageHandler = async (
 	provider: ClineProvider,
@@ -2469,6 +2470,7 @@ export const webviewMessageHandler = async (
 			await vscode.workspace
 				.getConfiguration(Package.name)
 				.update("debug", message.bool ?? false, vscode.ConfigurationTarget.Global)
+			updateDefaultDebug(message.bool ?? false)
 			await provider.postStateToWebview()
 			break
 		}

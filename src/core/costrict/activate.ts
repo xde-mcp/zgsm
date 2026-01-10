@@ -49,6 +49,7 @@ import prettyBytes from "pretty-bytes"
 import { ensureProjectWikiSubtasksExists } from "./wiki/projectWikiHelpers"
 import { isCliPatform, isJetbrainsPlatform } from "../../utils/platform"
 import type { ModelInfo, ModelRecord } from "@roo-code/types"
+import { updateDefaultDebug } from "../../utils/getDebugState"
 
 const HISTORY_WARN_SIZE = 1000 * 1000 * 1000 * 3
 
@@ -56,10 +57,12 @@ const HISTORY_WARN_SIZE = 1000 * 1000 * 1000 * 3
  * Initialization entry
  */
 async function initialize(provider: ClineProvider, logger: ILogger) {
+	const oldDebug = provider.getValue("debug")
 	const oldEnabled = provider.getValue("zgsmCodebaseIndexEnabled")
 	if (oldEnabled == null) {
 		await provider.setValue("zgsmCodebaseIndexEnabled", true)
 	}
+	updateDefaultDebug(oldDebug ?? false)
 	//
 	ZgsmAuthStorage.setProvider(provider)
 	ZgsmAuthApi.setProvider(provider)

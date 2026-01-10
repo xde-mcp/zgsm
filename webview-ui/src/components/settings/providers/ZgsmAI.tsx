@@ -230,7 +230,7 @@ export const ZgsmAI = ({
 					)}
 				</>
 			)}
-			{!fromWelcomeView && useZgsmCustomConfig && (
+			{!fromWelcomeView && useZgsmCustomConfig && debug && (
 				<>
 					<R1FormatSetting
 						onChange={handleInputChange("openAiR1FormatEnabled", noTransform)}

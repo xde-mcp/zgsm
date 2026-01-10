@@ -9,22 +9,22 @@ export const renderModes = {
 		interval: 5,
 	},
 	fast: {
-		limit: isJetbrains ? 10 : 5,
+		limit: 5,
 		interval: isJetbrains ? 20 : 10,
 	},
 	medium: {
-		limit: isJetbrains ? 20 : 10,
+		limit: 10,
 		interval: isJetbrains ? 40 : 20,
 	},
 	slow: {
-		limit: isJetbrains ? 40 : 20,
+		limit: 20,
 		interval: isJetbrains ? 80 : 40,
 	},
 }
 
 export function getApiResponseRenderMode() {
 	if (isJetbrains) {
-		return renderModes.medium
+		return renderModes.fast
 	}
 	const apiResponseRenderMode = vscode.workspace
 		.getConfiguration("zgsm")

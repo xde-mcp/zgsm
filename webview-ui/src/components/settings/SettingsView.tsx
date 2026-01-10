@@ -225,6 +225,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		includeCurrentCost,
 		maxGitStatusFiles,
 		autoCleanup,
+		debug,
 	} = cachedState
 
 	const apiConfiguration = useMemo(() => cachedState.apiConfiguration ?? {}, [cachedState.apiConfiguration])
@@ -448,6 +449,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					zgsmCodebaseIndexEnabled: zgsmCodebaseIndexEnabled ?? true,
 					maxReadCharacterLimit: maxReadCharacterLimit ?? 40000,
 					autoCleanup,
+					debug,
 				},
 			})
 			// These have more complex logic so they aren't (yet) handled
@@ -944,7 +946,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 						<About
 							telemetrySetting={telemetrySetting}
 							setTelemetrySetting={setTelemetrySetting}
-							debug={cachedState.debug}
+							debug={debug}
 							setDebug={setDebug}
 						/>
 					)}

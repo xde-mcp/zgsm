@@ -174,6 +174,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	routerModels?: RouterModels
 	autoCleanup?: AutoCleanupSettings
 	setAutoCleanup: (value: AutoCleanupSettings) => void
+	debug?: boolean
+	setDebug: (value: boolean) => void
 	includeDiagnosticMessages?: boolean
 	setIncludeDiagnosticMessages: (value: boolean) => void
 	maxDiagnosticMessages?: number
@@ -216,6 +218,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		apiConfiguration: {},
 		version: "",
 		autoCleanup: DEFAULT_AUTO_CLEANUP_SETTINGS,
+		debug: false,
 		clineMessages: [],
 		taskHistory: [],
 		shouldShowAnnouncement: false,
@@ -397,6 +400,10 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 					// Update autoCleanup if present in state message
 					if ((newState as any).autoCleanup !== undefined) {
 						setState((prevState) => ({ ...prevState, autoCleanup: (newState as any).autoCleanup }))
+					}
+					// Update debug if present in state message
+					if ((newState as any).debug !== undefined) {
+						setState((prevState) => ({ ...prevState, debug: (newState as any).debug }))
 					}
 					// Handle marketplace data if present in state message
 					if (newState.marketplaceItems !== undefined) {
@@ -670,6 +677,8 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setCondensingApiConfigId: (value) => setState((prevState) => ({ ...prevState, condensingApiConfigId: value })),
 		autoCleanup: state.autoCleanup ?? DEFAULT_AUTO_CLEANUP_SETTINGS,
 		setAutoCleanup: (value) => setState((prevState) => ({ ...prevState, autoCleanup: value })),
+		debug: state.debug ?? false,
+		setDebug: (value) => setState((prevState) => ({ ...prevState, debug: value })),
 		setCustomCondensingPrompt: (value) =>
 			setState((prevState) => ({ ...prevState, customCondensingPrompt: value })),
 		setProfileThresholds: (value) => setState((prevState) => ({ ...prevState, profileThresholds: value })),

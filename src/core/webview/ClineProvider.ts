@@ -2196,6 +2196,7 @@ export class ClineProvider
 			featureRoomoteControlEnabled,
 			isBrowserSessionActive,
 			autoCleanup,
+			debug,
 			// Messages,
 		} = await this.getState()
 
@@ -2230,7 +2231,6 @@ export class ClineProvider
 		// Check if there's a system prompt override for the current mode
 		const currentMode = mode ?? defaultModeSlug
 		const hasSystemPromptOverride = await this.hasFileBasedSystemPromptOverride(currentMode)
-		const debug = vscode.workspace.getConfiguration(Package.name).get<boolean>("debug", false)
 		if (!debug) {
 			apiConfiguration.useZgsmCustomConfig = false
 		}
@@ -2238,6 +2238,7 @@ export class ClineProvider
 			version: this.context.extension?.packageJSON?.version ?? "",
 			apiConfiguration,
 			autoCleanup,
+			debug,
 			customInstructions,
 			alwaysAllowReadOnly: alwaysAllowReadOnly ?? false,
 			alwaysAllowReadOnlyOutsideWorkspace: alwaysAllowReadOnlyOutsideWorkspace ?? false,
@@ -2378,7 +2379,6 @@ export class ClineProvider
 			openRouterImageApiKey,
 			openRouterImageGenerationSelectedModel,
 			featureRoomoteControlEnabled,
-			debug,
 			claudeCodeIsAuthenticated: await (async () => {
 				try {
 					const { claudeCodeOAuthManager } = await import("../../integrations/claude-code/oauth.js")
@@ -2500,6 +2500,7 @@ export class ClineProvider
 		// Return the same structure as before.
 		providerSettings.openAiHeaders = providerSettings.openAiHeaders ?? {}
 		return {
+			debug: stateValues.debug ?? false,
 			autoCleanup: stateValues.autoCleanup ?? DEFAULT_AUTO_CLEANUP_SETTINGS,
 			apiConfiguration: providerSettings,
 			lastShownAnnouncementId: stateValues.lastShownAnnouncementId,

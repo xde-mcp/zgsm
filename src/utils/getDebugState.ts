@@ -1,6 +1,12 @@
 import * as vscode from "vscode"
 import { Package } from "../shared/package"
-import { isJetbrainsPlatform } from "./platform"
+export let defaultDebug = false
 
-export const isDebug = () =>
-	vscode.workspace.getConfiguration(Package.name).get<boolean>("debug", isJetbrainsPlatform())
+export const updateDefaultDebug = (debug: boolean) => {
+	defaultDebug = debug
+}
+
+export const isDebug = () => {
+	const debug = vscode.workspace.getConfiguration(Package.name).get<boolean>("debug", defaultDebug)
+	return debug
+}
