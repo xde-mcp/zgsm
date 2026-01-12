@@ -1,5 +1,18 @@
 {
-	"greeting": "What can CoStrict do for you?",
+	"reasoning": {
+		"thinking": "Thinking",
+		"seconds_one": "{{count}} second",
+		"seconds_other": "{{count}} seconds",
+		"thinkingMessages": [
+			"Thinking...",
+			"Building thoughts...",
+			"Analyzing...",
+			"Organizing information...",
+			"Thinking...",
+			"Reasoning...",
+			"Conceptualizing..."
+		]
+	},
 	"aboutMe": "Thanks to the latest breakthroughs in agentic coding capabilities, I can handle complex software development tasks step-by-step. With tools that let me create & edit files, explore complex projects, use the browser, and execute terminal commands (after you grant permission), I can assist you in ways that go beyond code completion or tech support. I can even use MCP to create new tools and extend my own capabilities.",
 	"instructions": {
 		"wantsToFetch": "CoStrict wants to fetch detailed instructions to assist with the current task"

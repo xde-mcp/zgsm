@@ -1,0 +1,187 @@
+import { useEffect, useState } from "react"
+
+export type RandomLoadingMessageLanguage = "en" | "zh-CN"
+
+export const EDITING_PHRASES: Record<RandomLoadingMessageLanguage, string[]> = {
+	en: [
+		"🎨 Painting the code...",
+		"✏️ Scribbling some magic...",
+		"🔧 Tightening the bolts...",
+		"🛠️ Hamming the code together...",
+		"💻 Speaking computer...",
+		"🔀 Rearranging the building blocks...",
+		"📝 Drafting the masterpiece...",
+		"🧩 Piecing it together...",
+		"🔨 Forging the solution...",
+		"🏗️ Constructing the architecture...",
+		"🔧 Turning the gears...",
+		"🎯 Hitting the target...",
+		"✨ Sprinkling some stardust...",
+		"🌟 Illuminating the code...",
+		"🧪 Experimenting with the formula...",
+		"📐 Measuring twice, cutting once...",
+		"🪚 Sanding the rough edges...",
+		"🔍 Finding the perfect spot...",
+		"⚙️ Aligning the mechanisms...",
+		"💫 Adding the finishing touches...",
+		"🔧 Wrenching out the bugs...",
+		"🧵 Stitching the pieces together...",
+		"🎭 Rearranging the stage...",
+		"🚀 Propelling the code forward...",
+		"🔨 Smashing obstacles...",
+		"🧱 Building the foundation...",
+		"🎨 Brushing up the details...",
+		"🔌 Connecting the dots...",
+		"⚡ Energizing the logic...",
+		"🧹 Cleaning up the mess...",
+	],
+	"zh-CN": [
+		"🎨 描绘代码...",
+		"✏️ 涂写一些魔法...",
+		"🔧 拧紧螺丝...",
+		"🛠️ 敲打代码中...",
+		"💻 说计算机语言...",
+		"🔀 重新排列积木...",
+		"📝 起草杰作...",
+		"🧩 拼凑中...",
+		"🔨 锻造解决方案...",
+		"🏗️ 构建架构...",
+		"🔧 转动齿轮...",
+		"🎯 击中目标...",
+		"✨ 撒上星光...",
+		"🌟 照亮代码...",
+		"🧪 试验配方中...",
+		"📐 量两次，切一次...",
+		"🪚 打磨粗糙边缘...",
+		"🔍 寻找完美位置...",
+		"⚙️ 对齐机制...",
+		"💫 添加最后润色...",
+		"🔧 用扳手拧掉 bug...",
+		"🧵 将碎片缝合在一起...",
+		"🎭 重新安排舞台...",
+		"🚀 推动代码前进...",
+		"🔨 砸碎障碍...",
+		"🧱 建造基础...",
+		"🎨 刷亮细节...",
+		"🔌 连接各个点...",
+		"⚡ 为逻辑注入能量...",
+		"🧹 清理混乱...",
+	],
+}
+
+export const WITTY_LOADING_PHRASES: Record<RandomLoadingMessageLanguage, string[]> = {
+	en: [
+		"🎯 whack-a-mole...",
+		"🎨 Painting the serifs back on...",
+		"📐 Reticulating splines...",
+		"🐹 Warming up the AI hamsters...",
+		"🐚 Asking the magic conch shell...",
+		"✨ Polishing the algorithms...",
+		"⏸️ Don't rush perfection (or my code)...",
+		"⚛️ Counting electrons...",
+		"🎭 Shuffling punchlines...",
+		"🧠 Untangling neural nets...",
+		"🐛 Just a sec, I'm debugging reality...",
+		"💎 Compiling brilliance...",
+		"⏳ Loading wait.exe...",
+		"☕️ Converting coffee into code...",
+		"🔍 Looking for a misplaced semicolon...",
+		"⚙️ Greasin' the cogs of the machine...",
+		"🚗 Calibrating the flux capacitor...",
+		"🌌 Engaging the improbability drive...",
+		"⚔️ Channeling the Force...",
+		"😌 Don't panic...",
+		"💨 Blowing on the cartridge...",
+		"🧚 Summoning code fairies...",
+		"🐛 Wrestling with bugs...",
+		"🌰 Feeding the hamsters...",
+		"📥 Downloading common sense...",
+		"🎱 Shaking the magic 8-ball...",
+		"⚡️ Charging the laser...",
+		"🌀 Opening neural pathways...",
+		"🙏 Summoning the code gods...",
+		"🔎 Searching for lost semicolons...",
+		"🎸 Tuning the algorithms...",
+		"🧮 Crunching the numbers...",
+		"🧬 Splicing some DNA...",
+		"🌊 Riding the syntax wave...",
+		"🎩 Pulling rabbits out of the code...",
+		"🧩 Solving the puzzle...",
+		"🔮 Consulting the crystal ball...",
+		"🎲 Rolling the digital dice...",
+		"🎪 Setting up the circus...",
+		"🪐 Exploring the code universe...",
+		"🔥 Igniting the spark of creativity...",
+		"🎨 Mixing the perfect code colors...",
+	],
+	"zh-CN": [
+		"🎯 打地鼠...",
+		"🎨 正在把衬线刷回去...",
+		"📐 正在重修样条曲线...",
+		"🐹 正在加热 AI 仓鼠...",
+		"🐚 正在问魔法海螺...",
+		"✨ 正在打磨算法...",
+		"⏸️ 不要催促完美（或我的代码）...",
+		"⚛️ 正在数电子...",
+		"🎭 正在洗牌妙语...",
+		"🧠 正在解开神经网络...",
+		"🐛 稍等，我正在调试现实...",
+		"💎 正在编译才华...",
+		"⏳ 正在加载 wit.exe...",
+		"☕️ 正在将咖啡转换为代码...",
+		"🔍 正在寻找丢失的分号...",
+		"⚙️ 正在给机器的齿轮上油...",
+		"🚗 正在校准通量电容器...",
+		"🌌 正在启动不可能驱动器...",
+		"⚔️ 正在引导原力...",
+		"😌 不要恐慌...",
+		"💨 正在对着卡带吹气...",
+		"🧚 正在召唤代码精灵...",
+		"🐛 正在与虫子搏斗...",
+		"🌰 正在喂仓鼠...",
+		"📥 正在下载常识...",
+		"🎱 正在摇晃魔法8球...",
+		"⚡️ 正在给激光充电...",
+		"🌀 正在打开神经通路...",
+		"🙏 正在召唤代码之神...",
+		"🔎 正在寻找丢失的分号...",
+		"🎸 正在调整算法...",
+		"🧮 正在计算数字...",
+		"🧬 正在拼接 DNA...",
+		"🌊 正在驾驭语法浪潮...",
+		"🎩 正在从代码中变出兔子...",
+		"🧩 正在解开谜题...",
+		"🔮 正在咨询水晶球...",
+		"🎲 正在掷数字骰子...",
+		"🎪 正在搭建马戏团...",
+		"🪐 正在探索代码宇宙...",
+		"🔥 正在点燃创意的火花...",
+		"🎨 正在混合完美的代码色彩...",
+	],
+}
+
+export const RandomLoadingMessage = ({
+	language,
+	interval = 5000,
+	type = "general",
+}: {
+	language?: RandomLoadingMessageLanguage
+	interval?: number
+	type?: "general" | "editing"
+}) => {
+	const phrases = type === "editing" ? EDITING_PHRASES : WITTY_LOADING_PHRASES
+	const messages = phrases[language || "en"] ?? phrases["en"]
+	// const messages = WITTY_LOADING_PHRASES[language || "en"] ?? WITTY_LOADING_PHRASES["en"];
+	const [text, setText] = useState(messages[Math.floor(Math.random() * messages.length)])
+
+	useEffect(() => {
+		const timerId = setInterval(() => {
+			setText(messages[Math.floor(Math.random() * messages.length)])
+		}, interval)
+		return () => {
+			clearInterval(timerId)
+		}
+	}, [interval, messages])
+
+	return text
+}

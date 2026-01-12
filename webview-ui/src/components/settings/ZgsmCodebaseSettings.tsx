@@ -27,6 +27,7 @@ import { useEvent } from "react-use"
 
 interface ZgsmCodebaseSettingsProps {
 	setCachedStateField?: SetCachedStateField<"zgsmCodebaseIndexEnabled">
+	isActiveTab: boolean
 }
 
 interface IndexStatus {
@@ -86,7 +87,7 @@ const mapIndexStatusInfoToIndexStatus = (statusInfo: IndexStatusInfo, t: (key: s
 	}
 }
 
-export const ZgsmCodebaseSettings = ({ setCachedStateField }: ZgsmCodebaseSettingsProps) => {
+export const ZgsmCodebaseSettings = ({ isActiveTab, setCachedStateField }: ZgsmCodebaseSettingsProps) => {
 	const { t } = useAppTranslation()
 	const { zgsmCodebaseIndexEnabled, apiConfiguration, cwd } = useExtensionState()
 	// Polling related states
@@ -165,7 +166,7 @@ export const ZgsmCodebaseSettings = ({ setCachedStateField }: ZgsmCodebaseSettin
 	// Handle messages from extension
 	useEffect(() => {
 		// 1. Get build status once when page is opened
-		if (zgsmCodebaseIndexEnabled && !isPendingEnable) {
+		if (zgsmCodebaseIndexEnabled && !isPendingEnable && isActiveTab) {
 			// Get status immediately
 			vscode.postMessage({
 				type: "zgsmPollCodebaseIndexStatus",
@@ -185,6 +186,7 @@ export const ZgsmCodebaseSettings = ({ setCachedStateField }: ZgsmCodebaseSettin
 		shouldStopPolling,
 		t,
 		setCachedStateField,
+		isActiveTab,
 	])
 
 	const handleCodebaseIndexToggle = useCallback((e: any) => {

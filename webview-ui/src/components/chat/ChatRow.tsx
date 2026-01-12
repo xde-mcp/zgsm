@@ -85,6 +85,7 @@ import { useZgsmUserInfo } from "@/hooks/useZgsmUserInfo"
 import { format } from "date-fns"
 import { PathTooltip } from "../ui/PathTooltip"
 import { ReviewTaskStatus } from "@roo/codeReview"
+import { RandomLoadingMessage, RandomLoadingMessageLanguage } from "@/components/chat/RandomLoadingMessage"
 
 // Helper function to get previous todos before a specific message
 function getPreviousTodos(messages: ClineMessage[], currentMessageTs: number): any[] {
@@ -216,6 +217,7 @@ export const ChatRowContent = ({
 		clineMessages,
 		reviewTask,
 		showSpeedInfo,
+		language,
 	} = useExtensionState()
 	const { logoPic, userInfo } = useZgsmUserInfo(apiConfiguration?.zgsmAccessToken)
 	const { info: model } = useSelectedModel(apiConfiguration)
@@ -405,27 +407,38 @@ export const ChatRowContent = ({
 					</span>,
 				]
 			case "completion_result":
+				const isLoading = isLast && isStreaming
 				return [
-					<span
-						className="codicon codicon-check"
-						style={{ color: successColor, marginBottom: "-1.5px" }}></span>,
-					<span style={{ color: successColor, fontWeight: "bold" }}>
-						{t("chat:taskCompleted")}{" "}
-						{reviewTask.status === ReviewTaskStatus.COMPLETED && (
-							<a
-								href="javascript:void(0)"
-								onClick={(e) => {
-									e.stopPropagation()
-									vscode.postMessage({
-										type: "switchTab",
-										tab: "codeReview",
-									})
-								}}
-								style={{ color: "inherit", textDecoration: "underline" }}>
-								{t("chat:subtasks.viewSubtask")}
-							</a>
-						)}
-					</span>,
+					isLoading ? (
+						<ProgressIndicator />
+					) : (
+						<span
+							className="codicon codicon-check"
+							style={{ color: successColor, marginBottom: "-1.5px" }}></span>
+					),
+					isLoading ? (
+						<span style={{ color: successColor, fontWeight: "bold" }}>
+							<RandomLoadingMessage language={language as RandomLoadingMessageLanguage} />
+						</span>
+					) : (
+						<span style={{ color: successColor, fontWeight: "bold" }}>
+							{t("chat:taskCompleted")}{" "}
+							{reviewTask.status === ReviewTaskStatus.COMPLETED && (
+								<a
+									href="javascript:void(0)"
+									onClick={(e) => {
+										e.stopPropagation()
+										vscode.postMessage({
+											type: "switchTab",
+											tab: "codeReview",
+										})
+									}}
+									style={{ color: "inherit", textDecoration: "underline" }}>
+									{t("chat:subtasks.viewSubtask")}
+								</a>
+							)}
+						</span>
+					),
 				]
 			case "api_req_rate_limit_wait":
 				return []
@@ -493,13 +506,16 @@ export const ChatRowContent = ({
 		type,
 		isCommandExecuting,
 		t,
+		message.text,
+		message.ts,
 		isMcpServerResponding,
+		isLast,
+		isStreaming,
+		language,
 		reviewTask.status,
 		apiReqCancelReason,
 		cost,
 		apiRequestFailedMessage,
-		message,
-		isLast,
 	])
 
 	const headerStyle: React.CSSProperties = {
@@ -583,7 +599,7 @@ export const ChatRowContent = ({
 				return (
 					<>
 						<div style={headerStyle}>
-							{tool.isProtected ? (
+							{message.partial && isLast ? null : tool.isProtected ? (
 								<span
 									className="codicon codicon-lock"
 									style={{ color: "var(--vscode-editorWarning-foreground)", marginBottom: "-1.5px" }}
@@ -591,13 +607,19 @@ export const ChatRowContent = ({
 							) : (
 								toolIcon(tool.tool === "appliedDiff" ? "diff" : "edit")
 							)}
-							<span style={{ fontWeight: "bold" }}>
-								{tool.isProtected
-									? t("chat:fileOperations.wantsToEditProtected")
-									: tool.isOutsideWorkspace
-										? t("chat:fileOperations.wantsToEditOutsideWorkspace")
-										: t("chat:fileOperations.wantsToEdit")}
-							</span>
+							{message.partial && isLast ? (
+								<span style={{ fontWeight: "bold" }}>
+									<RandomLoadingMessage language={language as RandomLoadingMessageLanguage} />
+								</span>
+							) : (
+								<span style={{ fontWeight: "bold" }}>
+									{tool.isProtected
+										? t("chat:fileOperations.wantsToEditProtected")
+										: tool.isOutsideWorkspace
+											? t("chat:fileOperations.wantsToEditOutsideWorkspace")
+											: t("chat:fileOperations.wantsToEdit")}
+								</span>
+							)}
 						</div>
 						<div className="pl-6">
 							<CodeAccordian
@@ -617,7 +639,7 @@ export const ChatRowContent = ({
 				return (
 					<>
 						<div style={headerStyle}>
-							{tool.isProtected ? (
+							{message.partial && isLast ? null : tool.isProtected ? (
 								<span
 									className="codicon codicon-lock"
 									style={{ color: "var(--vscode-editorWarning-foreground)", marginBottom: "-1.5px" }}
@@ -625,17 +647,23 @@ export const ChatRowContent = ({
 							) : (
 								toolIcon("insert")
 							)}
-							<span style={{ fontWeight: "bold" }}>
-								{tool.isProtected
-									? t("chat:fileOperations.wantsToEditProtected")
-									: tool.isOutsideWorkspace
-										? t("chat:fileOperations.wantsToEditOutsideWorkspace")
-										: tool.lineNumber === 0
-											? t("chat:fileOperations.wantsToInsertAtEnd")
-											: t("chat:fileOperations.wantsToInsertWithLineNumber", {
-													lineNumber: tool.lineNumber,
-												})}
-							</span>
+							{message.partial && isLast ? (
+								<span style={{ fontWeight: "bold" }}>
+									<RandomLoadingMessage language={language as RandomLoadingMessageLanguage} />
+								</span>
+							) : (
+								<span style={{ fontWeight: "bold" }}>
+									{tool.isProtected
+										? t("chat:fileOperations.wantsToEditProtected")
+										: tool.isOutsideWorkspace
+											? t("chat:fileOperations.wantsToEditOutsideWorkspace")
+											: tool.lineNumber === 0
+												? t("chat:fileOperations.wantsToInsertAtEnd")
+												: t("chat:fileOperations.wantsToInsertWithLineNumber", {
+														lineNumber: tool.lineNumber,
+													})}
+								</span>
+							)}
 						</div>
 						<div className="pl-6">
 							<CodeAccordian
@@ -655,7 +683,7 @@ export const ChatRowContent = ({
 				return (
 					<>
 						<div style={headerStyle}>
-							{tool.isProtected ? (
+							{message.partial && isLast ? null : tool.isProtected ? (
 								<span
 									className="codicon codicon-lock"
 									style={{ color: "var(--vscode-editorWarning-foreground)", marginBottom: "-1.5px" }}
@@ -663,13 +691,19 @@ export const ChatRowContent = ({
 							) : (
 								toolIcon("replace")
 							)}
-							<span style={{ fontWeight: "bold" }}>
-								{tool.isProtected && message.type === "ask"
-									? t("chat:fileOperations.wantsToEditProtected")
-									: message.type === "ask"
-										? t("chat:fileOperations.wantsToSearchReplace")
-										: t("chat:fileOperations.didSearchReplace")}
-							</span>
+							{message.partial && isLast ? (
+								<span style={{ fontWeight: "bold" }}>
+									<RandomLoadingMessage language={language as RandomLoadingMessageLanguage} />
+								</span>
+							) : (
+								<span style={{ fontWeight: "bold" }}>
+									{tool.isProtected && message.type === "ask"
+										? t("chat:fileOperations.wantsToEditProtected")
+										: message.type === "ask"
+											? t("chat:fileOperations.wantsToSearchReplace")
+											: t("chat:fileOperations.didSearchReplace")}
+								</span>
+							)}
 						</div>
 						<div className="pl-6">
 							<CodeAccordian
@@ -718,7 +752,7 @@ export const ChatRowContent = ({
 				return (
 					<>
 						<div style={headerStyle}>
-							{tool.isProtected ? (
+							{message.partial && isLast ? null : tool.isProtected ? (
 								<span
 									className="codicon codicon-lock"
 									style={{ color: "var(--vscode-editorWarning-foreground)", marginBottom: "-1.5px" }}
@@ -726,11 +760,17 @@ export const ChatRowContent = ({
 							) : (
 								toolIcon("new-file")
 							)}
-							<span style={{ fontWeight: "bold" }}>
-								{tool.isProtected
-									? t("chat:fileOperations.wantsToEditProtected")
-									: t("chat:fileOperations.wantsToCreate")}
-							</span>
+							{message.partial && isLast ? (
+								<span style={{ fontWeight: "bold" }}>
+									<RandomLoadingMessage language={language as RandomLoadingMessageLanguage} />
+								</span>
+							) : (
+								<span style={{ fontWeight: "bold" }}>
+									{tool.isProtected
+										? t("chat:fileOperations.wantsToEditProtected")
+										: t("chat:fileOperations.wantsToCreate")}
+								</span>
+							)}
 						</div>
 						<div className="pl-6">
 							<CodeAccordian
@@ -1505,7 +1545,20 @@ export const ChatRowContent = ({
 				case "api_req_finished":
 					return null // we should never see this message type
 				case "text":
-					return !message?.text?.trim() ? null : (
+					const loadingMessage = !message?.text?.trim() && isLast && isStreaming
+
+					if (loadingMessage) {
+						return (
+							<div className="group text-sm transition-opacity opacity-100" style={headerStyle}>
+								<ProgressIndicator />
+								<span style={{ color: normalColor }}>
+									<RandomLoadingMessage language={language as RandomLoadingMessageLanguage} />
+								</span>
+							</div>
+						)
+					}
+
+					return (
 						<div>
 							<div style={headerStyle}>
 								<MessageCircle className="w-4 shrink-0" aria-label="Speech bubble icon" />

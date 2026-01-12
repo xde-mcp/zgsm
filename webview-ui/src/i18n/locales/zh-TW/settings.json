@@ -1,4 +1,5 @@
 {
+	"back": "返回工作檢視",
 	"common": {
 		"save": "儲存",
 		"saving": "儲存中...",
@@ -8,6 +9,10 @@
 		"select": "選擇",
 		"add": "新增標頭",
 		"remove": "移除"
+	},
+	"search": {
+		"placeholder": "搜尋設定...",
+		"noResults": "找不到設定"
 	},
 	"header": {
 		"title": "設定",

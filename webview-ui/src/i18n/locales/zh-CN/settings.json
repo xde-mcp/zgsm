@@ -1,4 +1,5 @@
 {
+	"back": "返回任务视图",
 	"common": {
 		"save": "保存",
 		"saving": "保存中...",
@@ -8,6 +9,10 @@
 		"select": "选择",
 		"add": "添加标头",
 		"remove": "移除"
+	},
+	"search": {
+		"placeholder": "搜索设置...",
+		"noResults": "未找到设置"
 	},
 	"header": {
 		"title": "设置",

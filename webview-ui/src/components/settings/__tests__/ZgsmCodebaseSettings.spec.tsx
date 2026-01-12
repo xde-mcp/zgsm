@@ -123,6 +123,7 @@ const renderZgsmCodebaseSettings = (props: TestProps = {}) => {
 
 	const defaultProps = {
 		setCachedStateField: vi.fn(),
+		isActiveTab: true,
 		...props,
 	}
 
