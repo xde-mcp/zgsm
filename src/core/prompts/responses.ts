@@ -62,7 +62,19 @@ export const formatResponse = {
 		return `Access to ${path} is blocked by the .rooignore file settings. You must try to continue in the task without using this file, or ask the user to update the .rooignore file.`
 	},
 
-	noToolsUsed: (protocol?: ToolProtocol) => {
+	noToolsUsed: (protocol?: ToolProtocol, todoListEnabled?: boolean) => {
+		return `SYSTEM NOTICE (MUST COMPLY):
+
+In the previous turn, no tool was called.
+This violates a system rule: EVERY assistant turn MUST include at least one tool call.
+
+In this turn:
+- You MUST call one appropriate tool.
+- Do NOT explain or justify the previous response.
+- Do NOT repeat previous content.
+- Do NOT respond conversationally.
+${todoListEnabled ? "\n- Cannot complete task while there are incomplete todos. MUST finish all todos before attempting completion." : ""}
+- If you have completed the user's task, use the \`attempt_completion\` tool.`
 		const instructions = getToolInstructionsReminder(protocol)
 
 		return `[ERROR] You did not use a tool in your previous response! Please retry with a tool use.

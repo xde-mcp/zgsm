@@ -28,7 +28,7 @@ function renderChatRow(message: any) {
 				<ChatRowContent
 					message={message}
 					isExpanded={false}
-					isLast={false}
+					isLast={true}
 					isStreaming={false}
 					onToggleExpand={() => {}}
 					onSuggestionClick={() => {}}

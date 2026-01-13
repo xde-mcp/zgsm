@@ -61,14 +61,14 @@
 		"reservedForResponse": "Reserved for model response: {{amount}} tokens"
 	},
 	"reject": {
-		"title": "Reject",
-		"tooltip": "Reject this action",
+		"title": "Deny",
+		"tooltip": "Prevent this action from occurring",
 		"askNextStep": "Please immediately terminate the '{{action}}' operation, and wait for me to provide a new plan before proceeding to the next step."
 	},
 	"completeSubtaskAndReturn": "Complete Subtask and Return",
 	"approve": {
 		"title": "Approve",
-		"tooltip": "Approve this action"
+		"tooltip": "Allow this action to happen"
 	},
 	"read-batch": {
 		"approve": {
@@ -83,25 +83,30 @@
 		"tooltip": "Execute this command"
 	},
 	"proceedWhileRunning": {
-		"title": "Proceed While Running",
-		"tooltip": "Continue despite warnings"
+		"title": "Continue While Running",
+		"tooltip": "Keep going despite warnings"
 	},
 	"killCommand": {
 		"title": "Kill Command",
 		"tooltip": "Kill the current command"
 	},
 	"resumeTask": {
-		"title": "Resume Task",
-		"tooltip": "Continue the current task"
+		"title": "Continue",
+		"tooltip": "Resume the current task"
 	},
 	"terminate": {
-		"title": "Terminate",
-		"tooltip": "End the current task"
+		"title": "New task",
+		"tooltip": "Start a new task"
 	},
 	"cancel": {
 		"title": "Cancel",
 		"tooltip": "Cancel the current operation"
 	},
+	"stop": {
+		"title": "Stop",
+		"tooltip": "Stop the current task"
+	},
+	"enqueueMessage": "Add message to queue (will be sent after current task completes)",
 	"editMessage": {
 		"placeholder": "Edit your message..."
 	},
@@ -310,7 +315,8 @@
 		"title": "Error Details",
 		"copyToClipboard": "Copy basic error info",
 		"copied": "Copied!",
-		"diagnostics": "Get detailed error info"
+		"diagnostics": "Get detailed error info",
+		"proxyProvider": "You seem to be using a proxy-based provider. Make sure to check its logs and to ensure it's not rewriting CoStrict's requests."
 	},
 	"diffError": {
 		"title": "Edit Unsuccessful"

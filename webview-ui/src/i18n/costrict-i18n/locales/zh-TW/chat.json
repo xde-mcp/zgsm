@@ -19,6 +19,7 @@
 	},
 	"about": "企業嚴肅開發的AI智慧夥伴",
 	"error": "CoStrict 將自動規劃下一步處理",
+	"emptyCompletionResult": "📝 CoStrict 正在自動規劃下一步...",
 	"text": {
 		"rooSaid": "CoStrict 說"
 	},

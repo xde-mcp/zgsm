@@ -51,7 +51,7 @@ export function TodoChangeDisplay({ previousTodos, newTodos }: TodoChangeDisplay
 
 	// If no todos to display, don't render anything
 	if (todosToDisplay.length === 0) {
-		return null
+		return <div className="ml-2 pl-4 pb-1">{t("chat:emptyCompletionResult")}</div>
 	}
 
 	return (

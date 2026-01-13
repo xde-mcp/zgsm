@@ -92,6 +92,7 @@ import { TerminalRegistry } from "../../integrations/terminal/TerminalRegistry"
 // utils
 import { calculateApiCostAnthropic, calculateApiCostOpenAI } from "../../shared/cost"
 import { getWorkspacePath } from "../../utils/path"
+import { sanitizeToolUseId } from "../../utils/tool-id"
 
 // prompts
 import { formatResponse } from "../prompts/responses"
@@ -1311,7 +1312,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					// data or one whole message at a time so ignore partial for
 					// saves, and only post parts of partial message instead of
 					// whole array in new listener.
-					this.updateClineMessage(lastMessage)
+					await this.updateClineMessage(lastMessage)
 					// console.log("Task#ask: current ask promise was ignored (#1)")
 					throw new AskIgnoredError("updating existing partial")
 				} else {
@@ -1349,7 +1350,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					lastMessage.progressStatus = progressStatus
 					lastMessage.isProtected = isProtected
 					await this.saveClineMessages()
-					this.updateClineMessage(lastMessage)
+					await this.updateClineMessage(lastMessage)
 				} else {
 					// This is a new and complete message, so add it like normal.
 					this.askResponse = undefined
@@ -1821,7 +1822,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					lastMessage.images = images
 					lastMessage.partial = partial
 					lastMessage.progressStatus = progressStatus
-					this.updateClineMessage(lastMessage)
+					await this.updateClineMessage(lastMessage)
 				} else {
 					// This is a new partial message, so add it with partial state.
 					const sayTs = Date.now()
@@ -1863,7 +1864,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					await this.saveClineMessages()
 
 					// More performant than an entire `postStateToWebview`.
-					this.updateClineMessage(lastMessage)
+					await this.updateClineMessage(lastMessage)
 				} else {
 					// This is a new and complete message, so add it like normal.
 					const sayTs = Date.now()
@@ -2565,7 +2566,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// Use the task's locked protocol, NOT the current settings (fallback to xml if not set)
 				const content = {
 					type: "text",
-					text: formatResponse.noToolsUsed(this._taskToolProtocol ?? "xml"),
+					text: formatResponse.noToolsUsed(
+						this._taskToolProtocol ?? "xml",
+						this.apiConfiguration.todoListEnabled,
+					),
 				} as Anthropic.Messages.ContentBlockParam & { __isNoToolsUsed?: boolean }
 
 				Object.defineProperty(content, "__isNoToolsUsed", {
@@ -3641,7 +3645,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							if (mcpBlock.id) {
 								assistantContent.push({
 									type: "tool_use" as const,
-									id: mcpBlock.id,
+									id: sanitizeToolUseId(mcpBlock.id),
 									name: mcpBlock.name, // Original dynamic name
 									input: mcpBlock.arguments, // Direct tool arguments
 								})
@@ -3662,7 +3666,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 								assistantContent.push({
 									type: "tool_use" as const,
-									id: toolCallId,
+									id: sanitizeToolUseId(toolCallId),
 									name: toolNameForHistory,
 									input,
 								})
@@ -3715,7 +3719,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						// Use the task's locked protocol for consistent behavior
 						const _content = {
 							type: "text",
-							text: formatResponse.noToolsUsed(this._taskToolProtocol ?? "xml"),
+							text: formatResponse.noToolsUsed(
+								this._taskToolProtocol ?? "xml",
+								this.apiConfiguration.todoListEnabled,
+							),
 						} as (Anthropic.TextBlockParam | Anthropic.ImageBlockParam | Anthropic.ToolResultBlockParam) & {
 							__isNoToolsUsed?: boolean
 						}
@@ -4797,15 +4804,20 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		if (lastMessage?.role === "user") {
 			if (Array.isArray(lastMessage.content)) {
 				this.apiConversationHistory.pop()
-				const lastMessageToolcontent = (
-					lastMessage.content.find((block: any) => block.type === "tool_result") as any
-				)?.content as string
-
+				let lastMessageToolcontent = "ask user to provide feedback"
+				if (firstMessage === lastMessage) {
+					lastMessageToolcontent = (lastMessage.content.find((block: any) => block.type === "text") as any)
+						?.text as string
+				} else {
+					lastMessageToolcontent = (
+						lastMessage.content.find((block: any) => block.type === "tool_result") as any
+					)?.content as string
+				}
 				if (
-					lastMessageToolcontent.includes("<task>") ||
-					lastMessageToolcontent.includes("<feedback>") ||
-					lastMessageToolcontent.includes("<answer>") ||
-					lastMessageToolcontent.includes("<user_message>")
+					lastMessageToolcontent?.includes?.("<task>") ||
+					lastMessageToolcontent?.includes?.("<feedback>") ||
+					lastMessageToolcontent?.includes?.("<answer>") ||
+					lastMessageToolcontent?.includes?.("<user_message>")
 				) {
 					userFeedback = lastMessageToolcontent
 				}
@@ -4832,7 +4844,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		if (!originalUserMessage || originalUserMessage.role !== "user") {
 			console.warn(`[Task#${this.taskId}] No original user message found, resetting to empty history`)
 			this.apiConversationHistory =
-				(this.apiConversationHistory[0] as any)?.role === "system" ? [this.apiConversationHistory[0]] : []
+				(this.apiConversationHistory[0] as any)?.role === "system"
+					? [this.apiConversationHistory[0]]
+					: firstMessage === lastMessage
+						? [firstMessage]
+						: []
 
 			// Reset parser and state
 			this.resetParserAndState()
@@ -5023,6 +5039,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				"malformed tool call",
 
 				"message content parts cannot be empty",
+
+				// Other common errors
+				"not support native protocol",
 			].join("|"),
 			"i", // case-insensitive flag
 		)

@@ -19,6 +19,7 @@
 	},
 	"about": "AI-Powered Strict Coding Assistant for Enterprises",
 	"error": "CoStrict will automatically plan the next step",
+	"emptyCompletionResult": "📝 CoStrict is automatically planning the next step...",
 	"text": {
 		"rooSaid": "CoStrict said"
 	},
