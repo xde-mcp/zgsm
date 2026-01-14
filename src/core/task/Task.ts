@@ -97,8 +97,8 @@ import { sanitizeToolUseId } from "../../utils/tool-id"
 // prompts
 import { formatResponse } from "../prompts/responses"
 import { SYSTEM_PROMPT } from "../prompts/system"
-import { buildNativeToolsArray } from "./build-tools"
 // import { getRooDirectoriesForCwd } from "../../services/roo-config/index.js"
+import { buildNativeToolsArrayWithRestrictions } from "./build-tools"
 
 // core modules
 import { ToolRepetitionDetector } from "../tools/ToolRepetitionDetector"
@@ -4346,15 +4346,27 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			taskProtocol === TOOL_PROTOCOL.NATIVE &&
 			(modelInfo.supportsNativeTools ?? ["zgsm", "gemini-cli"].includes(apiConfiguration?.apiProvider || ""))
 
-		// Build complete tools array: native tools + dynamic MCP tools, filtered by mode restrictions
+		// Build complete tools array: native tools + dynamic MCP tools
+		// When includeAllToolsWithRestrictions is true, returns all tools but provides
+		// allowedFunctionNames for providers (like Gemini) that need to see all tool
+		// definitions in history while restricting callable tools for the current mode.
+		// Only Gemini currently supports this - other providers filter tools normally.
 		let allTools: OpenAI.Chat.ChatCompletionTool[] = []
+		let allowedFunctionNames: string[] | undefined
+
+		// Gemini requires all tool definitions to be present for history compatibility,
+		// but uses allowedFunctionNames to restrict which tools can be called.
+		// Other providers (Anthropic, OpenAI, etc.) don't support this feature yet,
+		// so they continue to receive only the filtered tools for the current mode.
+		const supportsAllowedFunctionNames = apiConfiguration?.apiProvider === "gemini"
+
 		if (shouldIncludeTools) {
 			const provider = this.providerRef.deref()
 			if (!provider) {
 				throw new Error("Provider reference lost during tool building")
 			}
 
-			allTools = await buildNativeToolsArray({
+			const toolsResult = await buildNativeToolsArrayWithRestrictions({
 				provider,
 				cwd: this.cwd,
 				mode,
@@ -4366,7 +4378,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				browserToolEnabled: state?.browserToolEnabled ?? true,
 				modelInfo,
 				diffEnabled: this.diffEnabled,
+				includeAllToolsWithRestrictions: supportsAllowedFunctionNames,
 			})
+			allTools = toolsResult.tools
+			allowedFunctionNames = toolsResult.allowedFunctionNames
 		}
 
 		const { id } = (await ZgsmAuthService.getInstance()?.getUserInfo()) ?? {}
@@ -4433,6 +4448,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						// tool_choice: apiConfiguration?.apiProvider === "zgsm" ? "required" : "auto",
 						toolProtocol: taskProtocol,
 						parallelToolCalls: parallelToolCallsEnabled,
+						// When mode restricts tools, provide allowedFunctionNames so providers
+						// like Gemini can see all tools in history but only call allowed ones
+						...(allowedFunctionNames ? { allowedFunctionNames } : {}),
 					}
 				: {}),
 		}
