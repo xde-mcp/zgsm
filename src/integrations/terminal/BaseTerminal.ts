@@ -111,8 +111,11 @@ export abstract class BaseTerminal implements RooTerminal {
 	 * or don't belong to the current task
 	 */
 	public cleanCompletedProcessQueue(): void {
-		// Keep only processes with unretrieved output
-		this.completedProcesses = this.completedProcesses.filter((process) => process.hasUnretrievedOutput())
+		// Trim retrieved output from each process to free memory, then keep only those with remaining output
+		this.completedProcesses = this.completedProcesses.filter((process) => {
+			process.trimRetrievedOutput()
+			return process.hasUnretrievedOutput()
+		})
 	}
 
 	/**
@@ -153,9 +156,9 @@ export abstract class BaseTerminal implements RooTerminal {
 	}
 
 	/**
-		* Checks if the terminal has any unretrieved output
-		* @returns True if there is unretrieved output, false otherwise
-		*/
+	 * Checks if the terminal has any unretrieved output
+	 * @returns True if there is unretrieved output, false otherwise
+	 */
 	public hasUnretrievedOutput(): boolean {
 		// Check completed processes first
 		for (const process of this.completedProcesses) {

@@ -107,7 +107,7 @@ import { readApiMessages, saveApiMessages, saveTaskMessages } from "../task-pers
 import { readTaskMessages } from "../task-persistence/taskMessages"
 import { getNonce } from "./getNonce"
 import { getUri } from "./getUri"
-import { ZgsmAuthCommands } from "../costrict/auth"
+import { ZgsmAuthCommands, ZgsmAuthConfig } from "../costrict/auth"
 import { generateNewSessionClientId, getClientId } from "../../utils/getClientId"
 import { defaultCodebaseIndexEnabled } from "../../services/code-index/constants"
 import { CodeReviewService, ReviewTargetType } from "../costrict/code-review"
@@ -175,7 +175,7 @@ export class ClineProvider
 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
-	public readonly latestAnnouncementId = "jan-2026-v3.40.0-settings-search-stop-button-api-fixes" // v3.40.0 Settings Search, Stop Button UX, API Fixes
+	public readonly latestAnnouncementId = "jan-2026-v3.41.0-openai-codex-provider-gpt52-fixes" // v3.41.0 OpenAI Codex Provider, GPT-5.2-codex, Bug Fixes
 	public readonly providerSettingsManager: ProviderSettingsManager
 	public readonly customModesManager: CustomModesManager
 
@@ -1308,7 +1308,7 @@ export class ClineProvider
 				Object.assign(window, {
 					"ANTHROPIC_MODEL": "${process.env.ANTHROPIC_MODEL}",
 					"ANTHROPIC_BASE_URL": "${process.env.ANTHROPIC_BASE_URL}",
-					"COSTRICT_BASE_URL": "${process.env.COSTRICT_BASE_URL}",
+					"COSTRICT_BASE_URL": "${ZgsmAuthConfig.getInstance().getDefaultApiBaseUrl()}",
 				})
 			</script>
 		`
@@ -1422,7 +1422,7 @@ export class ClineProvider
 				Object.assign(window, {
 					"ANTHROPIC_MODEL": "${process.env.ANTHROPIC_MODEL}",
 					"ANTHROPIC_BASE_URL": "${process.env.ANTHROPIC_BASE_URL}",
-					"COSTRICT_BASE_URL": "${process.env.COSTRICT_BASE_URL}",
+					"COSTRICT_BASE_URL": "${ZgsmAuthConfig.getInstance().getDefaultApiBaseUrl()}",
 				})
 			</script>
             <title>CoStrict</title>
@@ -2387,6 +2387,14 @@ export class ClineProvider
 				try {
 					const { claudeCodeOAuthManager } = await import("../../integrations/claude-code/oauth.js")
 					return await claudeCodeOAuthManager.isAuthenticated()
+				} catch {
+					return false
+				}
+			})(),
+			openAiCodexIsAuthenticated: await (async () => {
+				try {
+					const { openAiCodexOAuthManager } = await import("../../integrations/openai-codex/oauth")
+					return await openAiCodexOAuthManager.isAuthenticated()
 				} catch {
 					return false
 				}

@@ -13,6 +13,7 @@ import {
 	VertexHandler,
 	AnthropicVertexHandler,
 	OpenAiHandler,
+	OpenAiCodexHandler,
 	LmStudioHandler,
 	GeminiHandler,
 	GeminiCliHandler,
@@ -168,6 +169,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new GeminiHandler(options)
 		case "gemini-cli":
 			return new GeminiCliHandler(options)
+		case "openai-codex":
+			return new OpenAiCodexHandler(options)
 		case "openai-native":
 			return new OpenAiNativeHandler(options)
 		case "deepseek":

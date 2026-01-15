@@ -1390,7 +1390,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 											"transition-all duration-200",
 											isEditMode || isStreaming || hasInputContent
 												? "opacity-100 hover:opacity-100 pointer-events-auto"
-												: "opacity-0 pointer-events-none",
+												: "hidden pointer-events-none",
 											(isEditMode || isStreaming || hasInputContent) &&
 												"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
 											"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
@@ -1401,7 +1401,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 												"bg-vscode-button-background hover:bg-vscode-button-background",
 										)}>
 										{isStreaming ? (
-											<Square className="size-4 stroke-none fill-vscode-button-foreground" />
+											<Square className="size-3 stroke-none fill-vscode-button-foreground" />
 										) : (
 											<SendHorizontal className="size-4" />
 										)}

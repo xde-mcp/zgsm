@@ -16,6 +16,7 @@ import {
 	ioIntelligenceModels,
 	mistralModels,
 	moonshotModels,
+	openAiCodexModels,
 	openAiNativeModels,
 	qwenCodeModels,
 	sambaNovaModels,
@@ -134,6 +135,7 @@ export const providerNames = [
 	"mistral",
 	"moonshot",
 	"minimax",
+	"openai-codex",
 	"openai-native",
 	"qwen-code",
 	"roo",
@@ -304,6 +306,10 @@ const geminiCliSchema = apiModelIdProviderModelSchema.extend({
 	geminiCliProjectId: z.string().optional(),
 })
 
+const openAiCodexSchema = apiModelIdProviderModelSchema.extend({
+	// No additional settings needed - uses OAuth authentication
+})
+
 const openAiNativeSchema = apiModelIdProviderModelSchema.extend({
 	openAiNativeApiKey: z.string().optional(),
 	openAiNativeBaseUrl: z.string().optional(),
@@ -454,6 +460,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	lmStudioSchema.merge(z.object({ apiProvider: z.literal("lmstudio") })),
 	geminiSchema.merge(z.object({ apiProvider: z.literal("gemini") })),
 	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })),
+	openAiCodexSchema.merge(z.object({ apiProvider: z.literal("openai-codex") })),
 	openAiNativeSchema.merge(z.object({ apiProvider: z.literal("openai-native") })),
 	mistralSchema.merge(z.object({ apiProvider: z.literal("mistral") })),
 	deepSeekSchema.merge(z.object({ apiProvider: z.literal("deepseek") })),
@@ -497,6 +504,7 @@ export const providerSettingsSchema = z.object({
 	...lmStudioSchema.shape,
 	...geminiSchema.shape,
 	...geminiCliSchema.shape,
+	...openAiCodexSchema.shape,
 	...openAiNativeSchema.shape,
 	...mistralSchema.shape,
 	...deepSeekSchema.shape,
@@ -591,6 +599,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	openrouter: "openRouterModelId",
 	bedrock: "apiModelId",
 	vertex: "apiModelId",
+	"openai-codex": "apiModelId",
 	"openai-native": "openAiModelId",
 	ollama: "ollamaModelId",
 	lmstudio: "lmStudioModelId",
@@ -731,6 +740,11 @@ export const MODELS_BY_PROVIDER: Record<
 		id: "minimax",
 		label: "MiniMax",
 		models: Object.keys(minimaxModels),
+	},
+	"openai-codex": {
+		id: "openai-codex",
+		label: "OpenAI - ChatGPT Plus/Pro",
+		models: Object.keys(openAiCodexModels),
 	},
 	"openai-native": {
 		id: "openai-native",
