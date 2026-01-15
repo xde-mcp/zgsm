@@ -126,14 +126,14 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	// Cline.abort).
 	const task = useMemo(() => messages.at(0), [messages])
 
-	// Dynamically calculating the current task text: Extract the latest user_feedback message from messages to use as the current task.
-	const currentTaskText = useMemo(() => {
-		const lastUserFeedback = findLast(messages, (msg) => msg.say === "user_feedback")
-		if (lastUserFeedback?.text) {
-			return lastUserFeedback.text
-		}
-		return task?.text ?? ""
-	}, [messages, task])
+	// // Dynamically calculating the current task text: Extract the latest user_feedback message from messages to use as the current task.
+	// const currentTaskText = useMemo(() => {
+	// 	const lastUserFeedback = findLast(messages, (msg) => msg.say === "user_feedback")
+	// 	if (lastUserFeedback?.text) {
+	// 		return lastUserFeedback
+	// 	}
+	// 	return task
+	// }, [messages, task])
 
 	const curWorkspaceHistory = useMemo(
 		() => (taskHistory || []).filter((t) => t.workspace === cwd),
@@ -1232,7 +1232,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	// Scroll to specified message
 	const scrollToMessage = useCallback(
-		(messageIndex: number) => {
+		(messageIndex?: number) => {
+			if (messageIndex === undefined || messageIndex < 0 || messageIndex >= groupedMessages.length) return
 			if (virtuosoRef.current && messageIndex >= 0 && messageIndex < groupedMessages.length && !isStreaming) {
 				virtuosoRef.current.scrollToIndex({
 					index: messageIndex,
@@ -1585,7 +1586,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	}
 
 	const areButtonsVisible = showScrollToBottom || primaryButtonText || secondaryButtonText
-
+	const lastUserFeedback = findLast(groupedMessages, (msg) => msg.say === "user_feedback")
 	return (
 		<div
 			data-testid="chat-view"
@@ -1616,7 +1617,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						buttonsDisabled={sendingDisabled}
 						handleCondenseContext={handleCondenseContext}
 						todos={latestTodos}
-						currentTaskText={currentTaskText}
+						lastUserFeedbackIndex={groupedMessages.findIndex((msg) => msg.ts === lastUserFeedback?.ts)}
+						lastUserFeedback={lastUserFeedback?.text || ""}
+						scrollToMessage={scrollToMessage}
 					/>
 
 					{hasSystemPromptOverride && (

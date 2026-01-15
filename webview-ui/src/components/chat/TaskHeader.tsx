@@ -52,7 +52,9 @@ export interface TaskHeaderProps {
 	buttonsDisabled: boolean
 	handleCondenseContext: (taskId: string) => void
 	todos?: any[]
-	currentTaskText?: string
+	lastUserFeedback?: string
+	lastUserFeedbackIndex?: number
+	scrollToMessage?: (messageIndex?: number) => void
 }
 
 const TaskHeader = ({
@@ -66,7 +68,9 @@ const TaskHeader = ({
 	buttonsDisabled,
 	handleCondenseContext,
 	todos,
-	currentTaskText,
+	lastUserFeedback,
+	lastUserFeedbackIndex,
+	scrollToMessage,
 }: TaskHeaderProps) => {
 	const { t } = useTranslation()
 	const { apiConfiguration, currentTaskItem, clineMessages, isBrowserSessionActive } = useExtensionState()
@@ -204,18 +208,6 @@ const TaskHeader = ({
 				</div>
 				{!isTaskExpanded && (
 					<>
-						{currentTaskText && (
-							<div
-								className="text-sm text-muted-foreground/70 mb-1.5"
-								onClick={(e) => e.stopPropagation()}>
-								<span className="font-medium">{t("chat:task.currentTask")}</span>
-								<StandardTooltip content={currentTaskText} side="top">
-									<span className="inline-block max-w-[calc(100%-100px)] truncate align-bottom">
-										<Mention text={currentTaskText} />
-									</span>
-								</StandardTooltip>
-							</div>
-						)}
 						{contextWindow > 0 && (
 							<div
 								className="flex items-center justify-between text-sm text-muted-foreground/70"
@@ -456,6 +448,28 @@ const TaskHeader = ({
 							</table>
 						</div>
 					</>
+				)}
+
+				{lastUserFeedback && (
+					<StandardTooltip content={lastUserFeedback} side="top">
+						<div
+							onClick={(e) => {
+								e.stopPropagation()
+								scrollToMessage?.(lastUserFeedbackIndex)
+							}}
+							className="mt-1 -mx-2.5 border-t border-vscode-sideBar-background flex items-center justify-start text-sm text-muted-foreground/70 pt-2 px-2.5 cursor-pointer select-none">
+							<span className="font-medium">{t("chat:task.lastUserFeedback")}</span>
+							<span className=" max-w-[calc(100%-100px)] truncate ">
+								<Mention
+									text={
+										lastUserFeedback.length > 500
+											? lastUserFeedback.slice(0, 500) + "..."
+											: lastUserFeedback
+									}
+								/>
+							</span>
+						</div>
+					</StandardTooltip>
 				)}
 				{/* Todo list - always shown at bottom when todos exist */}
 				{hasTodos && <TodoListDisplay todos={todos ?? (task as any)?.tool?.todos ?? []} />}
