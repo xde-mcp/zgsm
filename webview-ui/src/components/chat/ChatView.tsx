@@ -12,6 +12,7 @@ import { LRUCache } from "lru-cache"
 
 import { useDebounceEffect } from "@src/utils/useDebounceEffect"
 import { appendImages } from "@src/utils/imageUtils"
+import { getCostBreakdownIfNeeded } from "@src/utils/costFormatting"
 
 import type {
 	ClineAsk,
@@ -205,6 +206,16 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		}),
 	)
 	const [currentFollowUpTs, setCurrentFollowUpTs] = useState<number>(-1)
+	const [aggregatedCostsMap, setAggregatedCostsMap] = useState<
+		Map<
+			string,
+			{
+				totalCost: number
+				ownCost: number
+				childrenCost: number
+			}
+		>
+	>(new Map())
 
 	const clineAskRef = useRef(clineAsk)
 	useEffect(() => {
@@ -508,6 +519,18 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 		// Reset user response flag for new task
 	}, [task?.ts])
+
+	const taskTs = task?.ts
+
+	// Request aggregated costs when task changes and has childIds
+	useEffect(() => {
+		if (taskTs && currentTaskItem?.childIds && currentTaskItem.childIds.length > 0) {
+			vscode.postMessage({
+				type: "getTaskWithAggregatedCosts",
+				text: currentTaskItem.id,
+			})
+		}
+	}, [taskTs, currentTaskItem?.id, currentTaskItem?.childIds])
 
 	useEffect(() => {
 		if (isHidden) {
@@ -954,6 +977,15 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					break
 				case "interactionRequired":
 					playSound("notification")
+					break
+				case "taskWithAggregatedCosts":
+					if (message.text && message.aggregatedCosts) {
+						setAggregatedCostsMap((prev) => {
+							const newMap = new Map(prev)
+							newMap.set(message.text!, message.aggregatedCosts!)
+							return newMap
+						})
+					}
 					break
 			}
 			// textAreaRef.current is not explicitly required here since React
@@ -1613,12 +1645,33 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						cacheWrites={apiMetrics.totalCacheWrites}
 						cacheReads={apiMetrics.totalCacheReads}
 						totalCost={apiMetrics.totalCost}
+						aggregatedCost={
+							currentTaskItem?.id && aggregatedCostsMap.has(currentTaskItem.id)
+								? aggregatedCostsMap.get(currentTaskItem.id)!.totalCost
+								: undefined
+						}
+						hasSubtasks={
+							!!(
+								currentTaskItem?.id &&
+								aggregatedCostsMap.has(currentTaskItem.id) &&
+								aggregatedCostsMap.get(currentTaskItem.id)!.childrenCost > 0
+							)
+						}
+						costBreakdown={
+							currentTaskItem?.id && aggregatedCostsMap.has(currentTaskItem.id)
+								? getCostBreakdownIfNeeded(aggregatedCostsMap.get(currentTaskItem.id)!, {
+										own: t("common:costs.own"),
+										subtasks: t("common:costs.subtasks"),
+									})
+								: undefined
+						}
 						contextTokens={apiMetrics.contextTokens}
 						buttonsDisabled={sendingDisabled}
 						handleCondenseContext={handleCondenseContext}
 						todos={latestTodos}
 						lastUserFeedbackIndex={groupedMessages.findIndex((msg) => msg.ts === lastUserFeedback?.ts)}
 						lastUserFeedback={lastUserFeedback?.text || ""}
+						isStreaming={isStreaming}
 						scrollToMessage={scrollToMessage}
 					/>
 

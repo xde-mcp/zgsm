@@ -52,6 +52,7 @@ import {
 	MAX_WORKSPACE_FILES,
 	DEFAULT_AUTO_CLEANUP_SETTINGS,
 } from "@roo-code/types"
+import { aggregateTaskCostsRecursive, type AggregatedCosts } from "./aggregateTaskCosts"
 import { TelemetryService } from "@roo-code/telemetry"
 import { CloudService, BridgeOrchestrator } from "@roo-code/cloud"
 
@@ -1871,6 +1872,20 @@ export class ClineProvider
 		// FIXME: this seems to happen sometimes when the json file doesnt save to disk for some reason
 		await this.deleteTaskFromState(id)
 		throw new Error("Task not found")
+	}
+
+	async getTaskWithAggregatedCosts(taskId: string): Promise<{
+		historyItem: HistoryItem
+		aggregatedCosts: AggregatedCosts
+	}> {
+		const { historyItem } = await this.getTaskWithId(taskId)
+
+		const aggregatedCosts = await aggregateTaskCostsRecursive(taskId, async (id: string) => {
+			const result = await this.getTaskWithId(id)
+			return result.historyItem
+		})
+
+		return { historyItem, aggregatedCosts }
 	}
 
 	async showTaskWithId(id: string) {
