@@ -86,6 +86,7 @@ import { format } from "date-fns"
 import { PathTooltip } from "../ui/PathTooltip"
 import { ReviewTaskStatus } from "@roo/codeReview"
 import { RandomLoadingMessage, RandomLoadingMessageLanguage } from "@/components/chat/RandomLoadingMessage"
+import { OpenMarkdownPreviewButton } from "./OpenMarkdownPreviewButton"
 
 // Helper function to get previous todos before a specific message
 function getPreviousTodos(messages: ClineMessage[], currentMessageTs: number): any[] {
@@ -1574,11 +1575,13 @@ export const ChatRowContent = ({
 						return <div className="ml-2 pl-4 pb-1">{t("chat:emptyCompletionResult")}</div>
 					}
 					return (
-						<div>
+						<div className="group">
 							<div style={headerStyle}>
 								<MessageCircle className="w-4 shrink-0" aria-label="Speech bubble icon" />
 								<span style={{ fontWeight: "bold" }}>{t("chat:text.rooSaid")}</span>
 								{message.ts ? format(new Date(message.ts), "yyyy-MM-dd HH:mm:ss") : ""}
+								<div style={{ flexGrow: 1 }} />
+								<OpenMarkdownPreviewButton markdown={message.text} />
 							</div>
 							<div className="pl-6">
 								<Markdown
@@ -1768,10 +1771,12 @@ export const ChatRowContent = ({
 						return <div className="ml-2 pl-4 pb-1">{t("chat:emptyCompletionResult")}</div>
 					}
 					return (
-						<>
+						<div className="group">
 							<div style={headerStyle}>
 								{icon}
 								{title}
+								<div style={{ flexGrow: 1 }} />
+								<OpenMarkdownPreviewButton markdown={message.text} />
 							</div>
 							<div className="border-l border-green-600/30 ml-2 pl-4 pb-1">
 								<Markdown
@@ -1783,7 +1788,7 @@ export const ChatRowContent = ({
 									})}
 								/>
 							</div>
-						</>
+						</div>
 					)
 				case "shell_integration_warning":
 					return <CommandExecutionError />
@@ -2069,10 +2074,12 @@ export const ChatRowContent = ({
 					}
 					if (message.text) {
 						return (
-							<div>
+							<div className="group">
 								<div style={headerStyle}>
 									{icon}
 									{title}
+									<div style={{ flexGrow: 1 }} />
+									<OpenMarkdownPreviewButton markdown={message.text} />
 								</div>
 								<div style={{ color: "var(--vscode-charts-green)", paddingTop: 10 }}>
 									<Markdown
