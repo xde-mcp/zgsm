@@ -194,7 +194,7 @@ Available at: https://github.com/$REPO/releases"
     fi
     
     # Make executable
-    chmod +x "$INSTALL_DIR/bin/roo"
+    chmod +x "$INSTALL_DIR/bin/cos"
     
     # Also make ripgrep executable if it exists
     if [ -f "$INSTALL_DIR/bin/rg" ]; then
@@ -207,12 +207,12 @@ setup_bin() {
     mkdir -p "$BIN_DIR"
     
     # Remove old symlink if exists
-    if [ -L "$BIN_DIR/roo" ] || [ -f "$BIN_DIR/roo" ]; then
-        rm -f "$BIN_DIR/roo"
+    if [ -L "$BIN_DIR/cos" ] || [ -f "$BIN_DIR/cos" ]; then
+        rm -f "$BIN_DIR/cos"
     fi
     
-    ln -sf "$INSTALL_DIR/bin/roo" "$BIN_DIR/roo"
-    info "Created symlink: $BIN_DIR/roo"
+    ln -sf "$INSTALL_DIR/bin/cos" "$BIN_DIR/cos"
+    info "Created symlink: $BIN_DIR/cos"
 }
 
 # Check if bin dir is in PATH and provide instructions
@@ -257,10 +257,10 @@ check_path() {
 
 # Verify installation
 verify_install() {
-    if [ -x "$BIN_DIR/roo" ]; then
+    if [ -x "$BIN_DIR/cos" ]; then
         info "Verifying installation..."
         # Just check if it runs without error
-        "$BIN_DIR/roo" --version >/dev/null 2>&1 || true
+        "$BIN_DIR/cos" --version >/dev/null 2>&1 || true
     fi
 }
 
@@ -270,15 +270,15 @@ print_success() {
     printf "${GREEN}${BOLD}✓ Roo Code CLI installed successfully!${NC}\n"
     echo ""
     echo "  Installation: $INSTALL_DIR"
-    echo "  Binary: $BIN_DIR/roo"
+    echo "  Binary: $BIN_DIR/cos"
     echo "  Version: $VERSION"
     echo ""
     echo "  ${BOLD}Get started:${NC}"
-    echo "    roo --help"
+    echo "    cos --help"
     echo ""
     echo "  ${BOLD}Example:${NC}"
     echo "    export OPENROUTER_API_KEY=sk-or-v1-..."
-    echo "    roo ~/my-project -P \"What is this project?\""
+    echo "    cos ~/my-project -P \"What is this project?\""
     echo ""
 }
 

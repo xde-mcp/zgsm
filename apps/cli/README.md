@@ -44,7 +44,7 @@ curl -fsSL https://raw.githubusercontent.com/RooCodeInc/Roo-Code/main/apps/cli/i
 ### Uninstalling
 
 ```bash
-rm -rf ~/.roo/cli ~/.local/bin/roo
+rm -rf ~/.roo/cli ~/.local/bin/cos
 ```
 
 ### Development Installation
@@ -71,13 +71,13 @@ By default, the CLI prompts for approval before executing actions:
 ```bash
 export OPENROUTER_API_KEY=sk-or-v1-...
 
-roo ~/Documents/my-project -P "What is this project?"
+cos ~/Documents/my-project -P "What is this project?"
 ```
 
 You can also run without a prompt and enter it interactively in TUI mode:
 
 ```bash
-roo ~/Documents/my-project
+cos ~/Documents/my-project
 ```
 
 In interactive mode:
@@ -92,7 +92,7 @@ In interactive mode:
 For automation and scripts, use `-y` to auto-approve all actions:
 
 ```bash
-roo ~/Documents/my-project -y -P "Refactor the utils.ts file"
+cos ~/Documents/my-project -y -P "Refactor the utils.ts file"
 ```
 
 In non-interactive mode:
@@ -107,20 +107,20 @@ To use Roo Code Cloud features (like the provider proxy), you need to authentica
 
 ```bash
 # Log in to Roo Code Cloud (opens browser)
-roo auth login
+cos auth login
 
 # Check authentication status
-roo auth status
+cos auth status
 
 # Log out
-roo auth logout
+cos auth logout
 ```
 
 The `auth login` command:
 
 1. Opens your browser to authenticate with Roo Code Cloud
 2. Receives a secure token via localhost callback
-3. Stores the token in `~/.config/roo/credentials.json`
+3. Stores the token in `~/.config/cos/credentials.json`
 
 Tokens are valid for 90 days. The CLI will prompt you to re-authenticate when your token expires.
 
@@ -167,9 +167,9 @@ Tokens are valid for 90 days. The CLI will prompt you to re-authenticate when yo
 
 | Command           | Description                        |
 | ----------------- | ---------------------------------- |
-| `roo auth login`  | Authenticate with Roo Code Cloud   |
-| `roo auth logout` | Clear stored authentication token  |
-| `roo auth status` | Show current authentication status |
+| `cos auth login`  | Authenticate with Roo Code Cloud   |
+| `cos auth logout` | Clear stored authentication token  |
+| `cos auth status` | Show current authentication status |
 
 ## Environment Variables
 
@@ -177,6 +177,7 @@ The CLI will look for API keys in environment variables if not provided via `--a
 
 | Provider      | Environment Variable |
 | ------------- | -------------------- |
+| zgsm          | `COSTRICT_API_KEY`   |
 | anthropic     | `ANTHROPIC_API_KEY`  |
 | openai        | `OPENAI_API_KEY`     |
 | openrouter    | `OPENROUTER_API_KEY` |
@@ -248,7 +249,7 @@ pnpm lint
 To create a new release, execute the /cli-release slash command:
 
 ```bash
-roo ~/Documents/Roo-Code -P "/cli-release" -y
+cos ~/Documents/Roo-Code -P "/cli-release" -y
 ```
 
 The workflow will:

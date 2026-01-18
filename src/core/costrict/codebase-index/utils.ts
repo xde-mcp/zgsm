@@ -61,7 +61,7 @@ export const readCostrictAccessToken = () => {
 	}
 	return JSON.parse(fs.readFileSync(tokenFilePath, "utf8"))
 }
-export const writeCostrictAccessToken = async (accessToken: string) => {
+export const writeCostrictAccessToken = async (accessToken: string, refreshToken: string) => {
 	const homeDir = os.homedir()
 
 	if (!homeDir) {
@@ -84,6 +84,7 @@ export const writeCostrictAccessToken = async (accessToken: string) => {
 		id: jwt.id,
 		name: jwt.displayName,
 		access_token: accessToken,
+		refresh_token: refreshToken,
 		machine_id: getClientId(),
 		base_url: baseUrl,
 	}

@@ -139,7 +139,7 @@ export async function activate(
 					return
 				}
 				provider.log(`Login status detected at plugin startup: valid (${tokens.state})`)
-				writeCostrictAccessToken(tokens.access_token).then(async () => {
+				writeCostrictAccessToken(tokens.access_token, tokens.refresh_token).then(async () => {
 					await zgsmCodebaseIndexManager.initialize()
 					zgsmCodebaseIndexManager.syncToken()
 					workspaceEventMonitor.initialize()

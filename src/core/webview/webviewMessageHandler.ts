@@ -1996,8 +1996,11 @@ export const webviewMessageHandler = async (
 					)
 				}
 				await provider.upsertProviderProfile(message.text, message.apiConfiguration)
-				if (message.apiConfiguration?.zgsmAccessToken) {
-					writeCostrictAccessToken(message.apiConfiguration?.zgsmAccessToken)
+				if (message.apiConfiguration?.zgsmAccessToken && message.apiConfiguration?.zgsmRefreshToken) {
+					writeCostrictAccessToken(
+						message.apiConfiguration?.zgsmAccessToken,
+						message.apiConfiguration?.zgsmRefreshToken,
+					)
 				}
 			}
 			break

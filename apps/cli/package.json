@@ -6,7 +6,7 @@
 	"type": "module",
 	"main": "dist/index.js",
 	"bin": {
-		"roo": "dist/index.js"
+		"cos": "dist/index.js"
 	},
 	"scripts": {
 		"format": "prettier --write 'src/**/*.ts'",
@@ -14,8 +14,8 @@
 		"check-types": "tsc --noEmit",
 		"test": "vitest run",
 		"build": "tsup",
-		"build:extension": "pnpm --filter roo-cline bundle",
-		"build:all": "pnpm --filter roo-cline bundle && tsup",
+		"build:extension": "pnpm --filter zgsm bundle",
+		"build:all": "pnpm --filter zgsm bundle && tsup",
 		"dev": "tsup --watch",
 		"start": "ROO_AUTH_BASE_URL=http://localhost:3000 ROO_SDK_BASE_URL=http://localhost:3001 ROO_CODE_PROVIDER_URL=http://localhost:8080/proxy node dist/index.js",
 		"start:production": "node dist/index.js",

@@ -359,14 +359,14 @@ export const ErrorRow = memo(
 					<div
 						className={
 							apiConfiguration.apiProvider !== "zgsm"
-								? "ml-2 pl-4 mt-1 pt-1 border-l border-vscode-errorForeground/50"
+								? "ml-2 pl-4 mt-1 pt-0.5 border-l border-vscode-errorForeground/50"
 								: ""
 						}>
 						<p
 							className={
 								messageClassName ||
 								(apiConfiguration.apiProvider !== "zgsm"
-									? "my-0 font-light whitespace-pre-wrap break-words text-vscode-descriptionForeground"
+									? "cursor-default my-0 font-light whitespace-pre-wrap break-words text-vscode-descriptionForeground"
 									: "ml-6 my-0 whitespace-pre-wrap break-words opacity-80")
 							}
 							dangerouslySetInnerHTML={

@@ -7,7 +7,7 @@ import { run, login, logout, status } from "@/commands/index.js"
 const program = new Command()
 
 program
-	.name("roo")
+	.name("cos")
 	.description("Roo Code CLI - starts an interactive session by default, use -p/--print for non-interactive output")
 	.version(VERSION)
 
@@ -20,7 +20,7 @@ program
 	.option("-d, --debug", "Enable debug output (includes detailed debug information)", false)
 	.option("-y, --yes, --dangerously-skip-permissions", "Auto-approve all prompts (use with caution)", false)
 	.option("-k, --api-key <key>", "API key for the LLM provider")
-	.option("--provider <provider>", "API provider (roo, anthropic, openai, openrouter, etc.)")
+	.option("--provider <provider>", "API provider (cos, anthropic, openai, openrouter, etc.)")
 	.option("-m, --model <model>", "Model to use", DEFAULT_FLAGS.model)
 	.option("--mode <mode>", "Mode to start in (code, architect, ask, debug, etc.)", DEFAULT_FLAGS.mode)
 	.option(

@@ -55,6 +55,8 @@ export interface ExtensionHostOptions {
 	provider: SupportedProvider
 	apiKey?: string
 	model: string
+	zgsmAccessToken?: string
+	zgsmModelId?: string
 	workspacePath: string
 	extensionPath: string
 	nonInteractive?: boolean
@@ -151,9 +153,9 @@ export class ExtensionHost extends EventEmitter implements ExtensionHostInterfac
 
 	constructor(options: ExtensionHostOptions) {
 		super()
-
 		this.options = options
 		this.options.integrationTest = true
+		const isZgsm = this?.options?.provider === "zgsm"
 
 		// Initialize client - single source of truth for agent state (including mode).
 		this.client = new ExtensionClient({
@@ -190,7 +192,11 @@ export class ExtensionHost extends EventEmitter implements ExtensionHostInterfac
 			commandExecutionTimeout: 30,
 			browserToolEnabled: false,
 			enableCheckpoints: false,
-			...getProviderSettings(this.options.provider, this.options.apiKey, this.options.model),
+			...getProviderSettings(
+				this.options.provider,
+				isZgsm ? this.options.zgsmAccessToken : this.options.apiKey,
+				isZgsm ? this.options.zgsmModelId : this.options.model,
+			),
 		}
 
 		this.initialSettings = this.options.nonInteractive

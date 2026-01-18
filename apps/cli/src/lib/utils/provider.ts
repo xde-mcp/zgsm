@@ -29,6 +29,10 @@ export function getProviderSettings(
 	const config: RooCodeSettings = { apiProvider: provider }
 
 	switch (provider) {
+		case "zgsm":
+			if (apiKey) config.zgsmAccessToken = apiKey
+			if (model) config.zgsmModelId = model
+			break
 		case "anthropic":
 			if (apiKey) config.apiKey = apiKey
 			if (model) config.apiModelId = model
