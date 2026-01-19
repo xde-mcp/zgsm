@@ -154,8 +154,11 @@ export class ExtensionHost extends EventEmitter implements ExtensionHostInterfac
 	constructor(options: ExtensionHostOptions) {
 		super()
 		this.options = options
-		this.options.integrationTest = true
 		const isZgsm = this?.options?.provider === "zgsm"
+
+		// Set up quiet mode early, before any extension code runs.
+		// This suppresses console output from the extension during load.
+		this.setupQuietMode()
 
 		// Initialize client - single source of truth for agent state (including mode).
 		this.client = new ExtensionClient({
@@ -164,9 +167,7 @@ export class ExtensionHost extends EventEmitter implements ExtensionHostInterfac
 		})
 
 		// Initialize output manager.
-		this.outputManager = new OutputManager({
-			disabled: options.disableOutput,
-		})
+		this.outputManager = new OutputManager({ disabled: options.disableOutput })
 
 		// Initialize prompt manager with console mode callbacks.
 		this.promptManager = new PromptManager({
@@ -228,8 +229,6 @@ export class ExtensionHost extends EventEmitter implements ExtensionHostInterfac
 				this.initialSettings.reasoningEffort = this.options.reasoningEffort
 			}
 		}
-
-		this.setupQuietMode()
 	}
 
 	// ==========================================================================
@@ -273,7 +272,8 @@ export class ExtensionHost extends EventEmitter implements ExtensionHostInterfac
 	// ==========================================================================
 
 	private setupQuietMode(): void {
-		if (this.options.integrationTest) {
+		// Skip if already set up or if integrationTest mode
+		if (this.originalConsole || this.options.integrationTest) {
 			return
 		}
 
@@ -298,18 +298,16 @@ export class ExtensionHost extends EventEmitter implements ExtensionHostInterfac
 	}
 
 	private restoreConsole(): void {
-		if (this.options.integrationTest) {
+		if (!this.originalConsole) {
 			return
 		}
 
-		if (this.originalConsole) {
-			console.log = this.originalConsole.log
-			console.warn = this.originalConsole.warn
-			console.error = this.originalConsole.error
-			console.debug = this.originalConsole.debug
-			console.info = this.originalConsole.info
-			this.originalConsole = null
-		}
+		console.log = this.originalConsole.log
+		console.warn = this.originalConsole.warn
+		console.error = this.originalConsole.error
+		console.debug = this.originalConsole.debug
+		console.info = this.originalConsole.info
+		this.originalConsole = null
 
 		if (this.originalProcessEmitWarning) {
 			process.emitWarning = this.originalProcessEmitWarning
