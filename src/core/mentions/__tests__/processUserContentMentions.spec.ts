@@ -34,7 +34,7 @@ describe("processUserContentMentions", () => {
 			const userContent = [
 				{
 					type: "text" as const,
-					text: "<task>Read file with limit</task>",
+					text: "<user_message>Read file with limit</user_message>",
 				},
 			]
 
@@ -48,7 +48,7 @@ describe("processUserContentMentions", () => {
 			})
 
 			expect(parseMentions).toHaveBeenCalledWith(
-				"<task>Read file with limit</task>",
+				"<user_message>Read file with limit</user_message>",
 				"/test",
 				mockUrlContentFetcher,
 				mockFileContextTracker,
@@ -65,7 +65,7 @@ describe("processUserContentMentions", () => {
 			const userContent = [
 				{
 					type: "text" as const,
-					text: "<task>Read file without limit</task>",
+					text: "<user_message>Read file without limit</user_message>",
 				},
 			]
 
@@ -78,7 +78,7 @@ describe("processUserContentMentions", () => {
 			})
 
 			expect(parseMentions).toHaveBeenCalledWith(
-				"<task>Read file without limit</task>",
+				"<user_message>Read file without limit</user_message>",
 				"/test",
 				mockUrlContentFetcher,
 				mockFileContextTracker,
@@ -95,7 +95,7 @@ describe("processUserContentMentions", () => {
 			const userContent = [
 				{
 					type: "text" as const,
-					text: "<task>Read unlimited lines</task>",
+					text: "<user_message>Read unlimited lines</user_message>",
 				},
 			]
 
@@ -109,7 +109,7 @@ describe("processUserContentMentions", () => {
 			})
 
 			expect(parseMentions).toHaveBeenCalledWith(
-				"<task>Read unlimited lines</task>",
+				"<user_message>Read unlimited lines</user_message>",
 				"/test",
 				mockUrlContentFetcher,
 				mockFileContextTracker,
@@ -124,11 +124,11 @@ describe("processUserContentMentions", () => {
 	})
 
 	describe("content processing", () => {
-		it("should process text blocks with <task> tags", async () => {
+		it("should process text blocks with <user_message> tags", async () => {
 			const userContent = [
 				{
 					type: "text" as const,
-					text: "<task>Do something</task>",
+					text: "<user_message>Do something</user_message>",
 				},
 			]
 
@@ -142,35 +142,12 @@ describe("processUserContentMentions", () => {
 			expect(parseMentions).toHaveBeenCalled()
 			expect(result.content[0]).toEqual({
 				type: "text",
-				text: "parsed: <task>Do something</task>",
+				text: "parsed: <user_message>Do something</user_message>",
 			})
 			expect(result.mode).toBeUndefined()
 		})
 
-		it("should process text blocks with <feedback> tags", async () => {
-			const userContent = [
-				{
-					type: "text" as const,
-					text: "<feedback>Fix this issue</feedback>",
-				},
-			]
-
-			const result = await processUserContentMentions({
-				userContent,
-				cwd: "/test",
-				urlContentFetcher: mockUrlContentFetcher,
-				fileContextTracker: mockFileContextTracker,
-			})
-
-			expect(parseMentions).toHaveBeenCalled()
-			expect(result.content[0]).toEqual({
-				type: "text",
-				text: "parsed: <feedback>Fix this issue</feedback>",
-			})
-			expect(result.mode).toBeUndefined()
-		})
-
-		it("should not process text blocks without task or feedback tags", async () => {
+		it("should not process text blocks without user_message tags", async () => {
 			const userContent = [
 				{
 					type: "text" as const,
@@ -195,7 +172,7 @@ describe("processUserContentMentions", () => {
 				{
 					type: "tool_result" as const,
 					tool_use_id: "123",
-					content: "<feedback>Tool feedback</feedback>",
+					content: "<user_message>Tool feedback</user_message>",
 				},
 			]
 
@@ -210,7 +187,7 @@ describe("processUserContentMentions", () => {
 			expect(result.content[0]).toEqual({
 				type: "tool_result",
 				tool_use_id: "123",
-				content: "parsed: <feedback>Tool feedback</feedback>",
+				content: "parsed: <user_message>Tool feedback</user_message>",
 			})
 			expect(result.mode).toBeUndefined()
 		})
@@ -223,7 +200,7 @@ describe("processUserContentMentions", () => {
 					content: [
 						{
 							type: "text" as const,
-							text: "<task>Array task</task>",
+							text: "<user_message>Array task</user_message>",
 						},
 						{
 							type: "text" as const,
@@ -247,7 +224,7 @@ describe("processUserContentMentions", () => {
 				content: [
 					{
 						type: "text",
-						text: "parsed: <task>Array task</task>",
+						text: "parsed: <user_message>Array task</user_message>",
 					},
 					{
 						type: "text",
@@ -262,7 +239,7 @@ describe("processUserContentMentions", () => {
 			const userContent = [
 				{
 					type: "text" as const,
-					text: "<task>First task</task>",
+					text: "<user_message>First task</user_message>",
 				},
 				{
 					type: "image" as const,
@@ -275,7 +252,7 @@ describe("processUserContentMentions", () => {
 				{
 					type: "tool_result" as const,
 					tool_use_id: "456",
-					content: "<feedback>Feedback</feedback>",
+					content: "<user_message>Feedback</user_message>",
 				},
 			]
 
@@ -291,13 +268,13 @@ describe("processUserContentMentions", () => {
 			expect(result.content).toHaveLength(3)
 			expect(result.content[0]).toEqual({
 				type: "text",
-				text: "parsed: <task>First task</task>",
+				text: "parsed: <user_message>First task</user_message>",
 			})
 			expect(result.content[1]).toEqual(userContent[1]) // Image block unchanged
 			expect(result.content[2]).toEqual({
 				type: "tool_result",
 				tool_use_id: "456",
-				content: "parsed: <feedback>Feedback</feedback>",
+				content: "parsed: <user_message>Feedback</user_message>",
 			})
 			expect(result.mode).toBeUndefined()
 		})
@@ -308,7 +285,7 @@ describe("processUserContentMentions", () => {
 			const userContent = [
 				{
 					type: "text" as const,
-					text: "<task>Test default</task>",
+					text: "<user_message>Test default</user_message>",
 				},
 			]
 
@@ -320,7 +297,7 @@ describe("processUserContentMentions", () => {
 			})
 
 			expect(parseMentions).toHaveBeenCalledWith(
-				"<task>Test default</task>",
+				"<user_message>Test default</user_message>",
 				"/test",
 				mockUrlContentFetcher,
 				mockFileContextTracker,
@@ -337,7 +314,7 @@ describe("processUserContentMentions", () => {
 			const userContent = [
 				{
 					type: "text" as const,
-					text: "<task>Test explicit false</task>",
+					text: "<user_message>Test explicit false</user_message>",
 				},
 			]
 
@@ -350,7 +327,7 @@ describe("processUserContentMentions", () => {
 			})
 
 			expect(parseMentions).toHaveBeenCalledWith(
-				"<task>Test explicit false</task>",
+				"<user_message>Test explicit false</user_message>",
 				"/test",
 				mockUrlContentFetcher,
 				mockFileContextTracker,

@@ -317,8 +317,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 			isDev && this.logger.error(`[createMessage] ${err}`)
 			throw err
 		} finally {
-			// eslint-disable-next-line @typescript-eslint/no-unused-expressions
-			isDev && this.logger.info(`[ResponseID ${modelId} sse createMessage end]:`, requestId)
+			this.logger.info(`[ResponseID ${modelId} sse createMessage end]:`, requestId)
 		}
 	}
 
