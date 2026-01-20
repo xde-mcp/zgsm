@@ -20,6 +20,7 @@ import type { GitCommit } from "./git.js"
 import type { McpServer } from "./mcp.js"
 import type { IZgsmModelResponseData, ModelRecord, RouterModels } from "./model.js"
 import type { INotice } from "./notification.js"
+import type { OpenAiCodexRateLimitInfo } from "./providers/openai-codex-rate-limits.js"
 
 /**
  * ExtensionMessage
@@ -113,6 +114,7 @@ export interface ExtensionMessage {
 		| "customToolsResult"
 		| "modes"
 		| "taskWithAggregatedCosts"
+		| "openAiCodexRateLimits"
 	text?: string
 	payload?: any // eslint-disable-line @typescript-eslint/no-explicit-any
 	checkpointWarning?: {
@@ -178,7 +180,9 @@ export interface ExtensionMessage {
 	customMode?: ModeConfig
 	slug?: string
 	success?: boolean
-	values?: Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
+	/** Generic payload for extension messages that use `values` */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	values?: Record<string, any>
 	requestId?: string
 	promptText?: string
 	results?:
@@ -220,6 +224,12 @@ export interface ExtensionMessage {
 		childrenCost: number
 	}
 	historyItem?: HistoryItem
+}
+
+export interface OpenAiCodexRateLimitsMessage {
+	type: "openAiCodexRateLimits"
+	values?: OpenAiCodexRateLimitInfo
+	error?: string
 }
 
 export type ExtensionState = Pick<
@@ -584,6 +594,7 @@ export interface WebviewMessage {
 		| "openDebugUiHistory"
 		| "downloadErrorDiagnostics"
 		| "requestClaudeCodeRateLimits"
+		| "requestOpenAiCodexRateLimits"
 		| "refreshCustomTools"
 		| "requestModes"
 		| "switchMode"
@@ -618,6 +629,7 @@ export interface WebviewMessage {
 	promptMode?: string | "enhance"
 	customPrompt?: PromptComponent
 	dataUrls?: string[]
+	/** Generic payload for webview messages that use `values` */
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	values?: Record<string, any>
 	query?: string
@@ -682,6 +694,10 @@ export interface WebviewMessage {
 		codebaseIndexOpenRouterApiKey?: string
 	}
 	updatedSettings?: RooCodeSettings
+}
+
+export interface RequestOpenAiCodexRateLimitsMessage {
+	type: "requestOpenAiCodexRateLimits"
 }
 
 export const checkoutDiffPayloadSchema = z.object({
