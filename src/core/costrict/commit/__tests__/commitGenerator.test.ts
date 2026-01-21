@@ -6,6 +6,7 @@ import type { GitDiffInfo, CommitGenerationOptions } from "../types"
 vi.mock("child_process", () => ({
 	exec: vi.fn(),
 	spawn: vi.fn(),
+	execFile: vi.fn(),
 }))
 
 // Mock vscode

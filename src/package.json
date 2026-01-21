@@ -134,6 +134,11 @@
 				"icon": "$(settings-gear)"
 			},
 			{
+				"command": "zgsm.worktreesButtonClicked",
+				"title": "%command.worktrees.title%",
+				"icon": "$(git-branch)"
+			},
+			{
 				"command": "zgsm.openInNewTab",
 				"title": "%command.openInNewTab.title%",
 				"category": "%configuration.title%"
@@ -429,6 +434,11 @@
 					"command": "zgsm.popoutButtonClicked",
 					"group": "overflow@2",
 					"when": "view == zgsm.SidebarProvider"
+				},
+				{
+					"command": "zgsm.worktreesButtonClicked",
+					"group": "overflow@4",
+					"when": "view == zgsm.SidebarProvider"
 				}
 			],
 			"editor/title": [
@@ -458,8 +468,13 @@
 					"when": "activeWebviewPanelId == zgsm.TabPanelProvider"
 				},
 				{
-					"command": "zgsm.popoutButtonClicked",
+					"command": "zgsm.worktreesButtonClicked",
 					"group": "overflow@2",
+					"when": "activeWebviewPanelId == zgsm.TabPanelProvider"
+				},
+				{
+					"command": "zgsm.popoutButtonClicked",
+					"group": "overflow@3",
 					"when": "activeWebviewPanelId == zgsm.TabPanelProvider"
 				},
 				{

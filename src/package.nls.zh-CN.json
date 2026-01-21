@@ -27,6 +27,7 @@
 	"command.openInEditor.title": "在编辑器中打开",
 	"command.cloud.title": "账户",
 	"command.settings.title": "设置",
+	"command.worktrees.title": "Worktrees",
 	"command.documentation.title": "文档",
 	"command.shortKeyCut.title": "CoStrict代码补全快捷键",
 	"command.codeReview.title": "代码审查",

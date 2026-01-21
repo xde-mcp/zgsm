@@ -27,6 +27,7 @@
 	"command.openInEditor.title": "在編輯器中開啟",
 	"command.cloud.title": "帳戶",
 	"command.settings.title": "設定",
+	"command.worktrees.title": "Worktrees",
 	"command.documentation.title": "文件",
 	"command.shortKeyCut.title": "CoStrict程式碼補全快捷鍵",
 	"command.codeReview.title": "程式碼審查",

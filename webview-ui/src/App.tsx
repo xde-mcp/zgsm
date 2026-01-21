@@ -23,6 +23,7 @@ import { CheckpointRestoreDialog } from "./components/chat/CheckpointRestoreDial
 import { DeleteMessageDialog, EditMessageDialog } from "./components/chat/MessageModificationConfirmationDialog"
 import ErrorBoundary from "./components/ErrorBoundary"
 // import { CloudView } from "./components/cloud/CloudView"
+import { WorktreesView } from "./components/worktrees"
 import { useAddNonInteractiveClickListener } from "./components/ui/hooks/useNonInteractiveClick"
 import { TooltipProvider } from "./components/ui/tooltip"
 import { STANDARD_TOOLTIP_DELAY, StandardTooltip } from "./components/ui/standard-tooltip"
@@ -34,7 +35,6 @@ import { ZgsmCodebaseDisableConfirmDialog } from "./components/settings/ZgsmCode
 import { useTranslation } from "react-i18next"
 import { EXPERIMENT_IDS } from "@roo/experiments"
 
-// type Tab = "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud" | "zgsm-account" | "codeReview"
 type Tab =
 	| "settings"
 	| "history"
@@ -43,6 +43,7 @@ type Tab =
 	| "cloud"
 	| "zgsm-account"
 	| "codeReview"
+	| "worktrees"
 	| "codeReviewHistory"
 
 interface HumanRelayDialogState {
@@ -55,7 +56,6 @@ interface ReauthConfirmationDialogState {
 	isOpen: boolean
 	messageTs: number
 }
-
 interface DeleteMessageDialogState {
 	isOpen: boolean
 	messageTs: number
@@ -90,6 +90,7 @@ const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]
 	cloudButtonClicked: "cloud",
 	zgsmAccountButtonClicked: "zgsm-account",
 	codeReviewButtonClicked: "codeReview",
+	worktreesButtonClicked: "worktrees",
 }
 
 const App = () => {
@@ -382,6 +383,7 @@ const App = () => {
 			{tab === "zgsm-account" && (
 				<ZgsmAccountView apiConfiguration={apiConfiguration} onDone={() => switchTab("chat")} />
 			)}
+			{tab === "worktrees" && <WorktreesView onDone={() => switchTab("chat")} />}
 			{tab === "codeReviewHistory" && <CodeReviewHistoryView onDone={() => switchTab("codeReview")} />}
 			<div className={`${isChatTab ? "fixed inset-0 flex flex-col" : "hidden"}`}>
 				<div className={`header flex items-center justify-between px-5 ${isChatTab ? "" : "hidden"}`}>
@@ -409,6 +411,11 @@ const App = () => {
 								<i
 									className="codicon codicon-add mr-1 cursor-pointer p-0.5"
 									onClick={() => resetTabs()}></i>
+							</StandardTooltip>
+							<StandardTooltip content={t("worktrees:title")}>
+								<i
+									className="codicon codicon-git-branch-create cursor-pointer p-0.5"
+									onClick={() => switchTab("worktrees")}></i>
 							</StandardTooltip>
 							<StandardTooltip content={t("history:history")}>
 								<i
