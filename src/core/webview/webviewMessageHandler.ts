@@ -16,6 +16,8 @@ import {
 	type ModelRecord,
 	type WebviewMessage,
 	type EditQueuedMessagePayload,
+	type CodeReviewWelcomeTipsPayload,
+	type CreateReviewTaskPayload,
 	TelemetryEventName,
 	ModelInfo,
 	RooCodeSettings,
@@ -50,7 +52,7 @@ import { discoverChromeHostUrl, tryChromeHostUrl } from "../../services/browser/
 import { searchWorkspaceFiles } from "../../services/search/file-search"
 import { fileExistsAtPath } from "../../utils/fs"
 import { playTts, setTtsEnabled, setTtsSpeed, stopTts } from "../../utils/tts"
-import { searchCommits } from "../../utils/git"
+import { searchCommits, getUncommittedFiles, addFilesIntent, restoreFilesFromStaged } from "../../utils/git"
 import { exportSettings, importSettingsWithFeedback } from "../config/importExport"
 import { getOpenAiModels } from "../../api/providers/openai"
 import { getVsCodeLmModels } from "../../api/providers/vscode-lm"
@@ -83,6 +85,9 @@ import delay from "delay"
 import { setPendingTodoList } from "../tools/UpdateTodoListTool"
 import { getEditorType } from "../../utils/getEditorType"
 import { updateDefaultDebug } from "../../utils/getDebugState"
+import { isJetbrainsPlatform } from "../../utils/platform"
+import { showFileDiffFromGitStatus } from "../../utils/zgsmUtils"
+import { ReviewTargetType } from "../../shared/codeReview"
 
 export const webviewMessageHandler = async (
 	provider: ClineProvider,
@@ -1750,6 +1755,14 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("hasOpenedModeSelector", message.bool ?? true)
 			await provider.postStateToWebview()
 			break
+		case "setCodeReviewWelcomeTips": {
+			const payload = message.payload as CodeReviewWelcomeTipsPayload
+			if (payload?.value !== undefined) {
+				await updateGlobalState("hasClosedCodeReviewWelcomeTips", payload.value)
+				await provider.postStateToWebview()
+			}
+			break
+		}
 		case "toggleApiConfigPin":
 			if (message.text) {
 				const currentPinned = getGlobalState("pinnedApiConfigs") ?? {}
@@ -3534,6 +3547,72 @@ export const webviewMessageHandler = async (
 			} catch (err) {}
 			break
 		}
+		case "getReviewFiles": {
+			try {
+				const cwd = getCurrentCwd()
+				const files = await getUncommittedFiles(cwd)
+				await provider.postMessageToWebview({
+					type: "reviewFilesResponse",
+					payload: { files },
+				})
+			} catch (error) {
+				console.error("Error getting review files:", error)
+				await provider.postMessageToWebview({
+					type: "reviewFilesResponse",
+					payload: { files: [] },
+				})
+			}
+			break
+		}
+		case "createReviewTask": {
+			const reviewInstance = CodeReviewService.getInstance()
+			const { files } = message.payload! as CreateReviewTaskPayload
+			const cwd = getCurrentCwd()
+
+			const untrackedFiles =
+				files?.filter((item) => item.status === "??" || item.status === "U").map((item) => item.path) || []
+			let intentAddedFiles: string[] = []
+
+			if (untrackedFiles.length > 0) {
+				intentAddedFiles = await addFilesIntent(cwd, untrackedFiles)
+			}
+
+			await reviewInstance.createReviewTask(
+				"@git-changes",
+				{
+					type: ReviewTargetType.FILE,
+					data: files?.map((item) => ({
+						file_path: item.path,
+					})),
+				},
+				{
+					onTaskComplete: async () => {
+						if (intentAddedFiles.length > 0) {
+							await restoreFilesFromStaged(cwd, intentAddedFiles)
+						}
+					},
+				},
+			)
+			break
+		}
+		case "showFileDiff": {
+			const { filePath, status, oldFilePath } = message.values || {}
+			if (isJetbrainsPlatform()) {
+				return
+			}
+			if (!filePath || !status) {
+				console.error("Missing required parameters for showFileDiff")
+				break
+			}
+
+			await showFileDiffFromGitStatus({
+				cwd: getCurrentCwd(),
+				filePath,
+				status,
+				oldFilePath,
+			})
+			break
+		}
 		case "settingsButtonclicked": {
 			provider.postMessageToWebview({
 				type: "action",
@@ -3832,6 +3911,94 @@ export const webviewMessageHandler = async (
 				values: message.values,
 				log: (msg) => provider.log(msg),
 			})
+			break
+		}
+
+		case "getReviewHistory": {
+			try {
+				const reviewInstance = CodeReviewService.getInstance()
+				const history = await reviewInstance.getReviewHistory()
+				await provider.postMessageToWebview({
+					type: "reviewHistoryResponse",
+					values: { history },
+				})
+			} catch (error) {
+				provider.log(`Error getting review history: ${error}`, "error")
+				await provider.postMessageToWebview({
+					type: "reviewHistoryResponse",
+					values: { history: [], error: error instanceof Error ? error.message : String(error) },
+				})
+			}
+			break
+		}
+
+		case "getReviewIssueById": {
+			try {
+				const { reviewTaskId } = message.values || {}
+				if (!reviewTaskId) {
+					await provider.postMessageToWebview({
+						type: "reviewIssueByIdLoaded",
+						values: { reviewTaskId: "", issues: [] },
+					})
+					break
+				}
+				const reviewInstance = CodeReviewService.getInstance()
+				const result = await reviewInstance.getReviewHistoryById(reviewTaskId)
+				await provider.postMessageToWebview({
+					type: "reviewIssueByIdLoaded",
+					values: {
+						reviewTaskId,
+						issues: result?.issues || [],
+					},
+				})
+			} catch (error) {
+				provider.log(`Error getting review history entry: ${error}`, "error")
+				await provider.postMessageToWebview({
+					type: "reviewIssueByIdLoaded",
+					values: { reviewTaskId: "", issues: [] },
+				})
+			}
+			break
+		}
+
+		case "deleteReviewHistoryItem": {
+			try {
+				const { reviewTaskId } = message.values || {}
+				if (!reviewTaskId) {
+					vscode.window.showErrorMessage("Missing review task ID")
+					break
+				}
+				const reviewInstance = CodeReviewService.getInstance()
+				await reviewInstance.deleteReviewHistoryItem(reviewTaskId)
+				await provider.postMessageToWebview({
+					type: "reviewHistoryEntryDeleted",
+					values: { reviewTaskId },
+				})
+			} catch (error) {
+				provider.log(`Error deleting review history entry: ${error}`, "error")
+				vscode.window.showErrorMessage(
+					error instanceof Error ? error.message : "Failed to delete review history entry",
+				)
+			}
+			break
+		}
+
+		case "showReviewComment": {
+			try {
+				if (isJetbrainsPlatform()) {
+					return
+				}
+				const { issue, reviewTaskId } = message.values || {}
+				if (!issue) {
+					vscode.window.showErrorMessage("Missing issue")
+					break
+				}
+				const reviewInstance = CodeReviewService.getInstance()
+				await reviewInstance.showReviewComment(issue, reviewTaskId)
+			} catch (error) {
+				provider.log(`Error showing review comment: ${error}`, "error")
+				vscode.window.showErrorMessage(error instanceof Error ? error.message : "Failed to show review comment")
+			}
 			break
 		}
 

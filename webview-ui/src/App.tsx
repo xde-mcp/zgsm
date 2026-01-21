@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
 import { type ExtensionMessage, TelemetryEventName } from "@roo-code/types"
 
+import { ReviewTaskStatus } from "@roo/codeReview"
 import TranslationProvider from "./i18n/TranslationContext"
 // import { MarketplaceViewStateManager } from "./components/marketplace/MarketplaceViewStateManager"
 
@@ -15,6 +16,7 @@ import ChatView, { ChatViewRef } from "./components/chat/ChatView"
 import HistoryView from "./components/history/HistoryView"
 import SettingsView, { SettingsViewRef } from "./components/settings/SettingsView"
 import CodeReviewPage from "./components/code-review"
+import CodeReviewHistoryView from "./components/code-review/CodeReviewHistoryView"
 import WelcomeView from "./components/welcome/WelcomeViewProvider"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import { CheckpointRestoreDialog } from "./components/chat/CheckpointRestoreDialog"
@@ -33,7 +35,15 @@ import { useTranslation } from "react-i18next"
 import { EXPERIMENT_IDS } from "@roo/experiments"
 
 // type Tab = "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud" | "zgsm-account" | "codeReview"
-type Tab = "settings" | "history" | "chat" | "marketplace" | "cloud" | "zgsm-account" | "codeReview"
+type Tab =
+	| "settings"
+	| "history"
+	| "chat"
+	| "marketplace"
+	| "cloud"
+	| "zgsm-account"
+	| "codeReview"
+	| "codeReviewHistory"
 
 interface HumanRelayDialogState {
 	isOpen: boolean
@@ -98,6 +108,9 @@ const App = () => {
 		renderContext,
 		mdmCompliant,
 		apiConfiguration,
+		hasClosedCodeReviewWelcomeTips,
+		reviewTask,
+		setReviewTask,
 	} = useExtensionState()
 	const { t } = useTranslation()
 
@@ -140,6 +153,7 @@ const App = () => {
 
 	const settingsRef = useRef<SettingsViewRef>(null)
 	const chatViewRef = useRef<ChatViewRef>(null)
+	const codeReviewNavigateRef = useRef<(() => void) | null>(null)
 
 	const switchTab = useCallback(
 		(newTab: Tab) => {
@@ -162,6 +176,13 @@ const App = () => {
 		},
 		[mdmCompliant],
 	)
+
+	const toggleCodeReviewTips = useCallback(() => {
+		vscode.postMessage({
+			type: "setCodeReviewWelcomeTips",
+			payload: { value: !hasClosedCodeReviewWelcomeTips },
+		})
+	}, [hasClosedCodeReviewWelcomeTips])
 
 	const [currentSection, setCurrentSection] = useState<string | undefined>(undefined)
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -316,6 +337,18 @@ const App = () => {
 	const onTaskCancel = useCallback(() => {
 		vscode.postMessage({ type: "cancelReviewTask" })
 	}, [])
+	const onNavigateBack = useCallback(() => {
+		if (reviewTask.status !== ReviewTaskStatus.RUNNING && codeReviewNavigateRef.current) {
+			setReviewTask({
+				status: ReviewTaskStatus.INITIAL,
+				data: {
+					issues: [],
+					progress: 0,
+				},
+			})
+			codeReviewNavigateRef.current()
+		}
+	}, [reviewTask.status, setReviewTask])
 
 	if (!didHydrateState) {
 		return null
@@ -349,6 +382,7 @@ const App = () => {
 			{tab === "zgsm-account" && (
 				<ZgsmAccountView apiConfiguration={apiConfiguration} onDone={() => switchTab("chat")} />
 			)}
+			{tab === "codeReviewHistory" && <CodeReviewHistoryView onDone={() => switchTab("codeReview")} />}
 			<div className={`${isChatTab ? "fixed inset-0 flex flex-col" : "hidden"}`}>
 				<div className={`header flex items-center justify-between px-5 ${isChatTab ? "" : "hidden"}`}>
 					<TabList value={tab} onValueChange={(val) => switchTab(val as Tab)} className="header-left h-7">
@@ -383,8 +417,35 @@ const App = () => {
 							</StandardTooltip>
 						</div>
 					)}
+					{tab === "codeReview" && (
+						<div className="header-right flex absolute right-3">
+							{reviewTask?.status !== ReviewTaskStatus.INITIAL && (
+								<StandardTooltip content={t("chat:startNewTask.title")}>
+									<i
+										className={`codicon codicon-arrow-left mr-1 p-0.5 ${
+											reviewTask.status !== ReviewTaskStatus.RUNNING
+												? "cursor-pointer"
+												: "cursor-not-allowed opacity-50"
+										}`}
+										onClick={onNavigateBack}></i>
+								</StandardTooltip>
+							)}
+							{reviewTask.status === ReviewTaskStatus.INITIAL && (
+								<StandardTooltip content={t("codeReview:codeReview")}>
+									<i
+										className="codicon codicon-question cursor-pointer mr-1 p-0.5"
+										onClick={() => toggleCodeReviewTips()}></i>
+								</StandardTooltip>
+							)}
+							<StandardTooltip content={t("history:history")}>
+								<i
+									className="codicon codicon-history cursor-pointer p-0.5"
+									onClick={() => switchTab("codeReviewHistory")}></i>
+							</StandardTooltip>
+						</div>
+					)}
 				</div>
-				<TabContent>
+				<TabContent className={tab === "codeReview" ? "p-0" : ""}>
 					<ChatView
 						ref={chatViewRef}
 						isHidden={tab !== "chat"}
@@ -396,6 +457,9 @@ const App = () => {
 							isHidden={tab !== "codeReview"}
 							onIssueClick={onIssueClick}
 							onTaskCancel={onTaskCancel}
+							onNavigateToWelcome={(fn) => {
+								codeReviewNavigateRef.current = fn
+							}}
 						/>
 					)}
 				</TabContent>
