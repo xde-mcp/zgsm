@@ -3,7 +3,7 @@
  */
 export interface SystemPromptSettings {
 	maxConcurrentFileReads: number
-	todoListEnabled: boolean
+	todoListEnabled?: boolean
 	browserToolEnabled?: boolean
 	useAgentRules: boolean
 	/** When true, recursively discover and load .roo/rules from subdirectories */

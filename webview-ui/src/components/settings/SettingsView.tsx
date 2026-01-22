@@ -209,7 +209,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		terminalCompressProgressBar,
 		maxConcurrentFileReads,
 		condensingApiConfigId,
-		customCondensingPrompt,
 		customSupportPrompts,
 		profileThresholds,
 		alwaysAllowFollowupQuestions,
@@ -479,22 +478,15 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			})
 			// These have more complex logic so they aren't (yet) handled
 			// by the `updateSettings` message.
-			vscode.postMessage({ type: "updateCondensingPrompt", text: customCondensingPrompt || "" })
-			// vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
-			const finalApiConfig = { ...apiConfiguration, useZgsmCustomConfig, zgsmCodebaseIndexEnabled }
 
 			if (
-				finalApiConfig.useZgsmCustomConfig &&
-				finalApiConfig.includeMaxTokens === undefined &&
+				apiConfiguration.useZgsmCustomConfig &&
+				apiConfiguration.includeMaxTokens === undefined &&
 				!Object.hasOwn(apiConfiguration, "includeMaxTokens")
 			) {
-				finalApiConfig.includeMaxTokens = true
+				apiConfiguration.includeMaxTokens = true
 			}
-			vscode.postMessage({
-				type: "upsertApiConfiguration",
-				text: currentApiConfigName,
-				apiConfiguration: finalApiConfig,
-			})
+			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
 			vscode.postMessage({ type: "telemetrySetting", text: telemetrySetting })
 			vscode.postMessage({ type: "debugSetting", bool: cachedState.debug })
 

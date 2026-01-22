@@ -1658,7 +1658,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 				this.emit(RooCodeEventName.TaskUserMessage, this.taskId)
 
-				provider.postMessageToWebview({ type: "invoke", invoke: "sendMessage", text, images })
+				// Handle the message directly instead of routing through the webview.
+				// This avoids a race condition where the webview's message state hasn't
+				// hydrated yet, causing it to interpret the message as a new task request.
+				this.handleWebviewAskResponse("messageResponse", text, images)
 			} else {
 				console.error("[Task#submitUserMessage] Provider reference lost")
 			}
@@ -1686,7 +1689,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// Get condensing configuration
 		const state = await this.providerRef.deref()?.getState()
 		// These properties may not exist in the state type yet, but are used for condensing configuration
-		const customCondensingPrompt = state?.customCondensingPrompt
+		const customCondensingPrompt = state?.customSupportPrompts?.CONDENSE
 		const condensingApiConfigId = state?.condensingApiConfigId
 		const listApiConfigMeta = state?.listApiConfigMeta
 
@@ -3075,10 +3078,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 								// // Native tool calling: text chunks are plain text.
 								// // Create or update a text content block directly
 								const lastBlock = this.assistantMessageContent[this.assistantMessageContent.length - 1]
-								const _assistantMessage = assistantMessage
-								// const _assistantMessage = assistantMessage.includes("<tool_call>")
-								// 	? assistantMessage.split("<tool_call>")[0]
-								// 	: assistantMessage
+								// const _assistantMessage = assistantMessage
+								const _assistantMessage =
+									assistantMessage.includes("<tool_call>") &&
+									this.apiConfiguration.apiProvider === "zgsm" &&
+									!(this.apiConfiguration.zgsmModelId ?? "").toLowerCase().includes("qwen")
+										? assistantMessage.split("<tool_call>")[0]
+										: assistantMessage
 								if (lastBlock?.type === "text" && lastBlock.partial) {
 									lastBlock.content = _assistantMessage
 								} else if (lastBlock?.type === "text" && lastBlock.partial === false) {
@@ -4085,7 +4091,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		} = state ?? {}
 
 		// Get condensing configuration for automatic triggers.
-		const customCondensingPrompt = state?.customCondensingPrompt
+		const customCondensingPrompt = state?.customSupportPrompts?.CONDENSE
 		const condensingApiConfigId = state?.condensingApiConfigId
 		const listApiConfigMeta = state?.listApiConfigMeta
 
@@ -4547,7 +4553,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						true,
 					)
 				}
-				if (this.smartMistakeDetector?.shouldAutoSwitchModel(retryAttempt)) {
+				if (
+					this.apiConfiguration.apiProvider === "zgsm" &&
+					this.smartMistakeDetector?.shouldAutoSwitchModel(retryAttempt)
+				) {
 					try {
 						await this.switchModel()
 						this.consecutiveMistakeCount = 0

@@ -470,8 +470,20 @@ describe("AnthropicHandler", () => {
 
 			// Tool calling is request-driven: if tools are provided, we should include them.
 			expect(mockCreate).toHaveBeenCalledWith(
-				expect.not.objectContaining({
-					tools: expect.anything(),
+				expect.objectContaining({
+					tools: expect.arrayContaining([
+						expect.objectContaining({
+							name: "get_weather",
+							description: "Get the current weather",
+							input_schema: expect.objectContaining({
+								type: "object",
+								properties: expect.objectContaining({
+									location: { type: "string" },
+								}),
+							}),
+						}),
+					]),
+					tool_choice: { type: "auto", disable_parallel_tool_use: true },
 				}),
 				expect.anything(),
 			)

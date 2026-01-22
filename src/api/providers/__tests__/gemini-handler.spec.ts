@@ -1,9 +1,22 @@
 import { t } from "i18next"
 import { vi } from "vitest"
-import { TelemetryService } from "@roo-code/telemetry"
 import { FunctionCallingConfigMode } from "@google/genai"
 
-import { GeminiHandler } from "../gemini"
+// Mock TelemetryService
+vi.mock("@roo-code/telemetry", () => ({
+	TelemetryService: {
+		instance: {
+			captureException: vi.fn(),
+		},
+	},
+}))
+
+// Mock modules that might trigger circular dependencies
+vi.mock("../vertex", () => ({}))
+vi.mock("../index", () => ({}))
+vi.mock("../../index", () => ({}))
+
+// import { GeminiHandler } from "../gemini"
 import type { ApiHandlerOptions } from "../../../shared/api"
 
 describe("GeminiHandler backend support", () => {
@@ -16,6 +29,7 @@ describe("GeminiHandler backend support", () => {
 			enableUrlContext: true,
 			enableGrounding: true,
 		} as ApiHandlerOptions
+		const { GeminiHandler } = await import("../gemini")
 		const handler = new GeminiHandler(options)
 		const stub = vi.fn().mockReturnValue((async function* () {})())
 		// @ts-ignore access private client
@@ -33,6 +47,7 @@ describe("GeminiHandler backend support", () => {
 			enableUrlContext: false,
 			enableGrounding: false,
 		} as ApiHandlerOptions
+		const { GeminiHandler } = await import("../gemini")
 		const handler = new GeminiHandler(options)
 		const stub = vi.fn().mockResolvedValue({ text: "ok" })
 		// @ts-ignore access private client
@@ -49,6 +64,7 @@ describe("GeminiHandler backend support", () => {
 				apiProvider: "gemini",
 				enableGrounding: true,
 			} as ApiHandlerOptions
+			const { GeminiHandler } = await import("../gemini")
 			const handler = new GeminiHandler(options)
 
 			const mockStream = async function* () {
@@ -84,6 +100,7 @@ describe("GeminiHandler backend support", () => {
 				apiProvider: "gemini",
 				enableGrounding: true,
 			} as ApiHandlerOptions
+			const { GeminiHandler } = await import("../gemini")
 			const handler = new GeminiHandler(options)
 
 			const mockStream = async function* () {
@@ -136,6 +153,7 @@ describe("GeminiHandler backend support", () => {
 				enableUrlContext: true,
 				enableGrounding: true,
 			} as ApiHandlerOptions
+			const { GeminiHandler } = await import("../gemini")
 			const handler = new GeminiHandler(options)
 
 			const mockError = new Error("API rate limit exceeded")
@@ -182,6 +200,7 @@ describe("GeminiHandler backend support", () => {
 			const options = {
 				apiProvider: "gemini",
 			} as ApiHandlerOptions
+			const { GeminiHandler } = await import("../gemini")
 			const handler = new GeminiHandler(options)
 			const stub = vi.fn().mockReturnValue((async function* () {})())
 			// @ts-ignore access private client
@@ -208,6 +227,7 @@ describe("GeminiHandler backend support", () => {
 			const options = {
 				apiProvider: "gemini",
 			} as ApiHandlerOptions
+			const { GeminiHandler } = await import("../gemini")
 			const handler = new GeminiHandler(options)
 			const stub = vi.fn().mockReturnValue((async function* () {})())
 			// @ts-ignore access private client
@@ -232,6 +252,7 @@ describe("GeminiHandler backend support", () => {
 			const options = {
 				apiProvider: "gemini",
 			} as ApiHandlerOptions
+			const { GeminiHandler } = await import("../gemini")
 			const handler = new GeminiHandler(options)
 			const stub = vi.fn().mockReturnValue((async function* () {})())
 			// @ts-ignore access private client
@@ -256,6 +277,7 @@ describe("GeminiHandler backend support", () => {
 			const options = {
 				apiProvider: "gemini",
 			} as ApiHandlerOptions
+			const { GeminiHandler } = await import("../gemini")
 			const handler = new GeminiHandler(options)
 			const stub = vi.fn().mockReturnValue((async function* () {})())
 			// @ts-ignore access private client
@@ -280,6 +302,7 @@ describe("GeminiHandler backend support", () => {
 			const options = {
 				apiProvider: "gemini",
 			} as ApiHandlerOptions
+			const { GeminiHandler } = await import("../gemini")
 			const handler = new GeminiHandler(options)
 			const stub = vi.fn().mockReturnValue((async function* () {})())
 			// @ts-ignore access private client

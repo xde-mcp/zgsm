@@ -17,7 +17,7 @@ import type {
 	WorktreeListResponse,
 	WorktreeDefaultsResponse,
 } from "@roo-code/types"
-import { worktreeService, worktreeIncludeService } from "@roo-code/core"
+import { worktreeService, worktreeIncludeService, type CopyProgressCallback } from "@roo-code/core"
 
 import type { ClineProvider } from "../ClineProvider"
 
@@ -137,6 +137,7 @@ export async function handleCreateWorktree(
 		baseBranch?: string
 		createNewBranch?: boolean
 	},
+	onCopyProgress?: CopyProgressCallback,
 ): Promise<WorktreeResult> {
 	const cwd = provider.cwd
 
@@ -154,7 +155,11 @@ export async function handleCreateWorktree(
 	// If successful and .worktreeinclude exists, copy the files.
 	if (result.success && result.worktree) {
 		try {
-			const copiedItems = await worktreeIncludeService.copyWorktreeIncludeFiles(cwd, result.worktree.path)
+			const copiedItems = await worktreeIncludeService.copyWorktreeIncludeFiles(
+				cwd,
+				result.worktree.path,
+				onCopyProgress,
+			)
 			if (copiedItems.length > 0) {
 				result.message += ` (copied ${copiedItems.length} item(s) from .worktreeinclude)`
 			}
@@ -246,6 +251,16 @@ export async function handleCreateWorktreeInclude(provider: ClineProvider, conte
 
 	try {
 		await worktreeIncludeService.createWorktreeInclude(cwd, content)
+
+		// Open the file in the editor for easy editing
+		try {
+			const filePath = path.join(cwd, ".worktreeinclude")
+			const document = await vscode.workspace.openTextDocument(filePath)
+			await vscode.window.showTextDocument(document)
+		} catch {
+			// Opening the file in editor is a convenience feature - don't fail the operation
+		}
+
 		return {
 			success: true,
 			message: ".worktreeinclude file created",

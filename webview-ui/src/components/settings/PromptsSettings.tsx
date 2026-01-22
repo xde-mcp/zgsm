@@ -37,13 +37,6 @@ const PromptsSettings = ({
 }: PromptsSettingsProps) => {
 	const { t } = useAppTranslation()
 	const {
-		// listApiConfigMeta,
-		// enhancementApiConfigId,
-		// setEnhancementApiConfigId,
-		// condensingApiConfigId,
-		// setCondensingApiConfigId,
-		customCondensingPrompt,
-		setCustomCondensingPrompt,
 		includeTaskHistoryInEnhance: contextIncludeTaskHistoryInEnhance,
 		setIncludeTaskHistoryInEnhance: contextSetIncludeTaskHistoryInEnhance,
 	} = useExtensionState()
@@ -76,54 +69,22 @@ const PromptsSettings = ({
 		// Use nullish coalescing to preserve empty strings
 		const finalValue = value ?? undefined
 
-		if (type === "CONDENSE") {
-			setCustomCondensingPrompt(finalValue ?? supportPrompt.default.CONDENSE)
-			vscode.postMessage({
-				type: "updateCondensingPrompt",
-				text: finalValue ?? supportPrompt.default.CONDENSE,
-			})
-			// Also update the customSupportPrompts to trigger change detection
-			const updatedPrompts = { ...customSupportPrompts }
-			if (finalValue === undefined) {
-				delete updatedPrompts[type]
-			} else {
-				updatedPrompts[type] = finalValue
-			}
-			setCustomSupportPrompts(updatedPrompts)
+		const updatedPrompts = { ...customSupportPrompts }
+		if (finalValue === undefined) {
+			delete updatedPrompts[type]
 		} else {
-			const updatedPrompts = { ...customSupportPrompts }
-			if (finalValue === undefined) {
-				delete updatedPrompts[type]
-			} else {
-				updatedPrompts[type] = finalValue
-			}
-			setCustomSupportPrompts(updatedPrompts)
+			updatedPrompts[type] = finalValue
 		}
+		setCustomSupportPrompts(updatedPrompts)
 	}
 
 	const handleSupportReset = (type: SupportPromptType) => {
-		if (type === "CONDENSE") {
-			setCustomCondensingPrompt(supportPrompt.default.CONDENSE)
-			vscode.postMessage({
-				type: "updateCondensingPrompt",
-				text: supportPrompt.default.CONDENSE,
-			})
-			// Also update the customSupportPrompts to trigger change detection
-			const updatedPrompts = { ...customSupportPrompts }
-			delete updatedPrompts[type]
-			setCustomSupportPrompts(updatedPrompts)
-		} else {
-			const updatedPrompts = { ...customSupportPrompts }
-			delete updatedPrompts[type]
-			setCustomSupportPrompts(updatedPrompts)
-		}
+		const updatedPrompts = { ...customSupportPrompts }
+		delete updatedPrompts[type]
+		setCustomSupportPrompts(updatedPrompts)
 	}
 
 	const getSupportPromptValue = (type: SupportPromptType): string => {
-		if (type === "CONDENSE") {
-			// Preserve empty string - only fall back to default when value is nullish
-			return customCondensingPrompt ?? supportPrompt.default.CONDENSE
-		}
 		return supportPrompt.get(customSupportPrompts, type)
 	}
 

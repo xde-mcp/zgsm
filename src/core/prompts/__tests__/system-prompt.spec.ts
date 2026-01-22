@@ -678,7 +678,7 @@ describe("SYSTEM_PROMPT", () => {
 			undefined, // mcpHub
 			undefined, // diffStrategy
 			undefined, // browserViewportSize
-			defaultModeSlug, // mode
+			"architect", // mode
 			undefined, // customModePrompts
 			undefined, // customModes
 			undefined, // globalCustomInstructions
@@ -711,7 +711,7 @@ describe("SYSTEM_PROMPT", () => {
 			undefined, // mcpHub
 			undefined, // diffStrategy
 			undefined, // browserViewportSize
-			defaultModeSlug, // mode
+			"architect", // mode
 			undefined, // customModePrompts
 			undefined, // customModes
 			undefined, // globalCustomInstructions
