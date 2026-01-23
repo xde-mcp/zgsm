@@ -80,7 +80,6 @@ export const globalSettingsSchema = z.object({
 	openRouterImageApiKey: z.string().optional(),
 	openRouterImageGenerationSelectedModel: z.string().optional(),
 
-	condensingApiConfigId: z.string().optional(),
 	customCondensingPrompt: z.string().optional(),
 	// zgsm
 	useZgsmCustomConfig: z.boolean().optional(),

@@ -88,7 +88,6 @@ describe("ContextManagementSettings", () => {
 		zgsmCodebaseIndexEnabled: false,
 		autoCondenseContext: false,
 		autoCondenseContextPercent: 80,
-		condensingApiConfigId: undefined,
 		customCondensingPrompt: undefined,
 		listApiConfigMeta: [],
 		maxOpenTabsContext: 20,

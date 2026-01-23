@@ -115,9 +115,6 @@ async function generatePrompt(data: {
 
 	const codeIndexManager = CodeIndexManager.getInstance(context, cwd)
 
-	// Tool calling is native-only.
-	const effectiveProtocol = "native"
-
 	const [modesSection, mcpServersSection, skillsSection] = await Promise.all([
 		getModesSection(context),
 		shouldIncludeMcp
@@ -126,7 +123,7 @@ async function generatePrompt(data: {
 		getSkillsSection(skillsManager, mode as string),
 	])
 
-	// Tools catalog is not included in the system prompt in native-only mode.
+	// Tools catalog is not included in the system prompt.
 	const toolsCatalog = ""
 
 	// Check if lite prompts experiment is enabled
@@ -136,7 +133,7 @@ async function generatePrompt(data: {
 
 ${markdownFormattingSection()}
 
-${getSharedToolUseSection(effectiveProtocol, experiments)}${toolsCatalog}
+${getSharedToolUseSection(experiments)}${toolsCatalog}
 
 	${useLitePrompts ? getLiteToolUseGuidelinesSection(experiments) : getToolUseGuidelinesSection(experiments)}
 
