@@ -130,10 +130,12 @@ const PromptsSettings = ({
 					<SearchableSelect
 						value={activeSupportOption}
 						onValueChange={(type) => setActiveSupportOption(type as SupportPromptType)}
-						options={Object.keys(supportPrompt.default).map((type) => ({
-							value: type,
-							label: t(`prompts:supportPrompts.types.${type}.label`),
-						}))}
+						options={Object.keys(supportPrompt.default)
+							.filter((type) => type !== "CONDENSE")
+							.map((type) => ({
+								value: type,
+								label: t(`prompts:supportPrompts.types.${type}.label`),
+							}))}
 						placeholder={t("settings:common.select")}
 						searchPlaceholder={""}
 						emptyMessage={""}
