@@ -38,6 +38,7 @@ import { getEditorType } from "../../utils/getEditorType"
 import { ChatCompletionChunk } from "openai/resources/index.mjs"
 import { convertToZAiFormat } from "../transform/zai-format"
 import { isDebug } from "../../utils/getDebugState"
+import { xmlLiteToolGuide } from "../../core/prompts/tools/native-tools/lite-descriptions"
 
 const autoModeModelId = "Auto"
 const isDev = process.env.NODE_ENV === "development"
@@ -389,20 +390,10 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 				]
 			} else {
 				if (_mid?.includes("qwen")) {
-					const xmlToolGuide = `
-## Tool Call Guide (IMPORTANT):
-your answer response should be in xml format. like this:
-\`\`\`
-<tool_call>{
-"name":  {{tool_name}}, // the name of the tool
-"arguments":  {{tool_args}} // the arguments of the tool
-}</tool_call>
-\`\`\`
-`
 					if (Array.isArray(systemMessage.content)) {
-						systemMessage.content[0].text = systemMessage.content[0].text + "\n" + xmlToolGuide
+						systemMessage.content[0].text = systemMessage.content[0].text + "\n" + xmlLiteToolGuide
 					} else {
-						systemMessage.content = systemMessage.content + "\n" + xmlToolGuide
+						systemMessage.content = systemMessage.content + "\n" + xmlLiteToolGuide
 					}
 				}
 				convertedMessages = [
@@ -563,7 +554,8 @@ your answer response should be in xml format. like this:
 		if (isQwen) {
 			// mockToolId = "fake_tool_call"
 			matcher = new TagMatcher("tool_call", (chunk) => {
-				console.log("tool_call", chunk)
+				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+				isDev && this.logger.info(`[ResponseID ${this.options.zgsmModelId} fake tool call]:`, requestId, chunk)
 				return {
 					type: chunk.matched ? "fake_tool_call" : "text",
 					text: chunk.data,
