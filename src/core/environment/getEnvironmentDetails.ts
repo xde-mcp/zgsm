@@ -292,14 +292,6 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 	details += `<model>${modelId}</model>\n`
 	details += `<tool_format>${toolFormat}</tool_format>\n`
 
-	if (Experiments.isEnabled(experiments ?? {}, EXPERIMENT_IDS.POWER_STEERING)) {
-		details += `<role>${modeDetails.roleDefinition}</role>\n`
-
-		if (modeDetails.customInstructions) {
-			details += `<custom_instructions>${modeDetails.customInstructions}</custom_instructions>\n`
-		}
-	}
-
 	// Add browser session status - Only show when active to prevent cluttering context
 	const isBrowserActive = cline.browserSession.isSessionActive()
 

@@ -27,8 +27,10 @@ export { convertOpenAIToolToAnthropic, convertOpenAIToolsToAnthropic } from "./c
 export type { ReadFileToolOptions } from "./read_file"
 
 import {
+	getLiteReadFileDescription,
 	getLiteWriteToFileDescription,
 	getLiteApplyPatchDescription,
+	getLiteApplyDiffDescription,
 	getLiteSearchFilesDescription,
 	getLiteListFilesDescription,
 	getLiteExecuteCommandDescription,
@@ -45,6 +47,8 @@ import {
 	getLiteRunSlashCommandDescription,
 	getLiteEditFileDescription,
 	getLiteAskMultipleChoiceDescription,
+	getLiteSearchAndReplaceDescription,
+	getLiteSearchReplaceDescription,
 } from "./lite-descriptions"
 
 /**
@@ -64,6 +68,8 @@ function getLiteDescription(tool: OpenAI.Chat.ChatCompletionFunctionTool): strin
 	switch (tool.function!.name) {
 		case "access_mcp_resource":
 			return getLiteAccessMcpResourceDescription()
+		case "apply_diff":
+			return getLiteApplyDiffDescription()
 		case "apply_patch":
 			return getLiteApplyPatchDescription()
 		case "ask_followup_question":
@@ -86,12 +92,18 @@ function getLiteDescription(tool: OpenAI.Chat.ChatCompletionFunctionTool): strin
 			return getLiteListFilesDescription()
 		case "new_task":
 			return getLiteNewTaskDescription()
+		case "read_file":
+			return getLiteReadFileDescription()
 		case "run_slash_command":
 			return getLiteRunSlashCommandDescription()
 		case "edit_file":
 			return getLiteEditFileDescription()
+		case "search_and_replace":
+			return getLiteSearchAndReplaceDescription()
 		case "search_files":
 			return getLiteSearchFilesDescription()
+		case "search_replace":
+			return getLiteSearchReplaceDescription()
 		case "switch_mode":
 			return getLiteSwitchModeDescription()
 		case "update_todo_list":

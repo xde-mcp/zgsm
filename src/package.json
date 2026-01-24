@@ -893,6 +893,7 @@
 		"ignore": "^7.0.3",
 		"isbinaryfile": "^5.0.7",
 		"jschardet": "^3.1.4",
+		"json-stream-stringify": "^3.1.6",
 		"jwt-decode": "^4.0.0",
 		"lodash.debounce": "^4.0.8",
 		"lru-cache": "^11.1.0",

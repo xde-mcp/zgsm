@@ -20,7 +20,6 @@ import {
 	getSystemInfoSection,
 	getObjectiveSection,
 	getSharedToolUseSection,
-	getMcpServersSection,
 	getToolUseGuidelinesSection,
 	getCapabilitiesSection,
 	getModesSection,
@@ -59,7 +58,6 @@ async function generatePrompt(data: {
 	promptComponent?: PromptComponent
 	customModeConfigs?: ModeConfig[]
 	globalCustomInstructions?: string
-	diffEnabled?: boolean
 	experiments?: Record<string, boolean>
 	enableMcpServerCreation?: boolean
 	language?: string
@@ -83,7 +81,6 @@ async function generatePrompt(data: {
 		promptComponent,
 		customModeConfigs,
 		globalCustomInstructions,
-		diffEnabled,
 		experiments,
 		enableMcpServerCreation,
 		language,
@@ -96,13 +93,10 @@ async function generatePrompt(data: {
 		modelId,
 		shell,
 	} = data
-
 	if (!context) {
 		throw new Error("Extension context is required for generating system prompt")
 	}
 	shell = shell || getShell(settings?.terminalShellIntegrationDisabled)
-	// If diff is disabled, don't pass the diffStrategy
-	const effectiveDiffStrategy = diffEnabled ? diffStrategy : undefined
 
 	// Get the full mode config to ensure we have the role definition (used for groups, etc.)
 	const modeConfig = getModeBySlug(mode, customModeConfigs) || modes.find((m) => m.slug === mode) || modes[0]
@@ -115,11 +109,11 @@ async function generatePrompt(data: {
 
 	const codeIndexManager = CodeIndexManager.getInstance(context, cwd)
 
-	const [modesSection, mcpServersSection, skillsSection] = await Promise.all([
+	// Tool calling is native-only.
+	const effectiveProtocol = "native"
+
+	const [modesSection, skillsSection] = await Promise.all([
 		getModesSection(context),
-		shouldIncludeMcp
-			? getMcpServersSection(mcpHub, effectiveDiffStrategy, enableMcpServerCreation, false)
-			: Promise.resolve(""),
 		getSkillsSection(skillsManager, mode as string),
 	])
 
@@ -135,9 +129,7 @@ ${markdownFormattingSection()}
 
 ${getSharedToolUseSection(experiments)}${toolsCatalog}
 
-	${useLitePrompts ? getLiteToolUseGuidelinesSection(experiments) : getToolUseGuidelinesSection(experiments)}
-
-${mcpServersSection}
+${useLitePrompts ? getLiteToolUseGuidelinesSection(experiments) : getToolUseGuidelinesSection(experiments)}
 
 ${useLitePrompts ? getLiteCapabilitiesSection(cwd, shouldIncludeMcp ? mcpHub : undefined) : getCapabilitiesSection(cwd, shouldIncludeMcp ? mcpHub : undefined)}
 
@@ -170,7 +162,6 @@ export const SYSTEM_PROMPT = async (
 	customModePrompts?: CustomModePrompts,
 	customModes?: ModeConfig[],
 	globalCustomInstructions?: string,
-	diffEnabled?: boolean,
 	experiments?: Record<string, boolean>,
 	enableMcpServerCreation?: boolean,
 	language?: string,
@@ -232,21 +223,17 @@ ${fileCustomSystemPrompt}
 ${customInstructions}`
 	}
 
-	// If diff is disabled, don't pass the diffStrategy
-	const effectiveDiffStrategy = diffEnabled ? diffStrategy : undefined
-
 	return generatePrompt({
 		context,
 		cwd,
 		supportsComputerUse,
 		mode: currentMode.slug,
 		mcpHub,
-		diffStrategy: effectiveDiffStrategy,
+		diffStrategy,
 		browserViewportSize,
 		promptComponent,
 		customModeConfigs: customModes,
 		globalCustomInstructions,
-		diffEnabled,
 		experiments,
 		enableMcpServerCreation,
 		language,

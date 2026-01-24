@@ -12,7 +12,7 @@ TOOL USE
 
 You have access to a set of tools that are executed upon the user's approval. Use the provider-native tool-calling mechanism. Do not include XML markup or examples. You must use exactly one tool call per assistant response. Do not call zero tools or more than one tool in the same response.
 
-	# Tool Use Guidelines
+# Tool Use Guidelines
 
 1. Assess what information you already have and what information you need to proceed with the task.
 2. Choose the most appropriate tool based on the task and the tool descriptions provided. Assess if you need additional information to proceed, and which of the available tools would be most effective for gathering this information. For example using the list_files tool is more effective than running a command like `ls` in the terminal. It's critical that you think about each available tool and use the one that best fits the current step in the task.
@@ -31,25 +31,6 @@ It is crucial to proceed step-by-step, waiting for the user's message after each
 4. Ensure that each action builds correctly on the previous ones.
 
 By waiting for and carefully considering the user's response after each tool use, you can react accordingly and make informed decisions about how to proceed with the task. This iterative process helps ensure the overall success and accuracy of your work.
-
-MCP SERVERS
-
-The Model Context Protocol (MCP) enables communication between the system and MCP servers that provide additional tools and resources to extend your capabilities. MCP servers can be one of two types:
-
-1. Local (Stdio-based) servers: These run locally on the user's machine and communicate via standard input/output
-2. Remote (SSE-based) servers: These run on remote machines and communicate via Server-Sent Events (SSE) over HTTP/HTTPS
-
-# Connected MCP Servers
-
-When a server is connected, you can use the server's tools via the `use_mcp_tool` tool, and access the server's resources via the `access_mcp_resource` tool.
-
-
-## Creating an MCP Server
-
-The user may ask you something along the lines of "add a tool" that does some function, in other words to create an MCP server that provides tools and resources that may connect to external APIs for example. If they do, you should obtain detailed instructions on this topic using the fetch_instructions tool, like this:
-<fetch_instructions>
-<task>create_mcp_server</task>
-</fetch_instructions>
 
 ====
 

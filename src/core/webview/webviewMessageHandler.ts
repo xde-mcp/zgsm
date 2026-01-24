@@ -97,7 +97,6 @@ import {
 	handleCheckBranchWorktreeInclude,
 	handleCreateWorktreeInclude,
 	handleCheckoutBranch,
-	handleMergeWorktree,
 } from "./worktree"
 import { isJetbrainsPlatform } from "../../utils/platform"
 import { showFileDiffFromGitStatus } from "../../utils/zgsmUtils"
@@ -1492,7 +1491,7 @@ export const webviewMessageHandler = async (
 				const exists = await fileExistsAtPath(mcpPath)
 
 				if (!exists) {
-					await safeWriteJson(mcpPath, { mcpServers: {} })
+					await safeWriteJson(mcpPath, { mcpServers: {} }, { prettyPrint: true })
 				}
 
 				await openFile(mcpPath)
@@ -4234,38 +4233,6 @@ export const webviewMessageHandler = async (
 			} catch (error) {
 				const errorMessage = error instanceof Error ? error.message : String(error)
 				await provider.postMessageToWebview({ type: "worktreeResult", success: false, text: errorMessage })
-			}
-
-			break
-		}
-
-		case "mergeWorktree": {
-			try {
-				const result = await handleMergeWorktree(provider, {
-					worktreePath: message.worktreePath!,
-					targetBranch: message.worktreeTargetBranch!,
-					deleteAfterMerge: message.worktreeDeleteAfterMerge,
-				})
-
-				await provider.postMessageToWebview({
-					type: "mergeWorktreeResult",
-					success: result.success,
-					text: result.message,
-					hasConflicts: result.hasConflicts,
-					conflictingFiles: result.conflictingFiles,
-					sourceBranch: result.sourceBranch,
-					targetBranch: result.targetBranch,
-				})
-			} catch (error) {
-				const errorMessage = error instanceof Error ? error.message : String(error)
-
-				await provider.postMessageToWebview({
-					type: "mergeWorktreeResult",
-					success: false,
-					text: errorMessage,
-					hasConflicts: false,
-					conflictingFiles: [],
-				})
 			}
 
 			break

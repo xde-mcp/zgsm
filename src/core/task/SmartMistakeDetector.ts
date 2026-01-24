@@ -22,6 +22,11 @@ export enum MistakeType {
 export type MistakeSeverity = "low" | "medium" | "high"
 
 /**
+ * Mistake source - helps distinguish whether the error is model-related or environmental
+ */
+export type MistakeSource = "model" | "environment" | "user" | "system"
+
+/**
  * Mistake record interface
  */
 export interface MistakeRecord {
@@ -33,6 +38,8 @@ export interface MistakeRecord {
 	context?: string
 	/** Severity */
 	severity: MistakeSeverity
+	/** Error source - defaults to 'model' for backward compatibility */
+	source?: MistakeSource
 }
 
 /**
@@ -54,10 +61,10 @@ export interface MistakeCheckResult {
  */
 const MISTAKE_WEIGHTS: Record<MistakeType, number> = {
 	[MistakeType.NO_TOOL_USE]: 1,
-	[MistakeType.TOOL_FAILURE]: 2,
-	[MistakeType.REPEATED_ACTION]: 1.5,
+	[MistakeType.TOOL_FAILURE]: 1,
+	[MistakeType.REPEATED_ACTION]: 0.5,
 	[MistakeType.INVALID_INPUT]: 1,
-	[MistakeType.TIMEOUT]: 2,
+	[MistakeType.TIMEOUT]: 1,
 }
 
 /**
@@ -82,26 +89,35 @@ export class SmartMistakeDetector {
 	/** Time window (milliseconds) */
 	private readonly timeWindowMs: number
 
-	/** Default time window: 10 minutes */
+	/** Default time window: 5 minutes */
 	private static readonly DEFAULT_TIME_WINDOW_MS = 5 * 60 * 1000
 
 	/** Auto switch model enabled flag */
 	private readonly autoSwitchModelEnabled: boolean = false
 
-	/** Auto switch model threshold */
-	private readonly autoSwitchModelThreshold: number = 3
+	/** Auto switch model threshold - increased from 3 to 6 to reduce false positives */
+	private readonly autoSwitchModelThreshold: number = 6
+
+	/** Last model switch timestamp - used for cooldown period */
+	private lastSwitchTime?: number
+
+	/** Model switch cooldown period (milliseconds) - default 10 minutes */
+	private readonly switchCooldownMs: number = 10 * 60 * 1000
+
+	/** Minimum high-severity errors required in short period - increased from 3 to 5 */
+	private readonly highSeverityThreshold: number = 5
 
 	/**
 	 * Constructor
 	 *
-	 * @param timeWindowMs - Time window (milliseconds), default 10 minutes
+	 * @param timeWindowMs - Time window (milliseconds), default 5 minutes
 	 * @param autoSwitchModelEnabled - Enable auto switch model feature, default false
-	 * @param autoSwitchModelThreshold - Threshold for auto switch model, default 3
+	 * @param autoSwitchModelThreshold - Threshold for auto switch model, default 6
 	 */
 	constructor(timeWindowMs?: number, autoSwitchModelEnabled?: boolean, autoSwitchModelThreshold?: number) {
 		this.timeWindowMs = timeWindowMs ?? SmartMistakeDetector.DEFAULT_TIME_WINDOW_MS
 		this.autoSwitchModelEnabled = autoSwitchModelEnabled ?? false
-		this.autoSwitchModelThreshold = autoSwitchModelThreshold ?? 3
+		this.autoSwitchModelThreshold = autoSwitchModelThreshold ?? 6
 	}
 
 	/**
@@ -110,13 +126,20 @@ export class SmartMistakeDetector {
 	 * @param type - Mistake type
 	 * @param context - Optional context information
 	 * @param severity - Severity, default is "medium"
+	 * @param source - Error source, default is "model"
 	 */
-	addMistake(type: MistakeType, context?: string, severity: MistakeSeverity = "medium"): void {
+	addMistake(
+		type: MistakeType,
+		context?: string,
+		severity: MistakeSeverity = "medium",
+		source: MistakeSource = "model",
+	): void {
 		const record: MistakeRecord = {
 			type,
 			timestamp: Date.now(),
 			context,
 			severity,
+			source,
 		}
 		this.mistakes.push(record)
 		this.cleanOldMistakes()
@@ -269,7 +292,7 @@ export class SmartMistakeDetector {
 	 */
 	private calculateWeightedScore(): number {
 		return this.mistakes.reduce((score, mistake) => {
-			const typeWeight = MISTAKE_WEIGHTS[mistake.type] || 1
+			const typeWeight = MISTAKE_WEIGHTS[mistake.type] || 0.5
 			const severityWeight = SEVERITY_WEIGHTS[mistake.severity] || 1
 			return score + typeWeight * severityWeight
 		}, 0)
@@ -338,6 +361,11 @@ export class SmartMistakeDetector {
 	 * Uses internal weighted score calculation instead of simple consecutive count.
 	 * Also checks for high-severity error density in short time periods.
 	 *
+	 * Improvements:
+	 * - Added cooldown period to prevent frequent switching
+	 * - Only considers model-related errors (filters out environmental issues)
+	 * - Increased thresholds to reduce false positives
+	 *
 	 * @returns Whether model should be switched
 	 */
 	shouldAutoSwitchModel(): boolean {
@@ -345,17 +373,43 @@ export class SmartMistakeDetector {
 			return false
 		}
 
-		// Check error density in short time period (3 or more high-severity errors within 5 minutes)
-		const recentMistakes = this.getMistakesInLastMinutes(5)
+		// Check cooldown period - prevent switching too frequently
+		if (this.lastSwitchTime && Date.now() - this.lastSwitchTime < this.switchCooldownMs) {
+			return false
+		}
+
+		// Filter to only consider model-related errors (not environmental or system issues)
+		const modelRelatedMistakes = this.mistakes.filter((m) => m.source === "model" || !m.source)
+
+		if (modelRelatedMistakes.length === 0) {
+			return false
+		}
+
+		// Check error density in short time period (5 or more high-severity MODEL errors within 5 minutes)
+		const recentMistakes = this.getMistakesInLastMinutes(5).filter((m) => m.source === "model" || !m.source)
 		const highSeverityCount = recentMistakes.filter((m) => m.severity === "high").length
 
-		if (highSeverityCount >= 3) {
+		if (highSeverityCount >= this.highSeverityThreshold) {
 			return true // Frequent high-severity errors in short time, switch immediately
 		}
 
-		// Otherwise use weighted score judgment
-		const weightedScore = this.calculateWeightedScore()
+		// Otherwise use weighted score judgment (only for model-related errors)
+		const weightedScore = modelRelatedMistakes.reduce((score, mistake) => {
+			const typeWeight = MISTAKE_WEIGHTS[mistake.type] || 1
+			const severityWeight = SEVERITY_WEIGHTS[mistake.severity] || 1
+			return score + typeWeight * severityWeight
+		}, 0)
+
 		return weightedScore >= this.autoSwitchModelThreshold
+	}
+
+	/**
+	 * Mark that model has been switched
+	 *
+	 * Records the switch time to enforce cooldown period
+	 */
+	markModelSwitched(): void {
+		this.lastSwitchTime = Date.now()
 	}
 
 	/**

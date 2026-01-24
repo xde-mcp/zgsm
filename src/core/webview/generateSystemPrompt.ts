@@ -2,11 +2,10 @@ import * as vscode from "vscode"
 import { WebviewMessage } from "../../shared/WebviewMessage"
 import { defaultModeSlug, getModeBySlug, getGroupName } from "../../shared/modes"
 import { buildApiHandler } from "../../api"
-import { experiments as experimentsModule, EXPERIMENT_IDS, parallelToolCallsEnabled } from "../../shared/experiments"
+import { parallelToolCallsEnabled } from "../../shared/experiments"
 
 import { SYSTEM_PROMPT } from "../prompts/system"
 import { MultiSearchReplaceDiffStrategy } from "../diff/strategies/multi-search-replace"
-import { MultiFileSearchReplaceDiffStrategy } from "../diff/strategies/multi-file-search-replace"
 import { Package } from "../../shared/package"
 
 import { ClineProvider } from "./ClineProvider"
@@ -17,9 +16,7 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 		customModePrompts,
 		customInstructions,
 		browserViewportSize,
-		diffEnabled,
 		mcpEnabled,
-		fuzzyMatchThreshold,
 		experiments,
 		enableMcpServerCreation,
 		browserToolEnabled,
@@ -30,15 +27,7 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 		enableSubfolderRules,
 	} = await provider.getState()
 
-	// Check experiment to determine which diff strategy to use
-	const isMultiFileApplyDiffEnabled = experimentsModule.isEnabled(
-		experiments ?? {},
-		EXPERIMENT_IDS.MULTI_FILE_APPLY_DIFF,
-	)
-
-	const diffStrategy = isMultiFileApplyDiffEnabled
-		? new MultiFileSearchReplaceDiffStrategy(fuzzyMatchThreshold)
-		: new MultiSearchReplaceDiffStrategy(fuzzyMatchThreshold)
+	const diffStrategy = new MultiSearchReplaceDiffStrategy()
 
 	const cwd = provider.cwd
 
@@ -81,7 +70,6 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 		customModePrompts,
 		customModes,
 		customInstructions,
-		diffEnabled,
 		experiments,
 		enableMcpServerCreation,
 		language,
