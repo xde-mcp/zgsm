@@ -22,8 +22,8 @@ import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import { CheckpointRestoreDialog } from "./components/chat/CheckpointRestoreDialog"
 import { DeleteMessageDialog, EditMessageDialog } from "./components/chat/MessageModificationConfirmationDialog"
 import ErrorBoundary from "./components/ErrorBoundary"
+// import { WorktreesView } from "./components/worktrees"
 // import { CloudView } from "./components/cloud/CloudView"
-import { WorktreesView } from "./components/worktrees"
 import { useAddNonInteractiveClickListener } from "./components/ui/hooks/useNonInteractiveClick"
 import { TooltipProvider } from "./components/ui/tooltip"
 import { STANDARD_TOOLTIP_DELAY, StandardTooltip } from "./components/ui/standard-tooltip"
@@ -43,7 +43,7 @@ type Tab =
 	| "cloud"
 	| "zgsm-account"
 	| "codeReview"
-	| "worktrees"
+	// | "worktrees"
 	| "codeReviewHistory"
 
 interface HumanRelayDialogState {
@@ -90,7 +90,6 @@ const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]
 	cloudButtonClicked: "cloud",
 	zgsmAccountButtonClicked: "zgsm-account",
 	codeReviewButtonClicked: "codeReview",
-	worktreesButtonClicked: "worktrees",
 }
 
 const App = () => {
@@ -383,7 +382,7 @@ const App = () => {
 			{tab === "zgsm-account" && (
 				<ZgsmAccountView apiConfiguration={apiConfiguration} onDone={() => switchTab("chat")} />
 			)}
-			{tab === "worktrees" && <WorktreesView onDone={() => switchTab("chat")} />}
+			{/* {tab === "worktrees" && <WorktreesView onDone={() => switchTab("chat")} />} */}
 			{tab === "codeReviewHistory" && <CodeReviewHistoryView onDone={() => switchTab("codeReview")} />}
 			<div className={`${isChatTab ? "fixed inset-0 flex flex-col" : "hidden"}`}>
 				<div className={`header flex items-center justify-between px-5 ${isChatTab ? "" : "hidden"}`}>
@@ -410,11 +409,11 @@ const App = () => {
 							<StandardTooltip content={t("chat:startNewTask.title")}>
 								<i className="codicon codicon-add cursor-pointer p-0.5" onClick={() => resetTabs()}></i>
 							</StandardTooltip>
-							<StandardTooltip content={t("worktrees:title")}>
+							{/* <StandardTooltip content={t("worktrees:title")}>
 								<i
 									className="codicon codicon-git-branch-create cursor-pointer p-0.5"
 									onClick={() => switchTab("worktrees")}></i>
-							</StandardTooltip>
+							</StandardTooltip> */}
 							<StandardTooltip content={t("history:history")}>
 								<i
 									className="codicon codicon-history cursor-pointer p-0.5"

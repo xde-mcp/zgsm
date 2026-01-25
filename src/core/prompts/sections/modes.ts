@@ -8,7 +8,7 @@ import { ensureSettingsDirectoryExists } from "../../../utils/globalContext"
 export async function getModesSection(
 	context: vscode.ExtensionContext,
 	skipXmlExamples: boolean = false,
-	zgsmCodeMode?: string
+	zgsmCodeMode?: string,
 ): Promise<string> {
 	// Make sure path gets created
 	await ensureSettingsDirectoryExists(context)

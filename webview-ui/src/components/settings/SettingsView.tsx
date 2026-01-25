@@ -30,6 +30,7 @@ import {
 	Users2,
 	Trash2,
 	ArrowLeft,
+	GitCommitVertical,
 } from "lucide-react"
 import { isEqual } from "lodash-es"
 import {
@@ -85,6 +86,7 @@ import { UISettings } from "./UISettings"
 import { AutoCleanupSettings } from "./AutoCleanupSettings"
 import ModesView from "../modes/ModesView"
 import McpView from "../mcp/McpView"
+import { WorktreesView } from "../worktrees/WorktreesView"
 import { SettingsSearch } from "./SettingsSearch"
 import { useSearchIndexRegistry, SearchIndexProvider } from "./useSettingsSearch"
 
@@ -111,6 +113,7 @@ export const sectionNames = [
 	"autoCleanup",
 	"modes",
 	"mcp",
+	"worktrees",
 	"prompts",
 	"ui",
 	"experimental",
@@ -581,12 +584,13 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			{ id: "autoApprove", icon: CheckCheck },
 			{ id: "slashCommands", icon: SquareSlash },
 			{ id: "browser", icon: SquareMousePointer },
-			{ id: "checkpoints", icon: GitBranch },
+			{ id: "checkpoints", icon: GitCommitVertical },
 			{ id: "notifications", icon: Bell },
 			{ id: "contextManagement", icon: Database },
 			{ id: "terminal", icon: SquareTerminal },
 			{ id: "autoCleanup", icon: Trash2 },
 			{ id: "prompts", icon: MessageSquare },
+			{ id: "worktrees", icon: GitBranch },
 			{ id: "ui", icon: Glasses },
 			{ id: "experimental", icon: FlaskConical },
 			{ id: "language", icon: Globe },
@@ -973,6 +977,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 
 						{/* MCP Section */}
 						{renderTab === "mcp" && <McpView />}
+
+						{/* Worktrees Section */}
+						{renderTab === "worktrees" && <WorktreesView />}
 
 						{/* Prompts Section */}
 						{renderTab === "prompts" && (

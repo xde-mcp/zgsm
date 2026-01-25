@@ -49,7 +49,7 @@ export const ModeSelector = ({
 	const selectedItemRef = React.useRef<HTMLDivElement>(null)
 	const scrollContainerRef = React.useRef<HTMLDivElement>(null)
 	const lastNotifiedInvalidModeRef = React.useRef<string | null>(null)
-	const portalContainer = useRooPortal("roo-portal")
+	const portalContainer = useRooPortal("costrict-portal")
 	const { hasOpenedModeSelector, setHasOpenedModeSelector, zgsmCodeMode, apiConfiguration } = useExtensionState()
 	const { t } = useAppTranslation()
 	const trackModeSelectorOpened = React.useCallback(() => {

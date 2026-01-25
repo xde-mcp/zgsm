@@ -3909,7 +3909,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			apiConfiguration,
 			terminalShellIntegrationDisabled,
 			enableSubfolderRules,
-			zgsmCodeMode
+			zgsmCodeMode,
 		} = state ?? {}
 
 		return await (async () => {

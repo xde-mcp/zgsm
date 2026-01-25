@@ -382,9 +382,9 @@ export class NativeToolCallParser {
 
 		switch (name) {
 			case "fake_tool_call": {
-				// fake_tool_call 是一个虚拟工具，用于兼容不支持原生 function call 的模型
-				// 它不需要实际的 nativeArgs，因为它只是一个占位符
-				// 实际的工具调用会在 Task.ts 中通过解析 <tool_call> 标签来处理
+				// fake_tool_call is a virtual tool for compatibility with models that don't support native function calls
+				// It doesn't need actual nativeArgs because it's just a placeholder
+				// Actual tool calls are handled in Task.ts by parsing <tool_call> tags
 				break
 			}
 			case "read_file":

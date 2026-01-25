@@ -65,6 +65,7 @@ import ChatSearch from "./ChatSearch"
 // import { useCloudUpsell } from "@src/hooks/useCloudUpsell"
 // import { Cloud } from "lucide-react"
 // import CloudAgents from "../cloud/CloudAgents"
+import { WorktreeSelector } from "./WorktreeSelector"
 
 export interface ChatViewProps {
 	isHidden: boolean
@@ -114,6 +115,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		messageQueue = [],
 		experiments,
 		isBrowserSessionActive,
+		showWorktreesInHomeScreen,
 	} = useExtensionState()
 
 	const messagesRef = useRef(messages)
@@ -1753,6 +1755,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				</div>
 			)}
 
+			{!task && showWorktreesInHomeScreen && <WorktreeSelector />}
+
 			{task && (
 				<>
 					{showSearch && !isHidden && experiments?.chatSearch && (
@@ -1926,7 +1930,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				</div>
 			)}
 
-			<div id="roo-portal" />
+			<div id="costrict-portal" />
 			{/* <CloudUpsellDialog open={isUpsellOpen} onOpenChange={closeUpsell} onConnect={handleConnect} /> */}
 		</div>
 	)

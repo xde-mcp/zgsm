@@ -247,6 +247,6 @@ ${customInstructions}`
 		modelId,
 		shell,
 		skillsManager,
-		zgsmCodeMode: settings?.zgsmCodeMode
+		zgsmCodeMode: settings?.zgsmCodeMode,
 	})
 }

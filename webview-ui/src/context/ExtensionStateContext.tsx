@@ -185,6 +185,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	notices?: Array<{ title: string; type: "always" | "once"; content: string; timestamp: number; expired: number }>
 	noticesEnabled: boolean
 	setNoticesEnabled: (value: boolean) => void
+	showWorktreesInHomeScreen: boolean
+	setShowWorktreesInHomeScreen: (value: boolean) => void
 }
 
 export const ExtensionStateContext = createContext<ExtensionStateContextType | undefined>(undefined)
@@ -737,6 +739,9 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		notices,
 		noticesEnabled,
 		setNoticesEnabled,
+		showWorktreesInHomeScreen: state.showWorktreesInHomeScreen ?? true,
+		setShowWorktreesInHomeScreen: (value) =>
+			setState((prevState) => ({ ...prevState, showWorktreesInHomeScreen: value })),
 	}
 
 	return <ExtensionStateContext.Provider value={contextValue}>{children}</ExtensionStateContext.Provider>

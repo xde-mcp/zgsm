@@ -1,4 +1,4 @@
-// pnpm --filter roo-cline test api/providers/__tests__/openrouter.spec.ts
+// pnpm --filter zgsm test api/providers/__tests__/openrouter.spec.ts
 
 // Mock vscode first to avoid import errors
 vitest.mock("vscode", () => ({
