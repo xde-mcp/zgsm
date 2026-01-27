@@ -878,6 +878,9 @@ importers:
       json-stream-stringify:
         specifier: ^3.1.6
         version: 3.1.6
+      json5:
+        specifier: ^2.2.3
+        version: 2.2.3
       jwt-decode:
         specifier: ^4.0.0
         version: 4.0.0
@@ -14146,7 +14149,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.9)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@20.19.30)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2)
 
   '@vitest/utils@3.2.4':
     dependencies:

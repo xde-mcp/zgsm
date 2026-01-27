@@ -43,6 +43,7 @@ import { formatResponse } from "../prompts/responses"
 // import { codebaseSearchTool } from "../tools/CodebaseSearchTool"
 import { updateCospecMetadata } from "../checkpoints"
 import { fixBrowserLaunchAction } from "../../utils/fixbrowserLaunchAction"
+import { fixNativeToolname } from "../../utils/fixNativeToolname"
 // import { isNativeProtocol } from "@roo-code/types"
 // import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 
@@ -287,6 +288,7 @@ export async function presentAssistantMessage(cline: Task) {
 				}
 			}
 
+			const toolName = fixNativeToolname(mcpBlock.toolName)
 			// Execute the MCP tool using the same handler as use_mcp_tool
 			// Create a synthetic ToolUse block that the useMcpToolTool can handle
 			const syntheticToolUse: ToolUse<"use_mcp_tool"> = {
@@ -295,13 +297,13 @@ export async function presentAssistantMessage(cline: Task) {
 				name: "use_mcp_tool",
 				params: {
 					server_name: resolvedServerName,
-					tool_name: mcpBlock.toolName,
+					tool_name: toolName,
 					arguments: JSON.stringify(mcpBlock.arguments),
 				},
 				partial: mcpBlock.partial,
 				nativeArgs: {
 					server_name: resolvedServerName,
-					tool_name: mcpBlock.toolName,
+					tool_name: toolName,
 					arguments: mcpBlock.arguments,
 				},
 			}

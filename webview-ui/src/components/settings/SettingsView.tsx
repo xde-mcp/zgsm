@@ -1027,7 +1027,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 								experimentSettings={
 									cachedState.experimentSettings || {
 										smartMistakeDetectionConfig: {
-											autoSwitchModel: false,
+											autoSwitchModel: true,
 											autoSwitchModelThreshold: 3,
 										},
 									}

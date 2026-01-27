@@ -1,5 +1,6 @@
 import { ToolName } from "@roo-code/types"
 import { parseJSON } from "partial-json"
+import JSON5 from "json5"
 
 export const fixNativeToolname = (toolname: string | ToolName) => {
 	if (
@@ -27,31 +28,51 @@ export const fixNativeToolname = (toolname: string | ToolName) => {
 	return fixedToolname
 }
 
-export const fixNativeToolArgKey = <TName extends ToolName>(toolCall: {
-	id: string
-	name: TName
-	arguments: string
-}) => {
-	if (!toolCall.arguments.includes("<arg_key>")) return toolCall.arguments
+export const fixNativeToolArgKey = <TName extends ToolName>(
+	toolCall: {
+		id?: string
+		name?: TName | string
+		arguments?: string
+	},
+	isFinalToolUse?: boolean,
+) => {
+	let formatRecord = {} as Record<string, any>
 
 	try {
-		const format = parseJSON(toolCall.arguments)
-		Object.entries(format).forEach(([key, value]) => {
-			console.log("fixNativeToolArgKey key", key)
+		if (!toolCall?.arguments) {
+			return "{}"
+		} else if (!toolCall.arguments.includes("<arg_key>")) {
+			formatRecord = isFinalToolUse ? finalToolUseResult(toolCall.arguments) : parseJSON(toolCall.arguments)
+		} else {
+			formatRecord = isFinalToolUse ? JSON5.parse(toolCall.arguments) : parseJSON(toolCall.arguments)
 
-			if (!key.includes("<arg_key>")) {
-				return
-			}
-			const newKey = key.split("<arg_key>").pop() as string
-			format[newKey] = value
-			console.log(`${toolCall.name}|${toolCall.id}: ${key} -> ${newKey}`)
-			delete format[key]
-		})
+			Object.entries(formatRecord).forEach(([key, value]) => {
+				console.log("fixNativeToolArgKey key", key)
 
-		return JSON.stringify(format)
+				if (!key.includes("<arg_key>")) {
+					formatRecord[key] = value
+					return
+				}
+				const newKey = key.split("<arg_key>").pop() as string
+				formatRecord[newKey] = value
+				console.log(`${toolCall.name}|${toolCall.id}: ${key} -> ${newKey}`)
+			})
+		}
+
+		return JSON.stringify(formatRecord)
 	} catch (error) {
-		console.log(`${toolCall.name}|${toolCall.id}: ${error.message}`)
+		console.log("fixNativeToolArgKey failed", error)
+		return toolCall.arguments ?? "{}"
+	}
+}
 
-		return toolCall.arguments
+function finalToolUseResult(data?: string) {
+	if (!data) return {}
+
+	try {
+		// TODO: implement
+		return JSON5.parse(data)
+	} catch (error) {
+		return parseJSON(data)
 	}
 }

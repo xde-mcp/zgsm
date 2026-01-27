@@ -553,14 +553,19 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 		// let mockToolId = ""
 		if (isQwen) {
 			// mockToolId = "fake_tool_call"
-			matcher = new TagMatcher("tool_call", (chunk) => {
-				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
-				isDev && this.logger.info(`[ResponseID ${this.options.zgsmModelId} fake tool call]:`, requestId, chunk)
-				return {
-					type: chunk.matched ? "fake_tool_call" : "text",
-					text: chunk.data,
-				}
-			})
+			matcher = new TagMatcher(
+				"tool_call",
+				(chunk) => {
+					// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+					isDev &&
+						this.logger.info(`[ResponseID ${this.options.zgsmModelId} fake tool call]:`, requestId, chunk)
+					return {
+						type: chunk.matched ? "fake_tool_call" : "text",
+						text: chunk.data,
+					}
+				},
+				Infinity,
+			)
 		} else {
 			matcher = new TagMatcher(
 				"think",

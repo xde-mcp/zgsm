@@ -20,6 +20,7 @@ import type {
 } from "../../api/transform/stream"
 import { fixNativeToolname } from "../../utils/fixNativeToolname"
 import { MCP_TOOL_PREFIX, MCP_TOOL_SEPARATOR, parseMcpToolName, normalizeMcpToolName } from "../../utils/mcp-name"
+import { defaultModeSlug } from "../../shared/modes"
 
 /**
  * Helper type to extract properly typed native arguments for a given tool.
@@ -90,6 +91,42 @@ export class NativeToolCallParser {
 			}
 		}
 		return undefined
+	}
+
+	/**
+	 * Normalize parameter value to the expected type.
+	 * Handles common LLM type mismatches:
+	 * - Stringified objects/arrays: '[1,2,3]' -> [1,2,3], '{"a":1}' -> {a:1}
+	 * - Stringified primitive strings: '"hello"' -> 'hello'
+	 * - Already correct types: returned as-is
+	 *
+	 * @param value - The value to normalize
+	 * @returns The normalized value
+	 */
+	private static normalizeTypeValue(value: unknown): any {
+		// If value is not a string, return as-is
+		if (typeof value !== "string") {
+			return value
+		}
+
+		const trimmed = value.trim()
+
+		// Check if it's a JSON string (starts with { or [ or " for quoted strings)
+		if (
+			(trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+			(trimmed.startsWith("[") && trimmed.endsWith("]")) ||
+			(trimmed.startsWith('"') && trimmed.endsWith('"'))
+		) {
+			try {
+				return JSON.parse(trimmed)
+			} catch {
+				// If parsing fails, return original string
+				return value
+			}
+		}
+
+		// Return as-is for plain strings
+		return value
 	}
 
 	/**
@@ -311,6 +348,7 @@ export class NativeToolCallParser {
 				arguments: toolCall.argumentsAccumulator,
 			},
 			isZgsm,
+			true,
 		)
 
 		// Clean up streaming state
@@ -633,9 +671,10 @@ export class NativeToolCallParser {
 			arguments: string
 		},
 		isZgsm?: boolean,
+		isFinalToolUse?: boolean,
 	): ToolUse<TName> | McpToolUse | null {
 		if (isZgsm) {
-			toolCall.arguments = fixNativeToolArgKey(toolCall)
+			toolCall.arguments = fixNativeToolArgKey(toolCall, isFinalToolUse) || "{}"
 		}
 		// Check if this is a dynamic MCP tool (mcp--serverName--toolName)
 		// Also handle models that output underscores instead of hyphens (mcp__serverName__toolName)
@@ -680,11 +719,18 @@ export class NativeToolCallParser {
 			// Parse the arguments JSON string
 			const args = toolCall.arguments === "" ? {} : JSON.parse(toolCall.arguments)
 
+			// Normalize values to handle type mismatches from LLM
+			// (e.g. stringified objects/arrays: '"[1,2,3]"' -> [1,2,3])
+			const normalizedArgs: Record<string, any> = {}
+			for (const [key, value] of Object.entries(args)) {
+				normalizedArgs[key] = this.normalizeTypeValue(value)
+			}
+
 			// Build stringified params for display/logging.
 			// Tool execution MUST use nativeArgs (typed) and does not support legacy fallbacks.
 			const params: Partial<Record<ToolParamName, string>> = {}
 
-			for (const [key, value] of Object.entries(args)) {
+			for (const [key, value] of Object.entries(normalizedArgs)) {
 				// Skip complex parameters that have been migrated to nativeArgs.
 				// For read_file, the 'files' parameter is a FileEntry[] array that can't be
 				// meaningfully stringified. The properly typed data is in nativeArgs instead.
@@ -711,225 +757,229 @@ export class NativeToolCallParser {
 
 			switch (resolvedName) {
 				case "read_file":
-					if (args.files && Array.isArray(args.files)) {
-						nativeArgs = { files: this.convertFileEntries(args.files) } as NativeArgsFor<TName>
+					if (normalizedArgs.files && Array.isArray(normalizedArgs.files)) {
+						nativeArgs = { files: this.convertFileEntries(normalizedArgs.files) } as NativeArgsFor<TName>
 					}
 					break
 
 				case "attempt_completion":
-					if (args.result) {
-						nativeArgs = { result: args.result } as NativeArgsFor<TName>
+					if (normalizedArgs.result) {
+						nativeArgs = { result: normalizedArgs.result } as NativeArgsFor<TName>
 					}
 					break
 
 				case "execute_command":
-					if (args.command) {
+					if (normalizedArgs.command) {
 						nativeArgs = {
-							command: args.command,
-							cwd: args.cwd,
+							command: normalizedArgs.command,
+							cwd: normalizedArgs.cwd,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "apply_diff":
-					if (args.path !== undefined && args.diff !== undefined) {
+					if (normalizedArgs.path !== undefined && normalizedArgs.diff !== undefined) {
 						nativeArgs = {
-							path: args.path,
-							diff: args.diff,
+							path: normalizedArgs.path,
+							diff: normalizedArgs.diff,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "search_and_replace":
-					if (args.path !== undefined && args.operations !== undefined && Array.isArray(args.operations)) {
+					if (
+						normalizedArgs.path !== undefined &&
+						normalizedArgs.operations !== undefined &&
+						Array.isArray(normalizedArgs.operations)
+					) {
 						nativeArgs = {
-							path: args.path,
-							operations: args.operations,
+							path: normalizedArgs.path,
+							operations: normalizedArgs.operations,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "ask_followup_question":
-					if (args.question !== undefined && args.follow_up !== undefined) {
+					if (normalizedArgs.question !== undefined && normalizedArgs.follow_up !== undefined) {
 						nativeArgs = {
-							question: args.question,
-							follow_up: args.follow_up,
+							question: normalizedArgs.question,
+							follow_up: normalizedArgs.follow_up,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "ask_multiple_choice":
-					if (args.questions !== undefined && Array.isArray(args.questions)) {
+					if (normalizedArgs.questions !== undefined && Array.isArray(normalizedArgs.questions)) {
 						nativeArgs = {
-							title: args.title,
-							questions: args.questions,
+							title: normalizedArgs.title,
+							questions: normalizedArgs.questions,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "browser_action":
-					if (args.action !== undefined) {
+					if (normalizedArgs.action !== undefined) {
 						nativeArgs = {
-							action: fixBrowserLaunchAction(args),
-							url: args.url,
-							coordinate: args.coordinate,
-							size: args.size,
-							text: args.text,
-							path: args.path,
+							action: fixBrowserLaunchAction(normalizedArgs),
+							url: normalizedArgs.url,
+							coordinate: normalizedArgs.coordinate,
+							size: normalizedArgs.size,
+							text: normalizedArgs.text,
+							path: normalizedArgs.path,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "codebase_search":
-					if (args.query !== undefined) {
+					if (normalizedArgs.query !== undefined) {
 						nativeArgs = {
-							query: args.query,
-							path: args.path,
+							query: normalizedArgs.query,
+							path: normalizedArgs.path,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "fetch_instructions":
-					if (args.task !== undefined) {
+					if (normalizedArgs.task !== undefined) {
 						nativeArgs = {
-							task: args.task,
+							task: normalizedArgs.task,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "generate_image":
-					if (args.prompt !== undefined && args.path !== undefined) {
+					if (normalizedArgs.prompt !== undefined && normalizedArgs.path !== undefined) {
 						nativeArgs = {
-							prompt: args.prompt,
-							path: args.path,
-							image: args.image,
+							prompt: normalizedArgs.prompt,
+							path: normalizedArgs.path,
+							image: normalizedArgs.image,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "run_slash_command":
-					if (args.command !== undefined) {
+					if (normalizedArgs.command !== undefined) {
 						nativeArgs = {
-							command: args.command,
-							args: args.args,
+							command: normalizedArgs.command,
+							args: normalizedArgs.args,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "search_files":
-					if (args.path !== undefined && args.regex !== undefined) {
+					if (normalizedArgs.path !== undefined && normalizedArgs.regex !== undefined) {
 						nativeArgs = {
-							path: args.path,
-							regex: args.regex,
-							file_pattern: args.file_pattern,
+							path: normalizedArgs.path,
+							regex: normalizedArgs.regex,
+							file_pattern: normalizedArgs.file_pattern,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "switch_mode":
-					if (args.mode_slug !== undefined && args.reason !== undefined) {
+					if (normalizedArgs.mode_slug !== undefined && normalizedArgs.reason !== undefined) {
 						nativeArgs = {
-							mode_slug: args.mode_slug,
-							reason: args.reason,
+							mode_slug: normalizedArgs.mode_slug,
+							reason: normalizedArgs.reason,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "update_todo_list":
-					if (args.todos !== undefined) {
+					if (normalizedArgs.todos !== undefined) {
 						nativeArgs = {
-							todos: args.todos,
+							todos: normalizedArgs.todos,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "write_to_file":
-					if (args.path !== undefined && args.content !== undefined) {
+					if (normalizedArgs.path !== undefined && normalizedArgs.content !== undefined) {
 						nativeArgs = {
-							path: args.path,
-							content: args.content,
+							path: normalizedArgs.path,
+							content: normalizedArgs.content,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "use_mcp_tool":
-					if (args.server_name !== undefined && args.tool_name !== undefined) {
+					if (normalizedArgs.server_name !== undefined && normalizedArgs.tool_name !== undefined) {
 						nativeArgs = {
-							server_name: args.server_name,
-							tool_name: args.tool_name,
-							arguments: args.arguments,
+							server_name: normalizedArgs.server_name,
+							tool_name: normalizedArgs.tool_name,
+							arguments: normalizedArgs.arguments,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "access_mcp_resource":
-					if (args.server_name !== undefined && args.uri !== undefined) {
+					if (normalizedArgs.server_name !== undefined && normalizedArgs.uri !== undefined) {
 						nativeArgs = {
-							server_name: args.server_name,
-							uri: args.uri,
+							server_name: normalizedArgs.server_name,
+							uri: normalizedArgs.uri,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "apply_patch":
-					if (args.patch !== undefined) {
+					if (normalizedArgs.patch !== undefined) {
 						nativeArgs = {
-							patch: args.patch,
+							patch: normalizedArgs.patch,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "search_replace":
 					if (
-						args.file_path !== undefined &&
-						args.old_string !== undefined &&
-						args.new_string !== undefined
+						normalizedArgs.file_path !== undefined &&
+						normalizedArgs.old_string !== undefined &&
+						normalizedArgs.new_string !== undefined
 					) {
 						nativeArgs = {
-							file_path: args.file_path,
-							old_string: args.old_string,
-							new_string: args.new_string,
+							file_path: normalizedArgs.file_path,
+							old_string: normalizedArgs.old_string,
+							new_string: normalizedArgs.new_string,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "edit_file":
 					if (
-						args.file_path !== undefined &&
-						args.old_string !== undefined &&
-						args.new_string !== undefined
+						normalizedArgs.file_path !== undefined &&
+						normalizedArgs.old_string !== undefined &&
+						normalizedArgs.new_string !== undefined
 					) {
 						nativeArgs = {
-							file_path: args.file_path,
-							old_string: args.old_string,
-							new_string: args.new_string,
-							expected_replacements: args.expected_replacements,
+							file_path: normalizedArgs.file_path,
+							old_string: normalizedArgs.old_string,
+							new_string: normalizedArgs.new_string,
+							expected_replacements: normalizedArgs.expected_replacements,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "list_files":
-					if (args.path !== undefined) {
+					if (normalizedArgs.path !== undefined) {
 						nativeArgs = {
-							path: args.path,
-							recursive: this.coerceOptionalBoolean(args.recursive),
+							path: normalizedArgs.path,
+							recursive: this.coerceOptionalBoolean(normalizedArgs.recursive),
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				case "new_task":
-					if (args.mode !== undefined && args.message !== undefined) {
+					if (normalizedArgs.message !== undefined) {
 						nativeArgs = {
-							mode: args.mode,
-							message: args.message,
-							todos: args.todos,
+							mode: normalizedArgs.mode ?? defaultModeSlug,
+							message: normalizedArgs.message,
+							todos: normalizedArgs.todos,
 						} as NativeArgsFor<TName>
 					}
 					break
 
 				default:
 					if (customToolRegistry.has(resolvedName)) {
-						nativeArgs = args as NativeArgsFor<TName>
+						nativeArgs = normalizedArgs as NativeArgsFor<TName>
 					}
 
 					break
