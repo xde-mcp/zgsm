@@ -66,8 +66,6 @@ export const ExperimentalSettings = ({
 			<Section>
 				{Object.entries(experimentConfigsMap)
 					.filter(([key]) => key in EXPERIMENT_IDS)
-					// Hide MULTIPLE_NATIVE_TOOL_CALLS - feature is on hold
-					.filter(([key]) => key !== "MULTIPLE_NATIVE_TOOL_CALLS")
 					// Hide CHAT_SEARCH - moved to UI settings
 					.filter(([key]) => key !== "CHAT_SEARCH")
 					.filter(([key]) => key !== "POWER_STEERING")
