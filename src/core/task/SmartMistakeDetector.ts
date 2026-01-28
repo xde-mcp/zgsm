@@ -60,11 +60,11 @@ export interface MistakeCheckResult {
  * Mistake type weight configuration
  */
 const MISTAKE_WEIGHTS: Record<MistakeType, number> = {
-	[MistakeType.NO_TOOL_USE]: 1,
-	[MistakeType.TOOL_FAILURE]: 1,
+	[MistakeType.NO_TOOL_USE]: 0.5,
+	[MistakeType.TOOL_FAILURE]: 0.5,
 	[MistakeType.REPEATED_ACTION]: 0.5,
 	[MistakeType.INVALID_INPUT]: 1,
-	[MistakeType.TIMEOUT]: 1,
+	[MistakeType.TIMEOUT]: 0.5,
 }
 
 /**
@@ -96,7 +96,7 @@ export class SmartMistakeDetector {
 	private readonly autoSwitchModelEnabled: boolean = false
 
 	/** Auto switch model threshold - increased from 3 to 6 to reduce false positives */
-	private readonly autoSwitchModelThreshold: number = 6
+	private readonly autoSwitchModelThreshold: number = 3
 
 	/** Last model switch timestamp - used for cooldown period */
 	private lastSwitchTime?: number

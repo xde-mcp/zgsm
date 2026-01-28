@@ -18,6 +18,7 @@ export const toolNames = [
 	"fake_tool_call",
 	"execute_command",
 	"read_file",
+	"read_command_output",
 	"write_to_file",
 	"apply_diff",
 	"search_and_replace",

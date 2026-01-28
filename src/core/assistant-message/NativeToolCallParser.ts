@@ -1,4 +1,3 @@
-import { fixNativeToolArgKey } from "./../../utils/fixNativeToolname"
 import { parseJSON } from "partial-json"
 
 import { type ToolName, toolNames, type FileEntry } from "@roo-code/types"
@@ -18,7 +17,7 @@ import type {
 	ApiStreamToolCallDeltaChunk,
 	ApiStreamToolCallEndChunk,
 } from "../../api/transform/stream"
-import { fixNativeToolname } from "../../utils/fixNativeToolname"
+import { fixFinalToolUseResult, fixNativeToolname } from "../../utils/fixNativeToolname"
 import { MCP_TOOL_PREFIX, MCP_TOOL_SEPARATOR, parseMcpToolName, normalizeMcpToolName } from "../../utils/mcp-name"
 import { defaultModeSlug } from "../../shared/modes"
 
@@ -345,12 +344,13 @@ export class NativeToolCallParser {
 			{
 				id: toolCall.id,
 				name: toolCall.name as ToolName,
-				arguments: toolCall.argumentsAccumulator,
+				arguments:
+					(toolCall.name as ToolName) === "ask_multiple_choice" && isZgsm
+						? fixFinalToolUseResult(toolCall.argumentsAccumulator)
+						: toolCall.argumentsAccumulator,
 			},
 			isZgsm,
-			true,
 		)
-
 		// Clean up streaming state
 		this.streamingToolCalls.delete(id)
 
@@ -671,11 +671,7 @@ export class NativeToolCallParser {
 			arguments: string
 		},
 		isZgsm?: boolean,
-		isFinalToolUse?: boolean,
 	): ToolUse<TName> | McpToolUse | null {
-		if (isZgsm) {
-			toolCall.arguments = fixNativeToolArgKey(toolCall, isFinalToolUse) || "{}"
-		}
 		// Check if this is a dynamic MCP tool (mcp--serverName--toolName)
 		// Also handle models that output underscores instead of hyphens (mcp__serverName__toolName)
 		const mcpPrefix = MCP_TOOL_PREFIX + MCP_TOOL_SEPARATOR
@@ -717,13 +713,18 @@ export class NativeToolCallParser {
 
 		try {
 			// Parse the arguments JSON string
-			const args = toolCall.arguments === "" ? {} : JSON.parse(toolCall.arguments)
+			const args = toolCall.arguments === "" ? {} : parseJSON(toolCall.arguments)
 
 			// Normalize values to handle type mismatches from LLM
 			// (e.g. stringified objects/arrays: '"[1,2,3]"' -> [1,2,3])
 			const normalizedArgs: Record<string, any> = {}
 			for (const [key, value] of Object.entries(args)) {
-				normalizedArgs[key] = this.normalizeTypeValue(value)
+				let _key = key
+				if (isZgsm && _key.includes("<arg_key>")) {
+					_key = (key.split("<arg_key>").pop() as string) ?? _key
+					console.log(`${toolCall.name}|${toolCall.id}: ${key} -> ${_key}`)
+				}
+				normalizedArgs[_key] = this.normalizeTypeValue(value)
 			}
 
 			// Build stringified params for display/logging.
@@ -807,9 +808,13 @@ export class NativeToolCallParser {
 						} as NativeArgsFor<TName>
 					}
 					break
-
 				case "ask_multiple_choice":
-					if (normalizedArgs.questions !== undefined && Array.isArray(normalizedArgs.questions)) {
+					if (
+						normalizedArgs.questions !== undefined &&
+						Array.isArray(normalizedArgs.questions) &&
+						normalizedArgs.questions.length > 0 &&
+						normalizedArgs.questions.filter((q) => Object.keys(q).length > 0).length > 0
+					) {
 						nativeArgs = {
 							title: normalizedArgs.title,
 							questions: normalizedArgs.questions,
@@ -889,6 +894,17 @@ export class NativeToolCallParser {
 					if (normalizedArgs.todos !== undefined) {
 						nativeArgs = {
 							todos: normalizedArgs.todos,
+						} as NativeArgsFor<TName>
+					}
+					break
+
+				case "read_command_output":
+					if (args.artifact_id !== undefined) {
+						nativeArgs = {
+							artifact_id: args.artifact_id,
+							search: args.search,
+							offset: args.offset,
+							limit: args.limit,
 						} as NativeArgsFor<TName>
 					}
 					break
