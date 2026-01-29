@@ -27,7 +27,13 @@ export const fixNativeToolname = (toolname: string | ToolName) => {
 	return fixedToolname
 }
 
-export function fixFinalToolUseResult(input?: string) {
+export function fixAskMultipleChoiceFinalToolUseResult(input?: string) {
 	if (!input) return "{}"
-	return input.replace(/'/g, '"').replace(/\b(False|True)\b/g, (match) => match.toLowerCase())
+
+	try {
+		JSON.parse(input as string) // check if it's a valid json
+		return input
+	} catch (error) {
+		return input.replace(/'/g, '"').replace(/\b(False|True)\b/g, (match) => match.toLowerCase())
+	}
 }

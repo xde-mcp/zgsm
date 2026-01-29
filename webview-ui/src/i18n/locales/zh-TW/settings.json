@@ -43,7 +43,8 @@
 		"experimental": "實驗性",
 		"language": "語言",
 		"about": "關於 Roo Code",
-		"autoCleanup": "自動清理"
+		"autoCleanup": "自動清理",
+		"skills": "Skills"
 	},
 	"about": {
 		"bugReport": {
@@ -869,10 +870,6 @@
 			"name": "啟用模型啟動的斜線命令",
 			"description": "啟用時，Roo 可以執行您的斜線命令來執行工作流程。"
 		},
-		"MULTIPLE_NATIVE_TOOL_CALLS": {
-			"name": "並行工具呼叫",
-			"description": "啟用後，原生協定可在單個助理訊息輪次中執行多個工具。"
-		},
 		"CUSTOM_TOOLS": {
 			"name": "啟用自訂工具",
 			"description": "啟用後，CoStrict 可以從專案中的 .roo/tools 目錄或全域工具目錄 ~/.roo/tools 載入並使用自訂 TypeScript/JavaScript 工具。注意：這些工具將自動獲得核准。",
@@ -1062,6 +1059,51 @@
 		"cleanupOnStartup": {
 			"label": "啟動時清理",
 			"description": "擴充程式啟動時執行自動清理"
+		}
+	},
+	"skills": {
+		"description": "管理為代理提供上下文指令的技能。技能會在與您的任務相關時自動套用。<DocsLink>深入了解</DocsLink>",
+		"projectSkills": "專案技能",
+		"globalSkills": "全域技能",
+		"noProjectSkills": "未設定專案技能。建立一個以新增專案特定的代理功能。",
+		"noGlobalSkills": "未設定全域技能。建立一個以新增在所有專案中可用的代理功能。",
+		"addSkill": "新增技能",
+		"editSkill": "編輯技能",
+		"deleteSkill": "刪除技能",
+		"deleteDialog": {
+			"title": "刪除技能",
+			"description": "您確定要刪除技能「{{name}}」嗎？此動作無法復原。",
+			"confirm": "刪除",
+			"cancel": "取消"
+		},
+		"createDialog": {
+			"title": "建立新技能",
+			"description": "定義新的技能範本，為代理提供上下文指令。",
+			"nameLabel": "名稱",
+			"namePlaceholder": "my-skill-name",
+			"nameHint": "僅限小寫字母、數字和連字號（1-64個字元）",
+			"descriptionLabel": "說明",
+			"descriptionPlaceholder": "描述何時應使用此技能...",
+			"descriptionHint": "說明此技能的作用以及代理應何時套用它（1-1024個字元）",
+			"sourceLabel": "位置",
+			"sourceHint": "選擇此技能是全域可用還是僅在此專案中可用",
+			"modeLabel": "模式（選填）",
+			"modePlaceholder": "任何模式",
+			"modeHint": "將此技能限制為特定模式",
+			"modeAny": "任何模式",
+			"create": "建立",
+			"cancel": "取消"
+		},
+		"source": {
+			"global": "全域（在所有專案中可用）",
+			"project": "專案（僅此工作區）"
+		},
+		"validation": {
+			"nameRequired": "名稱為必填",
+			"nameTooLong": "名稱不得超過64個字元",
+			"nameInvalid": "名稱必須為1-64個小寫字母、數字或連字號",
+			"descriptionRequired": "說明為必填",
+			"descriptionTooLong": "說明不得超過1024個字元"
 		}
 	}
 }

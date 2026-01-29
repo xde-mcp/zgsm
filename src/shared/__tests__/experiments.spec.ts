@@ -24,7 +24,6 @@ describe("experiments", () => {
 				alwaysIncludeFileDetails: false,
 				useLitePrompts: false,
 				runSlashCommand: false,
-				multipleNativeToolCalls: false,
 				customTools: false,
 				smartMistakeDetection: false,
 			}
@@ -40,7 +39,6 @@ describe("experiments", () => {
 				preventFocusDisruption: true,
 				imageGeneration: false,
 				runSlashCommand: false,
-				multipleNativeToolCalls: false,
 				customTools: false,
 				smartMistakeDetection: false,
 			}
@@ -56,7 +54,6 @@ describe("experiments", () => {
 				preventFocusDisruption: false,
 				imageGeneration: false,
 				runSlashCommand: false,
-				multipleNativeToolCalls: false,
 				customTools: false,
 				smartMistakeDetection: false,
 			}

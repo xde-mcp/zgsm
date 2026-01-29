@@ -50,7 +50,8 @@ import {
 	getLiteAskMultipleChoiceDescription,
 	getLiteSearchAndReplaceDescription,
 	getLiteSearchReplaceDescription,
-} from "./lite-descriptions"
+	getLiteReadCommandOutputDescription,
+} from "../lite-descriptions"
 
 /**
  * Options for customizing the native tools array.
@@ -95,6 +96,8 @@ function getLiteDescription(tool: OpenAI.Chat.ChatCompletionFunctionTool): strin
 			return getLiteNewTaskDescription()
 		case "read_file":
 			return getLiteReadFileDescription()
+		case "read_command_output":
+			return getLiteReadCommandOutputDescription()
 		case "run_slash_command":
 			return getLiteRunSlashCommandDescription()
 		case "edit_file":

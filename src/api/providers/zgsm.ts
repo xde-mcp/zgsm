@@ -38,7 +38,7 @@ import { getEditorType } from "../../utils/getEditorType"
 import { ChatCompletionChunk } from "openai/resources/index.mjs"
 import { convertToZAiFormat } from "../transform/zai-format"
 import { isDebug } from "../../utils/getDebugState"
-import { xmlLiteToolGuide } from "../../core/prompts/tools/native-tools/lite-descriptions"
+import { xmlLiteToolGuide } from "../../core/prompts/tools/lite-descriptions"
 
 const autoModeModelId = "Auto"
 const isDev = process.env.NODE_ENV === "development"
@@ -469,7 +469,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 				...requestOptions,
 				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
 				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
-				...(metadata?.parallelToolCalls === true && { parallel_tool_calls: true }),
+				...{ parallel_tool_calls: metadata?.parallelToolCalls ?? true },
 			}
 		}
 
@@ -506,7 +506,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 				? {
 						...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
 						...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
-						...(metadata?.parallelToolCalls === true && { parallel_tool_calls: true }),
+						...{ parallel_tool_calls: metadata?.parallelToolCalls ?? true },
 					}
 				: undefined),
 			extra_body: {
@@ -997,7 +997,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 					? {
 							...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
 							...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
-							...(metadata?.parallelToolCalls === true && { parallel_tool_calls: true }),
+							...{ parallel_tool_calls: metadata?.parallelToolCalls ?? true },
 						}
 					: undefined),
 			}
@@ -1035,7 +1035,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 					? {
 							...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
 							...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
-							...(metadata?.parallelToolCalls === true && { parallel_tool_calls: true }),
+							...{ parallel_tool_calls: metadata?.parallelToolCalls ?? true },
 						}
 					: undefined),
 			}

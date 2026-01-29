@@ -16,7 +16,7 @@ import { getModelParams } from "../transform/model-params"
 
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { BaseProvider } from "./base-provider"
-import { getGeminiCliLiteToolGuide } from "../../core/prompts/tools/native-tools/lite-descriptions"
+import { getGeminiCliLiteToolGuide } from "../../core/prompts/tools/lite-descriptions"
 import { TagMatcher } from "../../utils/tag-matcher"
 
 // OAuth2 Configuration (from Cline implementation)

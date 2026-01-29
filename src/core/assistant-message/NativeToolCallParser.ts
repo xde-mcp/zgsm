@@ -17,7 +17,7 @@ import type {
 	ApiStreamToolCallDeltaChunk,
 	ApiStreamToolCallEndChunk,
 } from "../../api/transform/stream"
-import { fixFinalToolUseResult, fixNativeToolname } from "../../utils/fixNativeToolname"
+import { fixAskMultipleChoiceFinalToolUseResult, fixNativeToolname } from "../../utils/fixNativeToolname"
 import { MCP_TOOL_PREFIX, MCP_TOOL_SEPARATOR, parseMcpToolName, normalizeMcpToolName } from "../../utils/mcp-name"
 import { defaultModeSlug } from "../../shared/modes"
 
@@ -346,7 +346,7 @@ export class NativeToolCallParser {
 				name: toolCall.name as ToolName,
 				arguments:
 					(toolCall.name as ToolName) === "ask_multiple_choice" && isZgsm
-						? fixFinalToolUseResult(toolCall.argumentsAccumulator)
+						? fixAskMultipleChoiceFinalToolUseResult(toolCall.argumentsAccumulator)
 						: toolCall.argumentsAccumulator,
 			},
 			isZgsm,

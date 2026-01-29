@@ -129,9 +129,9 @@ async function generatePrompt(data: {
 
 ${markdownFormattingSection()}
 
-${getSharedToolUseSection(experiments)}${toolsCatalog}
+${getSharedToolUseSection()}${toolsCatalog}
 
-${useLitePrompts ? getLiteToolUseGuidelinesSection(experiments) : getToolUseGuidelinesSection(experiments)}
+${useLitePrompts ? getLiteToolUseGuidelinesSection() : getToolUseGuidelinesSection()}
 
 ${useLitePrompts ? getLiteCapabilitiesSection(cwd, shouldIncludeMcp ? mcpHub : undefined) : getCapabilitiesSection(cwd, shouldIncludeMcp ? mcpHub : undefined)}
 

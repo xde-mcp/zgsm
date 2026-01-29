@@ -119,6 +119,17 @@ Params: command (REQUIRED), args (REQUIRED)`
 }
 getLiteRunSlashCommandDescription.toolname = "run_slash_command"
 
+export function getLiteReadCommandOutputDescription(): string {
+	return `## read_command_output
+Retrieve the full output from a command that was truncated in execute_command.
+Params: artifact_id (REQUIRED), search (optional), offset (optional), limit (optional)
+- artifact_id: The artifact filename from truncated output (e.g., "cmd-1706119234567.txt")
+- search: Optional pattern to filter lines (regex or literal, case-insensitive)
+- offset: Byte offset to start reading from (default: 0)
+- limit: Maximum bytes to return (default: 40KB)`
+}
+getLiteReadCommandOutputDescription.toolname = "read_command_output"
+
 // Native tools
 export function getLiteApplyDiffDescription(): string {
 	return `## apply_diff
@@ -218,6 +229,8 @@ ${getLiteSearchFilesDescription()}
 ${getLiteListFilesDescription()}
 
 ${getLiteExecuteCommandDescription()}
+
+${getLiteReadCommandOutputDescription()}
 
 ${getLiteAskFollowupQuestionDescription()}
 

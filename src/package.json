@@ -10,7 +10,7 @@
 		"theme": "dark"
 	},
 	"engines": {
-		"vscode": "^1.86.2",
+		"vscode": "^1.93.1",
 		"node": "20.19.2"
 	},
 	"author": {
@@ -929,6 +929,7 @@
 		"zod": "3.25.76"
 	},
 	"devDependencies": {
+		"@ai-sdk/openai-compatible": "^1.0.0",
 		"@openrouter/ai-sdk-provider": "^2.0.4",
 		"@roo-code/build": "workspace:^",
 		"@roo-code/config-eslint": "workspace:^",
