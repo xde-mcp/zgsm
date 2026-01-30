@@ -240,7 +240,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	// Compute whether auto-approval is paused (user is typing in a followup)
 	const isFollowUpAutoApprovalPaused = useMemo(() => {
-		return !!(inputValue && inputValue.trim().length > 0 && clineAsk === "followup")
+		return !!(inputValue && inputValue?.trim().length > 0 && clineAsk === "followup")
 	}, [inputValue, clineAsk])
 
 	// Cancel auto-approval timeout when user starts typing
@@ -643,7 +643,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	 */
 	const handleSendMessage = useCallback(
 		(text: string, images: string[], chatType = "system") => {
-			text = text.trim()
+			text = text?.trim()
 
 			if (text || images.length > 0) {
 				// Queue message if:
@@ -753,7 +753,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	// Handle enqueue button click from textarea
 	const handleEnqueueCurrentMessage = useCallback(() => {
-		const text = inputValue.trim()
+		const text = inputValue?.trim()
 		if (text || selectedImages.length > 0) {
 			vscode.postMessage({
 				type: "queueMessage",
@@ -1605,7 +1605,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		acceptInput: () => {
 			if (enableButtons && primaryButtonText) {
 				handlePrimaryButtonClick(inputValue, selectedImages)
-			} else if (!sendingDisabled && !isProfileDisabled && (inputValue.trim() || selectedImages.length > 0)) {
+			} else if (!sendingDisabled && !isProfileDisabled && (inputValue?.trim() || selectedImages.length > 0)) {
 				handleSendMessage(inputValue, selectedImages)
 			}
 		},
@@ -1768,7 +1768,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								setSearchQuery("")
 								setShowSearch(false)
 							}}
-							onSearchChange={(_, query) => setSearchQuery((query || "").trim())}
+							onSearchChange={(_, query) => setSearchQuery((query || "")?.trim())}
 						/>
 					)}
 					<div className="grow flex" ref={scrollContainerRef}>

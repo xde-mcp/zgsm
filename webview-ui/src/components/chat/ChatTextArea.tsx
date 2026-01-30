@@ -300,7 +300,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		}, [selectedType, searchQuery])
 
 		const handleEnhancePrompt = useCallback(() => {
-			const trimmedInput = inputValue.trim()
+			const trimmedInput = inputValue?.trim()
 
 			if (trimmedInput) {
 				setIsEnhancingPrompt(true)
@@ -314,7 +314,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		// Memoized check for whether the input has content (text or images)
 		const hasInputContent = useMemo(() => {
-			return inputValue.trim().length > 0 || selectedImages.length > 0
+			return inputValue?.trim().length > 0 || selectedImages.length > 0
 		}, [inputValue, selectedImages])
 
 		// Compute the key combination text for the send button tooltip based on enterBehavior
@@ -750,9 +750,9 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				// Check if the pasted content is a URL, add space after so user
 				// can easily delete if they don't want it.
 				const urlRegex = /^\S+:\/\/\S+$/
-				if (urlRegex.test(pastedText.trim())) {
+				if (urlRegex.test(pastedText?.trim())) {
 					e.preventDefault()
-					const trimmedUrl = pastedText.trim()
+					const trimmedUrl = pastedText?.trim()
 					const newValue =
 						inputValue.slice(0, cursorPosition) + trimmedUrl + " " + inputValue.slice(cursorPosition)
 					setInputValue(newValue)
@@ -907,7 +907,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				const text = textFieldList || textUriList
 				if (text) {
 					// Split text on newlines to handle multiple files
-					const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "")
+					const lines = text.split(/\r?\n/).filter((line) => line?.trim() !== "")
 
 					if (lines.length > 0) {
 						// Process each line as a separate file path

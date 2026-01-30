@@ -1273,7 +1273,7 @@ export class ClineProvider
 		const nonce = getNonce()
 
 		// Get the OpenRouter base URL from configuration
-		const { apiConfiguration } = await this.getState()
+		const { apiConfiguration, language } = await this.getState()
 		const openRouterBaseUrl = apiConfiguration.openRouterBaseUrl || "https://openrouter.ai"
 		// Extract the domain for CSP
 		const openRouterDomain = openRouterBaseUrl.match(/^(https?:\/\/[^\/]+)/)?.[1] || "https://openrouter.ai"
@@ -1311,6 +1311,7 @@ export class ClineProvider
 					"ANTHROPIC_MODEL": "${process.env.ANTHROPIC_MODEL}",
 					"ANTHROPIC_BASE_URL": "${process.env.ANTHROPIC_BASE_URL}",
 					"COSTRICT_BASE_URL": "${ZgsmAuthConfig.getInstance().getDefaultApiBaseUrl()}",
+					"defaultLanguage": "${language}",
 				})
 			</script>
 		`
@@ -1399,7 +1400,7 @@ export class ClineProvider
 		const nonce = getNonce()
 
 		// Get the OpenRouter base URL from configuration
-		const { apiConfiguration } = await this.getState()
+		const { apiConfiguration, language } = await this.getState()
 		const openRouterBaseUrl = apiConfiguration.openRouterBaseUrl || "https://openrouter.ai"
 		// Extract the domain for CSP
 		const openRouterDomain = openRouterBaseUrl.match(/^(https?:\/\/[^\/]+)/)?.[1] || "https://openrouter.ai"
@@ -1426,6 +1427,7 @@ export class ClineProvider
 					"ANTHROPIC_MODEL": "${process.env.ANTHROPIC_MODEL}",
 					"ANTHROPIC_BASE_URL": "${process.env.ANTHROPIC_BASE_URL}",
 					"COSTRICT_BASE_URL": "${ZgsmAuthConfig.getInstance().getDefaultApiBaseUrl()}",
+					"defaultLanguage": "${language}",
 				})
 			</script>
             <title>CoStrict</title>

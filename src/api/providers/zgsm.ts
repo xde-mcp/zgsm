@@ -383,7 +383,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 						],
 					}
 				: { role: "system" as const, content: systemPrompt }
-			if (_mid?.includes("glm") || isMiniMax || _mid?.includes("claude")) {
+			if (_mid?.includes("kimi") || _mid?.includes("glm") || isMiniMax || _mid?.includes("claude")) {
 				convertedMessages = [
 					{ role: "system", content: systemPrompt },
 					...convertToZAiFormat(messages, { mergeToolResultText: true }),
@@ -567,13 +567,16 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 				Infinity,
 			)
 		} else {
+			// hasReasoning = true
 			matcher = new TagMatcher(
 				"think",
-				(chunk) =>
-					({
+				(chunk) => {
+					if (chunk.matched) hasReasoning = true
+					return {
 						type: chunk.matched ? "reasoning" : "text",
 						text: chunk.data,
-					}) as const,
+					} as const
+				},
 				isMiniMax ? Infinity : 0, // Only use Infinity for MiniMax models
 			)
 		}
@@ -592,6 +595,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 		let toolCallTime = Date.now()
 		let isPrinted = false
 		let shouldAbort = false
+		let hasReasoning = false
 
 		// Yield selected LLM info if available (for Auto model mode)
 		if (isAuto) {
@@ -721,6 +725,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 										requestId,
 										reasoning_content,
 									)
+								hasReasoning = true
 								yield { type: "reasoning", text: reasoning_content }
 							}
 							break
@@ -766,6 +771,9 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 				}
 			}
 		} finally {
+			if (!hasReasoning) {
+				yield { type: "reasoning", text: "[thinking (empty)]" }
+			}
 			// Always flush remaining content, even on abort
 			// This ensures no content is lost in the buffer
 			if (contentBuffer.length > 0) {
@@ -908,6 +916,14 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 		const params = getModelParams({ format: "zgsm", modelId: id, model: info, settings: this.options })
 		if (!info.id) {
 			info.id = id
+		}
+		if (
+			(id.toLowerCase().includes("kimi") ||
+				id.toLowerCase().includes("minimax") ||
+				id.toLowerCase().includes("glm")) &&
+			info.preserveReasoning == null
+		) {
+			info.preserveReasoning = true
 		}
 		return { id, info, ...params }
 	}

@@ -244,7 +244,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		zgsmCodebaseIndexEnabled: true,
 		zgsmCodeMode: "vibe",
 		checkpointTimeout: DEFAULT_CHECKPOINT_TIMEOUT_SECONDS, // Default to 15 seconds
-		language: "en", // Default language code
+		language: (window as any).defaultLanguage || "en", // Default language code
 		writeDelayMs: 1000,
 		browserViewportSize: "900x600",
 		screenshotQuality: 75,
