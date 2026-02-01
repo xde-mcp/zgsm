@@ -1,10 +1,19 @@
 export function getLiteReadFileDescription(): string {
 	return `## read_file
-Read file contents with line numbers.
-Params: files (REQUIRED)
-- files: Array of file objects
-  - path (REQUIRED): File path relative to workspace
-  - line_ranges (optional): Array of [start, end] tuples for specific sections`
+Read file contents with line numbers. Supports text extraction from PDF and DOCX files.
+Two modes:
+- slice (default): Read lines sequentially with offset/limit
+- indentation: Extract semantic code blocks based on anchor_line
+Params:
+- path (REQUIRED): File path relative to workspace
+- mode (optional): Reading mode - 'slice' or 'indentation' (default: 'slice')
+- offset (optional): 1-based start line for slice mode (default: 1)
+- limit (optional): Max lines for slice mode (default: 2000)
+- indentation (optional): Object for indentation mode
+  - anchor_line (REQUIRED): 1-based line number to extract semantic block
+  - max_levels (optional): Indentation levels to include above anchor
+  - include_siblings (optional): Include sibling blocks (default: false)
+Note: When anchor_line is known, prefer indentation mode for complete code blocks. Returns up to 2000 lines by default.`
 }
 getLiteReadFileDescription.toolname = "read_file"
 
@@ -39,10 +48,10 @@ getLiteExecuteCommandDescription.toolname = "execute_command"
 export function getLiteAskFollowupQuestionDescription(): string {
 	return `## ask_followup_question
 Ask user for clarification.
-Params: question (required), follow_up (required)
+Params: question (REQUIRED), follow_up (REQUIRED)
 - question: Clear, specific question addressing the information needed
 - follow_up: Array of 2-4 suggested responses
-  - text (required): Suggested answer the user can pick
+  - text (REQUIRED): Suggested answer the user can pick
   - mode (optional): Mode slug to switch to if chosen (e.g., code, architect)`
 }
 getLiteAskFollowupQuestionDescription.toolname = "ask_followup_question"
@@ -78,18 +87,20 @@ getLiteNewTaskDescription.toolname = "new_task"
 export function getLiteUpdateTodoListDescription(): string {
 	return `## update_todo_list
 Update TODO checklist.
-Params: todos (required)
+Params: todos (REQUIRED)
 - todos: Full markdown checklist in execution order
 Format: [ ] pending, [x] completed, [-] in progress`
 }
 getLiteUpdateTodoListDescription.toolname = "update_todo_list"
 
-export function getLiteFetchInstructionsDescription(): string {
-	return `## fetch_instructions
-Get task instructions.
-Params: task (REQUIRED) - create_mcp_server or create_mode`
+export function getLiteSkillDescription(): string {
+	return `## skill
+Load and execute a skill by name. Skills provide specialized instructions for common tasks like creating MCP servers or custom modes.
+Params:
+- skill (REQUIRED): Name of the skill to load (e.g., create-mcp-server, create-mode)
+- args (optional): Context or arguments to pass to the skill`
 }
-getLiteFetchInstructionsDescription.toolname = "fetch_instructions"
+getLiteSkillDescription.toolname = "skill"
 
 export function getLiteCodebaseSearchDescription(): string {
 	return `## codebase_search
@@ -157,7 +168,7 @@ getLiteEditFileDescription.toolname = "edit_file"
 export function getLiteAskMultipleChoiceDescription(): string {
 	return `## ask_multiple_choice
 Ask the user to select one or more options from a list of choices.
-Params: title (optional), questions (REQUIRED)
+Params: title (REQUIRED), questions (REQUIRED)
 - questions: Array of question objects (at least 1)
   - id (REQUIRED): Unique identifier for the question
   - prompt (REQUIRED): Question text to display
@@ -220,6 +231,8 @@ export const getGeminiCliLiteToolGuide = () => {
 
 # User Local Available Tools
 
+────────────────────────────────────
+
 ${getLiteReadFileDescription()}
 
 ${getLiteWriteToFileDescription()}
@@ -244,7 +257,7 @@ ${getLiteNewTaskDescription()}
 
 ${getLiteUpdateTodoListDescription()}
 
-${getLiteFetchInstructionsDescription()}
+${getLiteSkillDescription()}
 
 ${getLiteCodebaseSearchDescription()}
 
@@ -265,6 +278,8 @@ ${getLiteApplyDiffDescription()}
 ${getLiteSearchAndReplaceDescription()}
 
 ${getLiteSearchReplaceDescription()}
+
+────────────────────────────────────
 
 ${xmlLiteToolGuide}
 

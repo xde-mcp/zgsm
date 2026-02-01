@@ -44,6 +44,11 @@ export async function handleCreateSkill(
 			throw new Error(t("skills:errors.missing_create_fields"))
 		}
 
+		// Built-in skills cannot be created
+		if (source === "built-in") {
+			throw new Error(t("skills:errors.cannot_modify_builtin"))
+		}
+
 		const skillsManager = provider.getSkillsManager()
 		if (!skillsManager) {
 			throw new Error(t("skills:errors.manager_unavailable"))
@@ -82,6 +87,11 @@ export async function handleDeleteSkill(
 			throw new Error(t("skills:errors.missing_delete_fields"))
 		}
 
+		// Built-in skills cannot be deleted
+		if (source === "built-in") {
+			throw new Error(t("skills:errors.cannot_modify_builtin"))
+		}
+
 		const skillsManager = provider.getSkillsManager()
 		if (!skillsManager) {
 			throw new Error(t("skills:errors.manager_unavailable"))
@@ -102,6 +112,47 @@ export async function handleDeleteSkill(
 }
 
 /**
+ * Handles the moveSkill message - moves a skill to a different mode
+ */
+export async function handleMoveSkill(
+	provider: ClineProvider,
+	message: WebviewMessage,
+): Promise<SkillMetadata[] | undefined> {
+	try {
+		const skillName = message.skillName
+		const source = message.source
+		const currentMode = message.skillMode
+		const newMode = message.newSkillMode
+
+		if (!skillName || !source) {
+			throw new Error(t("skills:errors.missing_move_fields"))
+		}
+
+		// Built-in skills cannot be moved
+		if (source === "built-in") {
+			throw new Error(t("skills:errors.cannot_modify_builtin"))
+		}
+
+		const skillsManager = provider.getSkillsManager()
+		if (!skillsManager) {
+			throw new Error(t("skills:errors.manager_unavailable"))
+		}
+
+		await skillsManager.moveSkill(skillName, source, currentMode, newMode)
+
+		// Send updated skills list
+		const skills = skillsManager.getSkillsMetadata()
+		await provider.postMessageToWebview({ type: "skills", skills })
+		return skills
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error)
+		provider.log(`Error moving skill: ${errorMessage}`)
+		vscode.window.showErrorMessage(`Failed to move skill: ${errorMessage}`)
+		return undefined
+	}
+}
+
+/**
  * Handles the openSkillFile message - opens a skill file in the editor
  */
 export async function handleOpenSkillFile(provider: ClineProvider, message: WebviewMessage): Promise<void> {
@@ -112,6 +163,11 @@ export async function handleOpenSkillFile(provider: ClineProvider, message: Webv
 
 		if (!skillName || !source) {
 			throw new Error(t("skills:errors.missing_delete_fields"))
+		}
+
+		// Built-in skills cannot be opened as files (they have no file path)
+		if (source === "built-in") {
+			throw new Error(t("skills:errors.cannot_open_builtin"))
 		}
 
 		const skillsManager = provider.getSkillsManager()

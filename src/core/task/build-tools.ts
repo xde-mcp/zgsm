@@ -22,8 +22,6 @@ interface BuildToolsOptions {
 	customModes: ModeConfig[] | undefined
 	experiments: Record<string, boolean> | undefined
 	apiConfiguration: ProviderSettings | undefined
-	maxReadFileLine: number
-	maxConcurrentFileReads: number
 	browserToolEnabled: boolean
 	modelInfo?: ModelInfo
 	useLitePrompts?: boolean
@@ -90,8 +88,6 @@ export async function buildNativeToolsArrayWithRestrictions(options: BuildToolsO
 		customModes,
 		experiments,
 		apiConfiguration,
-		maxReadFileLine,
-		maxConcurrentFileReads,
 		browserToolEnabled,
 		modelInfo,
 		useLitePrompts,
@@ -111,16 +107,11 @@ export async function buildNativeToolsArrayWithRestrictions(options: BuildToolsO
 		modelInfo,
 	}
 
-	// Determine if partial reads are enabled based on maxReadFileLine setting.
-	const partialReadsEnabled = maxReadFileLine !== -1
-
 	// Check if the model supports images for read_file tool description.
 	const supportsImages = modelInfo?.supportsImages ?? false
 
 	// Build native tools with dynamic read_file tool based on settings.
 	const nativeTools = getNativeTools({
-		partialReadsEnabled,
-		maxConcurrentFileReads,
 		supportsImages,
 		useLitePrompts,
 	})

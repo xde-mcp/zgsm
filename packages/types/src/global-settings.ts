@@ -139,7 +139,6 @@ export const globalSettingsSchema = z.object({
 	allowedMaxCost: z.number().nullish(),
 	autoCondenseContext: z.boolean().optional(),
 	autoCondenseContextPercent: z.number().optional(),
-	maxConcurrentFileReads: z.number().optional(),
 
 	/**
 	 * Whether to include current time in the environment details
@@ -193,11 +192,9 @@ export const globalSettingsSchema = z.object({
 	maxWorkspaceFiles: z.number().optional(),
 	showRooIgnoredFiles: z.boolean().optional(),
 	enableSubfolderRules: z.boolean().optional(),
-	maxReadFileLine: z.number().optional(),
 	maxImageFileSize: z.number().optional(),
 	maxTotalImageSize: z.number().optional(),
 
-	maxReadCharacterLimit: z.number().optional(),
 	terminalOutputPreviewSize: z.enum(["small", "medium", "large"]).optional(),
 	terminalShellIntegrationTimeout: z.number().optional(),
 	terminalShellIntegrationDisabled: z.boolean().optional(),
@@ -222,7 +219,6 @@ export const globalSettingsSchema = z.object({
 	telemetrySetting: telemetrySettingsSchema.optional(),
 
 	mcpEnabled: z.boolean().optional(),
-	enableMcpServerCreation: z.boolean().optional(),
 
 	mode: z.string().optional(),
 	prevMode: z.string().optional(),
@@ -400,7 +396,7 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	soundEnabled: false,
 	soundVolume: 0.5,
 
-	maxReadCharacterLimit: DEFAULT_FILE_READ_CHARACTER_LIMIT,
+	// maxReadCharacterLimit: DEFAULT_FILE_READ_CHARACTER_LIMIT,
 	terminalShellIntegrationTimeout: 30000,
 	terminalCommandDelay: 150,
 	terminalPowershellCounter: false,
@@ -419,7 +415,6 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	maxWorkspaceFiles: MAX_WORKSPACE_FILES,
 	maxGitStatusFiles: 20,
 	showRooIgnoredFiles: true,
-	maxReadFileLine: 500, // -1 to enable full file reading.
 
 	includeDiagnosticMessages: true,
 	maxDiagnosticMessages: 50,

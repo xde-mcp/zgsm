@@ -15,6 +15,7 @@ import {
 	SKILL_NAME_MAX_LENGTH,
 } from "@roo-code/types"
 import { t } from "../../i18n"
+import { getBuiltInSkills, getBuiltInSkillContent } from "./built-in-skills"
 
 // Re-export for convenience
 export type { SkillMetadata, SkillContent }
@@ -159,13 +160,19 @@ export class SkillsManager {
 
 	/**
 	 * Get skills available for the current mode.
-	 * Resolves overrides: project > global, mode-specific > generic.
+	 * Resolves overrides: project > global > built-in, mode-specific > generic.
 	 *
 	 * @param currentMode - The current mode slug (e.g., 'code', 'architect')
 	 */
 	getSkillsForMode(currentMode: string): SkillMetadata[] {
 		const resolvedSkills = new Map<string, SkillMetadata>()
 
+		// First, add built-in skills (lowest priority)
+		for (const skill of getBuiltInSkills()) {
+			resolvedSkills.set(skill.name, skill)
+		}
+
+		// Then, add discovered skills (will override built-in skills with same name)
 		for (const skill of this.skills.values()) {
 			// Skip mode-specific skills that don't match current mode
 			if (skill.mode && skill.mode !== currentMode) continue
@@ -189,12 +196,22 @@ export class SkillsManager {
 
 	/**
 	 * Determine if newSkill should override existingSkill based on priority rules.
-	 * Priority: project > global, mode-specific > generic
+	 * Priority: project > global > built-in, mode-specific > generic
 	 */
 	private shouldOverrideSkill(existing: SkillMetadata, newSkill: SkillMetadata): boolean {
-		// Project always overrides global
-		if (newSkill.source === "project" && existing.source === "global") return true
-		if (newSkill.source === "global" && existing.source === "project") return false
+		// Define source priority: project > global > built-in
+		const sourcePriority: Record<string, number> = {
+			project: 3,
+			global: 2,
+			"built-in": 1,
+		}
+
+		const existingPriority = sourcePriority[existing.source] ?? 0
+		const newPriority = sourcePriority[newSkill.source] ?? 0
+
+		// Higher priority source always wins
+		if (newPriority > existingPriority) return true
+		if (newPriority < existingPriority) return false
 
 		// Same source: mode-specific overrides generic
 		if (newSkill.mode && !existing.mode) return true
@@ -219,12 +236,21 @@ export class SkillsManager {
 			const modeSkills = this.getSkillsForMode(currentMode)
 			skill = modeSkills.find((s) => s.name === name)
 		} else {
-			// Fall back to any skill with this name
+			// Fall back to any skill with this name (check discovered skills first, then built-in)
 			skill = Array.from(this.skills.values()).find((s) => s.name === name)
+			if (!skill) {
+				skill = getBuiltInSkills().find((s) => s.name === name)
+			}
 		}
 
 		if (!skill) return null
 
+		// For built-in skills, use the built-in content
+		if (skill.source === "built-in") {
+			return getBuiltInSkillContent(name)
+		}
+
+		// For file-based skills, read from disk
 		const fileContent = await fs.readFile(skill.path, "utf-8")
 		const { content: body } = matter(fileContent)
 
@@ -369,6 +395,77 @@ Add your skill instructions here.
 
 		// Delete the entire skill directory
 		await fs.rm(skillDir, { recursive: true, force: true })
+
+		// Refresh skills list
+		await this.discoverSkills()
+	}
+
+	/**
+	 * Move a skill to a different mode
+	 * @param name - Skill name to move
+	 * @param source - Where the skill is located ("global" or "project")
+	 * @param currentMode - Current mode (undefined for generic skills)
+	 * @param newMode - Target mode (undefined for generic skills)
+	 */
+	async moveSkill(
+		name: string,
+		source: "global" | "project",
+		currentMode: string | undefined,
+		newMode: string | undefined,
+	): Promise<void> {
+		// Don't move if source and destination are the same
+		if (currentMode === newMode) {
+			return
+		}
+
+		// Find the skill at its current location
+		const skill = this.getSkill(name, source, currentMode)
+		if (!skill) {
+			const modeInfo = currentMode ? ` (mode: ${currentMode})` : ""
+			throw new Error(t("skills:errors.not_found", { name, source, modeInfo }))
+		}
+
+		// Determine base directory
+		let baseDir: string
+		if (source === "global") {
+			baseDir = getGlobalRooDirectory()
+		} else {
+			const provider = this.providerRef.deref()
+			if (!provider?.cwd) {
+				throw new Error(t("skills:errors.no_workspace"))
+			}
+			baseDir = path.join(provider.cwd, ".roo")
+		}
+
+		// Determine source and destination directories
+		const sourceDirName = currentMode ? `skills-${currentMode}` : "skills"
+		const destDirName = newMode ? `skills-${newMode}` : "skills"
+		const sourceDir = path.join(baseDir, sourceDirName, name)
+		const destSkillsDir = path.join(baseDir, destDirName)
+		const destDir = path.join(destSkillsDir, name)
+		const destSkillMdPath = path.join(destDir, "SKILL.md")
+
+		// Check if skill already exists at destination
+		if (await fileExists(destSkillMdPath)) {
+			throw new Error(t("skills:errors.already_exists", { name, path: destSkillMdPath }))
+		}
+
+		// Ensure destination skills directory exists
+		await fs.mkdir(destSkillsDir, { recursive: true })
+
+		// Move the skill directory
+		await fs.rename(sourceDir, destDir)
+
+		// Clean up empty source skills directory
+		const sourceSkillsDir = path.join(baseDir, sourceDirName)
+		try {
+			const entries = await fs.readdir(sourceSkillsDir)
+			if (entries.length === 0) {
+				await fs.rmdir(sourceSkillsDir)
+			}
+		} catch {
+			// Ignore errors - directory might not exist or have permission issues
+		}
 
 		// Refresh skills list
 		await this.discoverSkills()

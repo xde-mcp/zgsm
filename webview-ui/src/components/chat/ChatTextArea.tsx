@@ -1383,7 +1383,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 										disabled={!isStreaming && !hasInputContent}
 										onClick={isStreaming ? onStop : onSend}
 										className={cn(
-											"relative inline-flex items-center justify-center",
+											"relative inline-flex items-center justify-center right-[2px]",
 											"bg-transparent border-none p-1.5",
 											"rounded-full min-w-[20px] min-h-[20px]",
 											"text-vscode-descriptionForeground hover:text-vscode-foreground",

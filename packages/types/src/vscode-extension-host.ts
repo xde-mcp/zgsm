@@ -79,7 +79,6 @@ export interface ExtensionMessage {
 		| "remoteBrowserEnabled"
 		| "ttsStart"
 		| "ttsStop"
-		| "maxReadFileLine"
 		| "fileSearchResults"
 		| "toggleApiConfigPin"
 		| "acceptInput"
@@ -340,8 +339,6 @@ export type ExtensionState = Pick<
 	| "ttsSpeed"
 	| "soundEnabled"
 	| "soundVolume"
-	| "maxConcurrentFileReads"
-	| "maxReadCharacterLimit"
 	| "terminalOutputPreviewSize"
 	| "terminalShellIntegrationTimeout"
 	| "terminalShellIntegrationDisabled"
@@ -397,14 +394,12 @@ export type ExtensionState = Pick<
 	maxWorkspaceFiles: number // Maximum number of files to include in current working directory details (0-500)
 	showRooIgnoredFiles: boolean // Whether to show .rooignore'd files in listings
 	enableSubfolderRules: boolean // Whether to load rules from subdirectories
-	maxReadFileLine: number // Maximum number of lines to read from a file before truncating
 	maxImageFileSize: number // Maximum size of image files to process in MB
 	maxTotalImageSize: number // Maximum total size for all images in a single read operation in MB
 
 	experiments: Experiments // Map of experiment IDs to their enabled state
 
 	mcpEnabled: boolean
-	enableMcpServerCreation: boolean
 
 	// mode: Mode
 	zgsmCodeMode?: "vibe" | "strict" | "raw" | "plan"
@@ -580,7 +575,6 @@ export interface WebviewMessage {
 		| "deleteMessageConfirm"
 		| "submitEditedMessage"
 		| "editMessageConfirm"
-		| "enableMcpServerCreation"
 		| "remoteControlEnabled"
 		| "taskSyncEnabled"
 		| "searchCommits"
@@ -690,6 +684,7 @@ export interface WebviewMessage {
 		| "requestSkills"
 		| "createSkill"
 		| "deleteSkill"
+		| "moveSkill"
 		| "openSkillFile"
 	text?: string
 	// costrict-start
@@ -730,9 +725,10 @@ export interface WebviewMessage {
 	modeConfig?: ModeConfig
 	timeout?: number
 	payload?: WebViewMessagePayload
-	source?: "global" | "project"
-	skillName?: string // For skill operations (createSkill, deleteSkill, openSkillFile)
-	skillMode?: string // For skill operations (mode restriction)
+	source?: "global" | "project" | "built-in"
+	skillName?: string // For skill operations (createSkill, deleteSkill, moveSkill, openSkillFile)
+	skillMode?: string // For skill operations (current mode restriction)
+	newSkillMode?: string // For moveSkill (target mode)
 	skillDescription?: string // For createSkill (skill description)
 	requestId?: string
 	ids?: string[]
@@ -892,7 +888,6 @@ export interface ClineSayTool {
 		| "codebaseSearch"
 		| "readFile"
 		| "readCommandOutput"
-		| "fetchInstructions"
 		| "listFilesTopLevel"
 		| "listFilesRecursive"
 		| "searchFiles"
@@ -903,6 +898,7 @@ export interface ClineSayTool {
 		| "imageGenerated"
 		| "runSlashCommand"
 		| "updateTodoList"
+		| "skill"
 	parentTaskId?: string
 	path?: string
 	// For readCommandOutput
@@ -923,6 +919,7 @@ export interface ClineSayTool {
 	isProtected?: boolean
 	additionalFileCount?: number // Number of additional files in the same read_file request
 	lineNumber?: number
+	startLine?: number // Starting line for read_file operations (for navigation on click)
 	query?: string
 	batchFiles?: Array<{
 		path: string
@@ -950,6 +947,8 @@ export interface ClineSayTool {
 	args?: string
 	source?: string
 	description?: string
+	// Properties for skill tool
+	skill?: string
 }
 
 // Must keep in sync with system prompt.

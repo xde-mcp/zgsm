@@ -292,10 +292,10 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 						parts: [{ text: systemInstruction + "\n\n" + getGeminiCliLiteToolGuide() }],
 					},
 					...contents,
-					{
-						role: "user",
-						parts: [{ text: getGeminiCliLiteToolGuide() }],
-					},
+					// {
+					// 	role: "user",
+					// 	parts: [{ text: getGeminiCliLiteToolGuide() }],
+					// },
 				],
 				generationConfig: {
 					temperature: this.options.modelTemperature ?? 0.7,

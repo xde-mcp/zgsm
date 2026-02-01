@@ -6,15 +6,15 @@ import askFollowupQuestion from "./ask_followup_question"
 import askMultipleChoice from "./ask_multiple_choice"
 import attemptCompletion from "./attempt_completion"
 import browserAction from "./browser_action"
-import codebaseSearch from "./codebase_search"
+// import codebaseSearch from "./codebase_search"
 import executeCommand from "./execute_command"
-import fetchInstructions from "./fetch_instructions"
 import generateImage from "./generate_image"
 import listFiles from "./list_files"
 import newTask from "./new_task"
 import readCommandOutput from "./read_command_output"
 import { createReadFileTool, type ReadFileToolOptions } from "./read_file"
 import runSlashCommand from "./run_slash_command"
+import skill from "./skill"
 import searchAndReplace from "./search_and_replace"
 import searchReplace from "./search_replace"
 import edit_file from "./edit_file"
@@ -41,8 +41,8 @@ import {
 	getLiteSwitchModeDescription,
 	getLiteNewTaskDescription,
 	getLiteUpdateTodoListDescription,
-	getLiteFetchInstructionsDescription,
-	getLiteCodebaseSearchDescription,
+	getLiteSkillDescription,
+	// getLiteCodebaseSearchDescription,
 	getLiteAccessMcpResourceDescription,
 	getLiteGenerateImageDescription,
 	getLiteRunSlashCommandDescription,
@@ -57,10 +57,6 @@ import {
  * Options for customizing the native tools array.
  */
 export interface NativeToolsOptions {
-	/** Whether to include line_ranges support in read_file tool (default: true) */
-	partialReadsEnabled?: boolean
-	/** Maximum number of files that can be read in a single read_file request (default: 5) */
-	maxConcurrentFileReads?: number
 	/** Whether the model supports image processing (default: false) */
 	supportsImages?: boolean
 	useLitePrompts?: boolean
@@ -82,12 +78,12 @@ function getLiteDescription(tool: OpenAI.Chat.ChatCompletionFunctionTool): strin
 			return getLiteAttemptCompletionDescription()
 		case "browser_action":
 			return getLiteBrowserActionDescription()
-		case "codebase_search":
-			return getLiteCodebaseSearchDescription()
+		// case "codebase_search":
+		// 	return getLiteCodebaseSearchDescription()
 		case "execute_command":
 			return getLiteExecuteCommandDescription()
-		case "fetch_instructions":
-			return getLiteFetchInstructionsDescription()
+		case "skill":
+			return getLiteSkillDescription()
 		case "generate_image":
 			return getLiteGenerateImageDescription()
 		case "list_files":
@@ -126,15 +122,9 @@ function getLiteDescription(tool: OpenAI.Chat.ChatCompletionFunctionTool): strin
  * @returns Array of native tool definitions
  */
 export function getNativeTools(options: NativeToolsOptions = {}): OpenAI.Chat.ChatCompletionTool[] {
-	const {
-		partialReadsEnabled = true,
-		maxConcurrentFileReads = 5,
-		supportsImages = false,
-		useLitePrompts = false,
-	} = options
+	const { supportsImages = false, useLitePrompts = false } = options
+
 	const readFileOptions: ReadFileToolOptions = {
-		partialReadsEnabled,
-		maxConcurrentFileReads,
 		supportsImages,
 	}
 
@@ -146,15 +136,15 @@ export function getNativeTools(options: NativeToolsOptions = {}): OpenAI.Chat.Ch
 		askMultipleChoice,
 		attemptCompletion,
 		browserAction,
-		codebaseSearch,
+		// codebaseSearch,
 		executeCommand,
-		fetchInstructions,
 		generateImage,
 		listFiles,
 		newTask,
 		readCommandOutput,
 		createReadFileTool(readFileOptions),
 		runSlashCommand,
+		skill,
 		searchAndReplace,
 		searchReplace,
 		edit_file,
