@@ -58,7 +58,7 @@ import {
 } from "@roo-code/types"
 // import { CloudService, BridgeOrchestrator } from "@roo-code/cloud"
 import { TelemetryService } from "@roo-code/telemetry"
-import { customToolRegistry } from "@roo-code/core"
+// import { customToolRegistry } from "@roo-code/core"
 
 // api
 import { ApiHandler, ApiHandlerCreateMessageMetadata, buildApiHandler } from "../../api"
@@ -74,7 +74,7 @@ import { getApiMetrics, hasTokenUsageChanged, hasToolUsageChanged } from "../../
 import { ClineAskResponse } from "../../shared/WebviewMessage"
 import { defaultModeSlug, getModeBySlug, getGroupName } from "../../shared/modes"
 import { DiffStrategy, type ToolUse } from "../../shared/tools"
-import { EXPERIMENT_IDS, experiments, parallelToolCallsEnabled } from "../../shared/experiments"
+import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { getModelMaxOutputTokens } from "../../shared/api"
 
 // services
@@ -86,7 +86,7 @@ import { RepoPerTaskCheckpointService } from "../../services/checkpoints"
 
 // integrations
 import { DiffViewProvider } from "../../integrations/editor/DiffViewProvider"
-import { findToolName } from "../../integrations/misc/export-markdown"
+// import { findToolName } from "../../integrations/misc/export-markdown"
 import { RooTerminalProcess } from "../../integrations/terminal/types"
 import { TerminalRegistry } from "../../integrations/terminal/TerminalRegistry"
 import { OutputInterceptor } from "../../integrations/terminal/OutputInterceptor"
@@ -139,12 +139,11 @@ import { MessageQueueService } from "../message-queue/MessageQueueService"
 import { ErrorCodeManager } from "../costrict/error-code"
 import { ZgsmAuthService } from "../costrict/auth"
 import { AutoApprovalHandler, checkAutoApproval } from "../auto-approval"
-import psTree from "ps-tree"
 import { MessageManager } from "../message-manager"
 import { validateAndFixToolResultIds } from "./validateToolResultIds"
-import { fixNativeToolname } from "../../utils/fixNativeToolname"
 import { getModelsFromCache } from "../../api/providers/fetchers/modelCache"
 import { mergeConsecutiveApiMessages } from "./mergeConsecutiveApiMessages"
+import { resolveToolAlias } from "../prompts/tools/filter-tools-for-mode"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
@@ -735,6 +734,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		this.messageQueueStateChangedHandler = () => {
 			this.emit(RooCodeEventName.TaskUserMessage, this.taskId)
+			this.emit(RooCodeEventName.QueuedMessagesUpdated, this.taskId, this.messageQueueService.messages)
 			this.providerRef.deref()?.postStateToWebviewWithoutTaskHistory()
 		}
 
@@ -4545,6 +4545,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		const metadata: ApiHandlerCreateMessageMetadata = {
 			mode: mode,
+			allToolNames:
+				apiConfiguration?.apiProvider === "gemini-cli"
+					? allTools.map((tool: any) => resolveToolAlias(tool?.function?.name)).filter((name) => !!name)
+					: undefined,
 			zgsmCodeMode,
 			provider: this.apiConfiguration.apiProvider,
 			zgsmWorkflowMode: this.zgsmWorkflowMode,

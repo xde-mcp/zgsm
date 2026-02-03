@@ -38,7 +38,7 @@ import { getEditorType } from "../../utils/getEditorType"
 import { ChatCompletionChunk } from "openai/resources/index.mjs"
 import { convertToZAiFormat } from "../transform/zai-format"
 import { isDebug } from "../../utils/getDebugState"
-import { xmlLiteToolGuide } from "../../core/prompts/tools/lite-descriptions"
+import { liteToolContractPrompt } from "../../core/prompts/tools/lite-descriptions"
 
 const autoModeModelId = "Auto"
 const isDev = process.env.NODE_ENV === "development"
@@ -391,9 +391,9 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 			} else {
 				if (_mid?.includes("qwen")) {
 					if (Array.isArray(systemMessage.content)) {
-						systemMessage.content[0].text = systemMessage.content[0].text + "\n" + xmlLiteToolGuide
+						systemMessage.content[0].text = systemMessage.content[0].text + "\n" + liteToolContractPrompt()
 					} else {
-						systemMessage.content = systemMessage.content + "\n" + xmlLiteToolGuide
+						systemMessage.content = systemMessage.content + "\n" + liteToolContractPrompt()
 					}
 				}
 				convertedMessages = [
