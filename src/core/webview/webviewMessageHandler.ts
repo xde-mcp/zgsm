@@ -80,7 +80,7 @@ const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
 // const pendingIndexStatusRequests = new Map<string, Promise<any>>()
 
 import { MarketplaceManager, MarketplaceItemType } from "../../services/marketplace"
-import { ZgsmAuthConfig } from "../costrict/auth"
+import { ZgsmAuthConfig, ZgsmAuthStorage } from "../costrict/auth"
 import { CodeReviewService } from "../costrict/code-review"
 import { ZgsmCodebaseIndexManager, IndexSwitchRequest, IndexStatusInfo } from "../costrict/codebase-index"
 import { ErrorCodeManager } from "../costrict/error-code"
@@ -1024,12 +1024,18 @@ export const webviewMessageHandler = async (
 					key: "zgsm",
 					options: {
 						provider: "zgsm",
-						baseUrl: message?.values?.baseUrl || apiConfiguration.zgsmBaseUrl,
-						apiKey: message?.values?.apiKey || apiConfiguration.zgsmAccessToken,
+						baseUrl:
+							message?.values?.baseUrl ||
+							apiConfiguration.zgsmBaseUrl ||
+							ZgsmAuthConfig.getInstance().getDefaultApiBaseUrl(),
+						apiKey:
+							message?.values?.apiKey ||
+							apiConfiguration.zgsmAccessToken ||
+							((await ZgsmAuthStorage.getInstance().getTokens()) ?? {}).access_token,
 						openAiHeaders: message?.values?.openAiHeaders || {},
 					},
 				},
-				{ key: "openrouter", options: { provider: "openrouter" } },
+				{ key: "openrouter", options: { provider: "openrouter", baseUrl: apiConfiguration.openRouterBaseUrl } },
 				{
 					key: "requesty",
 					options: {
