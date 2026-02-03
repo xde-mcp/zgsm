@@ -286,20 +286,6 @@ export const liteToolContractPrompt = (tag = "tool_call") => `
 
 When calling a tool, you MUST wrap the tool call parameters in a <${tag}> tag containing a valid JSON object.
 
-Requirements:
-- Output ONLY the <${tag}> XML block
-- "name" field: string, the exact name of the tool to call
-- "arguments" field: object, containing all required parameters for the tool
-- No text before or after
-- No markdown
-- No explanation
-- No comments
-- The content inside <${tag}> tags MUST be valid JSON
-- Do NOT include comments in the JSON
-- Ensure proper JSON syntax (double quotes, no trailing commas)
-
-Any deviation will cause automatic failure.
-
 Valid Response example:
 
 <${tag}>
@@ -313,15 +299,27 @@ Valid Response example:
 }
 </${tag}>
 
-Your response is parsed by a strict machine parser.
+Requirements:
+- Response Output ONLY the <${tag}> XML block
+	- "name" field: string, the exact name of the tool to call
+	- "arguments" field: object, containing all required parameters for the tool
+- No text before or after
+- No markdown
+- No explanation
+- No comments
+- The content inside <${tag}> tags MUST be valid JSON
+- Do NOT include comments in the JSON
+- Ensure proper JSON syntax (double quotes, no trailing commas)
+
+Any deviation will cause automatic failure.
 `
 
 export const liteToolJudgePrompt = (allowedToolNames?: string[]) => `
-You can ONLY call the following built-in tools by name:
+# You can ONLY call the following built-in tools by name:
 
 ${liteTools.map((t) => (allowedToolNames?.includes(t.toolname) || !allowedToolNames ? t.toolname : "")).join("\n")}
 
-Select exactly ONE tool if a tool is required.
+You must call ONE tool per assistant response.
 Do not explain your decision.
 
 `
