@@ -389,7 +389,7 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 					...convertToZAiFormat(messages, { mergeToolResultText: true }),
 				]
 			} else {
-				if (_mid?.includes("qwen")) {
+				if (_mid?.includes("qwen-2.5-vl")) {
 					if (Array.isArray(systemMessage.content)) {
 						systemMessage.content[0].text = systemMessage.content[0].text + "\n" + liteToolContractPrompt()
 					} else {
@@ -545,13 +545,13 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 		// For MiniMax models, allow matching <think> tags anywhere in the stream
 		// because MiniMax may include newlines before the <think> tag
 		const isMiniMax = modelInfo?.id?.toLowerCase().includes("minimax")
-		const isQwen = modelInfo?.id?.toLowerCase().includes("qwen") // Qwen model understands <tool_call> tags
+		const isNoToolsQwen = modelInfo?.id?.toLowerCase().includes("qwen-2.5-vl") // Qwen model understands <tool_call> tags
 		let matcher: TagMatcher<{
 			readonly type: "reasoning" | "text" | "fake_tool_call"
 			readonly text: string
 		}>
 		// let mockToolId = ""
-		if (isQwen) {
+		if (isNoToolsQwen) {
 			// mockToolId = "fake_tool_call"
 			matcher = new TagMatcher(
 				"tool_call",

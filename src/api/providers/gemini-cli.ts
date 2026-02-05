@@ -10,7 +10,7 @@ import { type ModelInfo, type GeminiCliModelId, geminiCliDefaultModelId, geminiC
 import type { ApiHandlerOptions } from "../../shared/api"
 import { t } from "../../i18n"
 
-import { convertAnthropicContentToGemini, convertAnthropicMessageToGemini } from "../transform/gemini-format"
+import { convertAnthropicMessageToGemini } from "../transform/gemini-format" // todo: remove this
 import type { ApiStream, ApiStreamChunk } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
 
