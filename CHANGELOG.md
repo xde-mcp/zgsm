@@ -9,7 +9,7 @@
 - add fake reasoning chunk handling for response processing
 - Refactored custom instructions system for better mode customization
 - Update internationalization
-- Sync roocode [last commit](https://github.com/RooCodeInc/Roo-Code/commit/aa49871a5d01ddb2325f2c42d61a187cf36ddbc5)
+- Sync roocode [last commit](https://github.com/RooCodeInc/Roo-Code/commit/227b9796d35ef0dd1b669ac9da88e20123648c52)
 - Fix known issues
 
 ## [2.3.3]

@@ -297,13 +297,13 @@ describe("extension.ts", () => {
 	test("does not call dotenvx.config when optional .env does not exist", async () => {
 		// Reset modules to test module-level initialization code
 		vi.resetModules()
-		
+
 		// Re-mock the modules BEFORE importing extension
 		vi.doMock("fs", () => ({
 			default: { existsSync: vi.fn().mockReturnValue(false) },
 			existsSync: vi.fn().mockReturnValue(false),
 		}))
-		
+
 		const dotenvxConfigMock = vi.fn()
 		vi.doMock("@dotenvx/dotenvx", () => ({
 			config: dotenvxConfigMock,
@@ -312,7 +312,7 @@ describe("extension.ts", () => {
 		// Import extension - this will execute the top-level code
 		// which should NOT call dotenvx.config when .env doesn't exist
 		await import("../extension")
-		
+
 		// Verify dotenvx.config was not called
 		expect(dotenvxConfigMock).not.toHaveBeenCalled()
 	}, 60000)
@@ -320,13 +320,13 @@ describe("extension.ts", () => {
 	test("calls dotenvx.config when optional .env exists", async () => {
 		// Reset modules to test module-level initialization code
 		vi.resetModules()
-		
+
 		// Re-mock the modules BEFORE importing extension
 		vi.doMock("fs", () => ({
 			default: { existsSync: vi.fn().mockReturnValue(true) },
 			existsSync: vi.fn().mockReturnValue(true),
 		}))
-		
+
 		const dotenvxConfigMock = vi.fn()
 		vi.doMock("@dotenvx/dotenvx", () => ({
 			config: dotenvxConfigMock,
@@ -335,7 +335,7 @@ describe("extension.ts", () => {
 		// Import extension - this will execute the top-level code
 		// which should call dotenvx.config when .env exists
 		await import("../extension")
-		
+
 		// Verify dotenvx.config was called exactly once
 		expect(dotenvxConfigMock).toHaveBeenCalledTimes(1)
 	}, 60000)
