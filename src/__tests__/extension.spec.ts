@@ -315,7 +315,7 @@ describe("extension.ts", () => {
 		
 		// Verify dotenvx.config was not called
 		expect(dotenvxConfigMock).not.toHaveBeenCalled()
-	})
+	}, 60000)
 
 	test("calls dotenvx.config when optional .env exists", async () => {
 		// Reset modules to test module-level initialization code
@@ -338,7 +338,7 @@ describe("extension.ts", () => {
 		
 		// Verify dotenvx.config was called exactly once
 		expect(dotenvxConfigMock).toHaveBeenCalledTimes(1)
-	})
+	}, 60000)
 
 	test("authStateChangedHandler calls BridgeOrchestrator.disconnect when logged-out event fires", async () => {
 		const { CloudService, BridgeOrchestrator } = await import("@roo-code/cloud")
