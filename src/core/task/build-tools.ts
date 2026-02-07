@@ -23,6 +23,7 @@ interface BuildToolsOptions {
 	experiments: Record<string, boolean> | undefined
 	apiConfiguration: ProviderSettings | undefined
 	browserToolEnabled: boolean
+	disabledTools?: string[]
 	modelInfo?: ModelInfo
 	useLitePrompts?: boolean
 	/**
@@ -89,6 +90,7 @@ export async function buildNativeToolsArrayWithRestrictions(options: BuildToolsO
 		experiments,
 		apiConfiguration,
 		browserToolEnabled,
+		disabledTools,
 		modelInfo,
 		useLitePrompts,
 		includeAllToolsWithRestrictions,
@@ -104,6 +106,7 @@ export async function buildNativeToolsArrayWithRestrictions(options: BuildToolsO
 	const filterSettings = {
 		todoListEnabled: apiConfiguration?.todoListEnabled ?? true,
 		browserToolEnabled: browserToolEnabled ?? true,
+		disabledTools,
 		modelInfo,
 	}
 

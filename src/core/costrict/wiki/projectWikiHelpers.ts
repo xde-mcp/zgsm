@@ -8,8 +8,7 @@ import { DOCUMENT_GENERATION_AGENT_TEMPLATE } from "./wiki-prompts/subtasks/03_d
 import { INDEX_GENERATION_AGENT_TEMPLATE } from "./wiki-prompts/subtasks/04_index-generation-agent"
 
 export const projectWikiCommandName = "project-wiki"
-export const projectWikiCommandDescription = `执行项目深度分析并创建全面的项目技术文档（v2版本）`
-
+export const projectWikiCommandDescription = `Performs deep project analysis and creates comprehensive technical documentation (v2)`
 
 // Template data mapping for subtasks only
 const SUBTASK_TEMPLATES = {
@@ -18,7 +17,6 @@ const SUBTASK_TEMPLATES = {
 	[SUBTASK_FILENAMES.DOCUMENT_GENERATION_AGENT]: DOCUMENT_GENERATION_AGENT_TEMPLATE,
 	[SUBTASK_FILENAMES.INDEX_GENERATION_AGENT]: INDEX_GENERATION_AGENT_TEMPLATE,
 }
-
 
 // 创建 logger 实例，但允许在测试时被替换
 let logger: ILogger = createLogger()

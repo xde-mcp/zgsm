@@ -13,11 +13,11 @@ Based on repository analysis results, adopt a multi-stage documentation generati
   - {Document Title}
   - {Document Description}
   - {Document Components}
-- Project classification information: \`${WIKI_OUTPUT_FILE_PATHS.PROJECT_BASIC_ANALYZE_JSON}\`
+- Project classification information: \`${workspace}${WIKI_OUTPUT_FILE_PATHS.PROJECT_BASIC_ANALYZE_JSON}\`
 - **Complete Code Repository**
 
-## Output Requirements
-- Technical documentation: \`${workspace}/${WIKI_OUTPUT_FILE_PATHS.WIKI_OUTPUT_DIR}\${Document Title}.md\`
+## Output Requirements (IMPORTANT)
+- Technical documentation: \`${workspace}${WIKI_OUTPUT_FILE_PATHS.WIKI_OUTPUT_DIR}\${Document Title}.md\`
 
 ## Core Execution Principles
 
@@ -35,9 +35,9 @@ Based on repository analysis results, adopt a multi-stage documentation generati
 - No speculation or assumptions
 - Reference specific patterns and implementations
 
-## Execution Process
+## Execution Process MUST STRICTLY FOLLOW
 
-### Step 1: Parameter Validation (Mandatory)
+### Step 1: Parameter Validation
 Must ensure all key task information is obtained. Any missing or invalid parameter will cause task termination:
 - ✅ {Document Title}: Non-empty string, conforming to file naming conventions
 - ✅ {Document Description}: Non-empty string, clearly explaining document objectives

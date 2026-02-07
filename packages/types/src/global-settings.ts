@@ -14,6 +14,7 @@ import { experimentsSchema, experimentSettingsSchema } from "./experiment.js"
 import { telemetrySettingsSchema } from "./telemetry.js"
 import { modeConfigSchema } from "./mode.js"
 import { customModePromptsSchema, customSupportPromptsSchema } from "./mode.js"
+import { toolNamesSchema } from "./tool.js"
 import { languagesSchema } from "./vscode.js"
 
 /**
@@ -261,6 +262,12 @@ export const globalSettingsSchema = z.object({
 	 * @default true
 	 */
 	showWorktreesInHomeScreen: z.boolean().optional(),
+
+	/**
+	 * List of native tool names to globally disable.
+	 * Tools in this list will be excluded from prompt generation and rejected at execution time.
+	 */
+	disabledTools: z.array(toolNamesSchema).optional(),
 })
 
 export type GlobalSettings = z.infer<typeof globalSettingsSchema>

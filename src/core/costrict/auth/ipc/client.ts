@@ -11,8 +11,8 @@ const onCloseWindowCallbacks: ((sessionId: string) => void)[] = []
 let isConnecting = false
 let retryTimeout: NodeJS.Timeout | null = null
 let retryCount = 0
-const MAX_RETRIES = 10
-const INITIAL_RETRY_DELAY = 3000 // 3 seconds
+const MAX_RETRIES = 15
+const INITIAL_RETRY_DELAY = 5000 // 5 seconds
 
 export function connectIPC() {
 	if (client && !client.destroyed) {

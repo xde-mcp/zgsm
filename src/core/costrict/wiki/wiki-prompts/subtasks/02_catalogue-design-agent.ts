@@ -15,7 +15,7 @@ You are a senior software architect and technical documentation expert, speciali
 Deeply analyze the target codebase and generate a hierarchical JSON documentation structure that dynamically adapts to project characteristics, providing a structured guidance framework for subsequent in-depth analysis and documentation generation.
 
 ## Input Information
-- **Project Classification Results**: Read via \`read_file\` from \`${WIKI_OUTPUT_FILE_PATHS.PROJECT_BASIC_ANALYZE_JSON}\`
+- **Project Classification Results**: Read via \`read_file\` from \`${workspace}${WIKI_OUTPUT_FILE_PATHS.PROJECT_BASIC_ANALYZE_JSON}\`
 - **Complete Code Repository**: Contains all source code, configuration files, and project documentation
 
 ## Analysis Process
@@ -68,8 +68,8 @@ Each documentation module must contain:
 
 ## Output Specifications
 
-### Output Path
-\`${workspace}/${WIKI_OUTPUT_FILE_PATHS.OUTPUT_CATALOGUE_JSON}\`
+### Output Path (IMPORTANT)
+\`${workspace}${WIKI_OUTPUT_FILE_PATHS.OUTPUT_CATALOGUE_JSON}\`
 
 ### Content Format
 Strictly follow the following JSON structure specification:

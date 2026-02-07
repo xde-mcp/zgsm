@@ -66,6 +66,7 @@ import ChatSearch from "./ChatSearch"
 // import { Cloud } from "lucide-react"
 // import CloudAgents from "../cloud/CloudAgents"
 import { WorktreeSelector } from "./WorktreeSelector"
+import { useZgsmUserInfo } from "@/hooks/useZgsmUserInfo"
 
 export interface ChatViewProps {
 	isHidden: boolean
@@ -1512,12 +1513,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const placeholderText = `${task ? t("chat:typeMessage") : t("chat:typeTask")}${placeholderTip}`
 
 	const summaryIconUri = useMemo(() => (window as any).COSTRICT_BASE_URI + "/summary_icon.webp", [])
-
+	const { hash } = useZgsmUserInfo(apiConfiguration?.zgsmAccessToken)
+	
 	const handleOpenAnnualSummary = useCallback(() => {
 		const baseUrl = apiConfiguration?.zgsmBaseUrl?.trim() || (window as any).COSTRICT_BASE_URL
-		const summaryUrl = `${baseUrl}/credit/manager/annual-summary`
+		const summaryUrl = `${baseUrl}/credit/manager/annual-summary${hash ? `?state=${hash}` :  ""}`
 		vscode.postMessage({ type: "openExternal", url: summaryUrl })
-	}, [apiConfiguration?.zgsmBaseUrl])
+	}, [apiConfiguration?.zgsmBaseUrl, hash])
 
 	const switchToMode = useCallback(
 		(modeSlug: string): void => {
@@ -1871,9 +1873,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						{language === "zh-CN" && apiConfiguration?.zgsmAccessToken && (
 							<button
 								onClick={handleOpenAnnualSummary}
-								className="fixed top-18 right-6 z-10 cursor-pointer hover:opacity-80 transition-opacity"
+								className="fixed top-20 right-6 z-10 cursor-pointer hover:opacity-80 transition-opacity animate-pulse"
 								aria-label="annual-summary">
-								<img src={summaryIconUri} alt="annual-summary" className="w-25.5" />
+								<img src={summaryIconUri} alt="annual-summary" className="w-22 transition-transform hover:scale-110 hover:rotate-3 active:scale-95 duration-300 ease-in-out" />
 							</button>
 						)}
 

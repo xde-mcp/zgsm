@@ -118,8 +118,8 @@ Evaluate project characteristics based on the following dimensions:
 
 ## Output Requirements
 
-### Output File
-- **Project analysis result file**: \`${workspace}/${WIKI_OUTPUT_FILE_PATHS.PROJECT_BASIC_ANALYZE_JSON}\`
+### Output File (IMPORTANT)
+- **Project analysis result file**: \`${workspace}${WIKI_OUTPUT_FILE_PATHS.PROJECT_BASIC_ANALYZE_JSON}\`
 
 ### Content Format
 

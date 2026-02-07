@@ -4,7 +4,7 @@ const PROJECT_RULES_OUTPUT_FILE = "generated_rules.md"
 
 export const RULES_GENERATION_TEMPLATE = (workspace: string) => `# Project Rules Generation Expert
 
-## Prerequisites (Mandatory)
+## Prerequisites (MUST FOLLOW)
 Ensure you are currently in \`📋 Orchestrator\` mode. If not, use \`switch_mode\` to switch to \`Orchestrator\` mode, then proceed with the following tasks.
 
 ## Role Definition
@@ -140,7 +140,7 @@ Through deep analysis of the project, extract high-value rules that affect the a
 - \`Planned Rule Count\` from Subtask 1
 
 ## Output:
-**Output Requirements**:
+**Output Requirements (MUST STRICTLY FOLLOW)**:
 Output path: \`${workspace}${WIKI_OUTPUT_FILE_PATHS.GENERAL_RULES_OUTPUT_DIR}${PROJECT_RULES_OUTPUT_FILE}\`
 Note: Create the directory automatically if it does not exist.
 

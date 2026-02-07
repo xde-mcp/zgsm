@@ -46,7 +46,7 @@ export const SelectDropdown = React.memo(
 		(
 			{
 				value,
-				options,
+				options = [],
 				onChange,
 				disabled = false,
 				title = "",

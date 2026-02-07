@@ -464,16 +464,6 @@
 		"cacheUsageNote": "提示：若未显示缓存使用情况，请切换模型后重新选择",
 		"vscodeLmModel": "VSCode LM 模型",
 		"vscodeLmWarning": "注意：通过 VS Code Language Model API 访问的模型可能由提供商进行封装或微调，因此其行为可能与直接从常见提供商或路由器使用同一模型时不同。要使用「Language Model」下拉列表中的模型，请先切换到该模型，然后在 Copilot Chat 提示中点击「接受」；否则可能会出现 400「The requested model is not supported」等错误。",
-		"geminiParameters": {
-			"urlContext": {
-				"title": "启用 URL 上下文",
-				"description": "让 Gemini 读取链接的页面以提取、比较和综合其内容，从而提供明智的答复。"
-			},
-			"groundingSearch": {
-				"title": "启用 Google 搜索基础",
-				"description": "将 Gemini 连接到实时网络数据，以获得包含可验证引用的准确、最新的答案。"
-			}
-		},
 		"googleCloudSetup": {
 			"title": "要使用 Google Cloud Vertex AI，您需要：",
 			"step1": "1. 注册Google Cloud账号并启用Vertex AI API",
@@ -955,6 +945,7 @@
 		"simplifiedExplanation": "你可以稍后调整详细的模型设置。"
 	},
 	"footer": {
+		"feedback": "如果遇到任何问题或有反馈，请随时在<githubLink>github.com/zgsm-ai/costrict</githubLink>提交 issue，或加入<redditLink>reddit.com/r/CoStrict</redditLink>或<discordLink>discord.gg/roocode</discordLink>",
 		"telemetry": {
 			"label": "允许匿名数据收集",
 			"description": "通过发送匿名使用数据和错误报告来帮助改进 CoStrict。此遥测不会收集代码、提示 或个人信息。详细信息请参阅我们的<privacyLink>隐私政策</privacyLink>。您可以随时关闭此功能。"

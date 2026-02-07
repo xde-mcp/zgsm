@@ -375,6 +375,7 @@ export type ExtensionState = Pick<
 	| "requestDelaySeconds"
 	| "experimentSettings"
 	| "showWorktreesInHomeScreen"
+	| "disabledTools"
 > & {
 	version: string
 	clineMessages: ClineMessage[]

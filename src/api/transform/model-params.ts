@@ -99,7 +99,7 @@ export function getModelParams({
 	modelId,
 	model,
 	settings,
-	defaultTemperature = 0,
+	defaultTemperature,
 }: GetModelParamsOptions<Format>): ModelParams {
 	const {
 		modelMaxTokens: customMaxTokens,

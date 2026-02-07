@@ -199,7 +199,6 @@ describe("Task grounding sources handling", () => {
 		mockApiConfiguration = {
 			apiProvider: "gemini",
 			geminiApiKey: "test-key",
-			enableGrounding: true,
 		} as ProviderSettings
 	})
 

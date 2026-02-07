@@ -34,7 +34,7 @@ export type ZAiAssistantMessage = AssistantMessage & {
  *                                     This is critical for Z.ai's interleaved thinking mode.
  * @returns Array of OpenAI messages optimized for Z.ai's thinking mode
  */
-export function convertToZAiFormat(
+export function convertToZAiFormat( // todo: remove this file
 	messages: AnthropicMessage[],
 	options?: { mergeToolResultText?: boolean },
 ): Message[] {
