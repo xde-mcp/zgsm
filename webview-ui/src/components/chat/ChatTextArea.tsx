@@ -1398,7 +1398,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 												"active:bg-[rgba(255,255,255,0.1)]",
 											(isEditMode || isStreaming || hasInputContent) && "cursor-pointer",
 											isStreaming &&
-												"bg-vscode-button-background hover:bg-vscode-button-background",
+												"animate-pulse bg-vscode-button-background hover:bg-vscode-button-background",
 										)}>
 										{isStreaming ? (
 											<Square className="size-3 stroke-none fill-vscode-button-foreground" />

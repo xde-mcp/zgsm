@@ -133,20 +133,21 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 						}
 
 						break
+					// todo: add TaskCommandName GetModels
 					case TaskCommandName.GetModels:
-						try {
-							const models = await getModels({
-								provider: "roo" as const,
-								baseUrl: process.env.ROO_CODE_PROVIDER_URL ?? "https://api.roocode.com/proxy",
-								apiKey: CloudService.hasInstance()
-									? CloudService.instance.authService?.getSessionToken()
-									: undefined,
-							})
+						// try {
+						// 	const models = await getModels({
+						// 		provider: "roo" as const,
+						// 		baseUrl: process.env.ROO_CODE_PROVIDER_URL ?? "https://api.roocode.com/proxy",
+						// 		apiKey: CloudService.hasInstance()
+						// 			? CloudService.instance.authService?.getSessionToken()
+						// 			: undefined,
+						// 	})
 
-							sendResponse(RooCodeEventName.ModelsResponse, [models])
-						} catch (error) {
-							sendResponse(RooCodeEventName.ModelsResponse, [{}])
-						}
+						// 	sendResponse(RooCodeEventName.ModelsResponse, [models])
+						// } catch (error) {
+						// 	sendResponse(RooCodeEventName.ModelsResponse, [{}])
+						// }
 
 						break
 				}

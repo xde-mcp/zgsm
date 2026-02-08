@@ -205,7 +205,7 @@ export class ChutesHandler extends OpenAICompatibleHandler implements SingleComp
 			throw handleAiSdkError(error, "chutes")
 		}
 	}
-	async completePrompt(prompt: string, systemPrompt?: string, metadata?: any): Promise<string> {
+	override async completePrompt(prompt: string, systemPrompt?: string, metadata?: any): Promise<string> {
 		const model = await this.fetchModel()
 		const languageModel = this.getLanguageModel()
 
