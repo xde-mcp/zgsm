@@ -155,14 +155,12 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 		this.options = options
 	}
 
-	private ensureClient(metadata?: any): Ollama {
+	private ensureClient(): Ollama {
 		if (!this.client) {
 			try {
 				const clientOptions: OllamaOptions = {
 					host: this.options.ollamaBaseUrl || "http://localhost:11434",
 					// Note: The ollama npm package handles timeouts internally
-					fetch: (input: string | URL | Request, init?: RequestInit) =>
-						fetch(input, { ...init, signal: metadata?.signal }),
 				}
 
 				// Add API key if provided (for Ollama cloud or authenticated instances)
@@ -348,7 +346,7 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 
 	async completePrompt(prompt: string, systemPrompt?: string, metadata?: any): Promise<string> {
 		try {
-			const client = this.ensureClient(metadata)
+			const client = this.ensureClient()
 			const { id: modelId } = await this.fetchModel()
 			const useR1Format = modelId.toLowerCase().includes("deepseek-r1")
 

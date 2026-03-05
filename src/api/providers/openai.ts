@@ -292,7 +292,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		return { id, info, ...params }
 	}
 
-	async completePrompt(prompt: string, systemPrompt?: string, metadata?: any): Promise<string> {
+	async completePrompt(prompt: string, systemPrompt?: string, metadata?: any) {
 		try {
 			const isAzureAiInference = this._isAzureAiInference(this.options.openAiBaseUrl)
 			const model = this.getModel()
@@ -302,9 +302,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				model: model.id,
 				messages: [{ role: "user", content: prompt }],
 			}
-			if (systemPrompt) {
-				requestOptions.messages.unshift({ role: "system", content: systemPrompt })
-			}
+
 			// Add max_tokens if needed
 			this.addMaxTokensIfNeeded(requestOptions, modelInfo)
 

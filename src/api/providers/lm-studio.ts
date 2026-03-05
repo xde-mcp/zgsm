@@ -185,7 +185,7 @@ export class LmStudioHandler extends BaseProvider implements SingleCompletionHan
 		}
 	}
 
-	async completePrompt(prompt: string, systemPrompt?: string, metadata?: any): Promise<string> {
+	async completePrompt(prompt: string, systemPrompt?: string, metadata?: any) {
 		try {
 			// Create params object with optional draft model
 			const params: any = {
@@ -202,7 +202,9 @@ export class LmStudioHandler extends BaseProvider implements SingleCompletionHan
 
 			let response
 			try {
-				response = await this.client.chat.completions.create(params, { signal: metadata?.signal })
+				response = await this.client.chat.completions.create(params, {
+					signal: metadata?.signal,
+				})
 			} catch (error) {
 				throw handleOpenAIError(error, this.providerName)
 			}

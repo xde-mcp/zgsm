@@ -14,6 +14,7 @@ import {
 	type TelemetrySetting,
 	type UserSettingsConfig,
 	type ModelRecord,
+	type Command as SlashCommand,
 	type WebviewMessage,
 	type EditQueuedMessagePayload,
 	type CodeReviewWelcomeTipsPayload,
@@ -33,7 +34,6 @@ import { type ApiMessage } from "../task-persistence/apiMessages"
 import { saveTaskMessages } from "../task-persistence"
 
 import { ClineProvider } from "./ClineProvider"
-import { BrowserSessionPanelManager } from "./BrowserSessionPanelManager"
 import { handleCheckpointRestoreOperation } from "./checkpointRestoreHandler"
 import { generateErrorDiagnostics } from "./diagnosticsHandler"
 import {
@@ -49,6 +49,7 @@ import { Package } from "../../shared/package"
 import { type RouterName, toRouterName } from "../../shared/api"
 import { MessageEnhancer } from "./messageEnhancer"
 
+// import { CodeIndexManager } from "../../services/code-index/manager"
 import { checkExistKey } from "../../shared/checkExistApiConfig"
 import { experimentDefault } from "../../shared/experiments"
 import { Terminal } from "../../integrations/terminal/Terminal"
@@ -56,7 +57,6 @@ import { openFile } from "../../integrations/misc/open-file"
 import { openImage, saveImage } from "../../integrations/misc/image-handler"
 import { selectImages } from "../../integrations/misc/process-images"
 import { getTheme } from "../../integrations/theme/getTheme"
-import { discoverChromeHostUrl, tryChromeHostUrl } from "../../services/browser/browserDiscovery"
 import { searchWorkspaceFiles } from "../../services/search/file-search"
 import { fileExistsAtPath } from "../../utils/fs"
 import { playTts, setTtsEnabled, setTtsSpeed, stopTts } from "../../utils/tts"
@@ -68,6 +68,7 @@ import { openMention } from "../mentions"
 import { resolveImageMentions } from "../mentions/resolveImageMentions"
 import { RooIgnoreController } from "../ignore/RooIgnoreController"
 import { getWorkspacePath } from "../../utils/path"
+import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 import { Mode, defaultModeSlug, ZgsmCodeMode } from "../../shared/modes"
 import { getModels, flushModels } from "../../api/providers/fetchers/modelCache"
 import { GetModelsOptions } from "../../shared/api"
@@ -90,7 +91,7 @@ import { workspaceEventMonitor } from "../costrict/codebase-index/workspace-even
 import { fetchZgsmQuotaInfo, fetchZgsmInviteCode } from "../../api/providers/fetchers/zgsm"
 import { initNotificationService } from "../costrict/notification"
 import delay from "delay"
-// import { ensureProjectWikiSubtasksExists } from "../costrict/wiki/projectWikiHelpers"
+import { ensureProjectWikiSubtasksExists } from "../costrict/wiki/projectWikiHelpers"
 import { setPendingTodoList } from "../tools/UpdateTodoListTool"
 import { getEditorType } from "../../utils/getEditorType"
 import { updateDefaultDebug } from "../../utils/getDebugState"
@@ -122,6 +123,73 @@ export const webviewMessageHandler = async (
 
 	const getCurrentCwd = () => {
 		return provider.getCurrentTask()?.cwd || provider.cwd
+	}
+
+	const getCurrentMode = async (): Promise<string> => {
+		const currentTask = provider.getCurrentTask()
+
+		if (currentTask) {
+			try {
+				return await currentTask.getTaskMode()
+			} catch (error) {
+				provider.log(
+					`Error resolving current task mode for command discovery: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+				)
+			}
+		}
+
+		try {
+			const state = await provider.getState()
+			if (typeof state.mode === "string" && state.mode.length > 0) {
+				return state.mode
+			}
+		} catch (error) {
+			provider.log(
+				`Error resolving global mode for command discovery: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+			)
+		}
+
+		return defaultModeSlug
+	}
+
+	const getDiscoveredCommands = async (): Promise<SlashCommand[]> => {
+		const state = await provider.getState()
+		const { getCommands } = await import("../../services/command/commands")
+		const commands = await getCommands(getCurrentCwd(), state.language)
+
+		const commandList: SlashCommand[] = commands.map((command) => ({
+			name: command.name,
+			source: command.source,
+			filePath: command.filePath,
+			description: command.description,
+			argumentHint: command.argumentHint,
+		}))
+
+		const existingCommandNames = new Set(commandList.map((command) => command.name))
+		const skillsManager = provider.getSkillsManager()
+
+		if (!skillsManager) {
+			return commandList
+		}
+
+		const currentMode = await getCurrentMode()
+		const availableSkills = skillsManager.getSkillsForMode(currentMode)
+
+		for (const skill of availableSkills) {
+			if (existingCommandNames.has(skill.name)) {
+				continue
+			}
+
+			existingCommandNames.add(skill.name)
+			commandList.push({
+				name: skill.name,
+				source: skill.source,
+				filePath: skill.path,
+				description: skill.description,
+			})
+		}
+
+		return commandList
 	}
 
 	/**
@@ -639,7 +707,13 @@ export const webviewMessageHandler = async (
 			// task. This essentially creates a fresh slate for the new task.
 			try {
 				const resolved = await resolveIncomingImages({ text: message.text, images: message.images })
-				await provider.createTask(resolved.text, resolved.images)
+				await provider.createTask(
+					resolved.text,
+					resolved.images,
+					undefined,
+					{ taskId: message.taskId },
+					message.taskConfiguration,
+				)
 				// Task created successfully - notify the UI to reset
 				await provider.postMessageToWebview({ type: "invoke", invoke: "newChat" })
 			} catch (error) {
@@ -677,6 +751,8 @@ export const webviewMessageHandler = async (
 					if (key === "language") {
 						newValue = value ?? "en"
 						changeLanguage(newValue as Language)
+						// Initialize subtask files for the new language.
+						await ensureProjectWikiSubtasksExists(newValue as string)
 					} else if (key === "allowedCommands") {
 						const commands = value ?? []
 
@@ -735,6 +811,8 @@ export const webviewMessageHandler = async (
 						if (value !== undefined) {
 							Terminal.setTerminalZdotdir(value as boolean)
 						}
+					} else if (key === "execaShellPath") {
+						Terminal.setExecaShellPath(value as string | undefined)
 					} else if (key === "mcpEnabled") {
 						newValue = value ?? true
 						const mcpHub = provider.getMcpHub()
@@ -1000,16 +1078,12 @@ export const webviewMessageHandler = async (
 						zgsm: {},
 						openrouter: {},
 						"vercel-ai-gateway": {},
-						huggingface: {},
 						litellm: {},
-						deepinfra: {},
-						"io-intelligence": {},
 						requesty: {},
 						unbound: {},
 						ollama: {},
 						lmstudio: {},
 						// roo: {},
-						chutes: {},
 					}
 
 			const safeGetModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
@@ -1042,7 +1116,7 @@ export const webviewMessageHandler = async (
 						openAiHeaders: message?.values?.openAiHeaders || {},
 					},
 				},
-				{ key: "openrouter", options: { provider: "openrouter", baseUrl: apiConfiguration.openRouterBaseUrl } },
+				{ key: "openrouter", options: { provider: "openrouter" } },
 				{
 					key: "requesty",
 					options: {
@@ -1051,16 +1125,14 @@ export const webviewMessageHandler = async (
 						baseUrl: apiConfiguration.requestyBaseUrl,
 					},
 				},
-				{ key: "unbound", options: { provider: "unbound", apiKey: apiConfiguration.unboundApiKey } },
-				{ key: "vercel-ai-gateway", options: { provider: "vercel-ai-gateway" } },
 				{
-					key: "deepinfra",
+					key: "unbound",
 					options: {
-						provider: "deepinfra",
-						apiKey: apiConfiguration.deepInfraApiKey,
-						baseUrl: apiConfiguration.deepInfraBaseUrl,
+						provider: "unbound",
+						apiKey: apiConfiguration.unboundApiKey,
 					},
 				},
+				{ key: "vercel-ai-gateway", options: { provider: "vercel-ai-gateway" } },
 				// {
 				// 	key: "roo",
 				// 	options: {
@@ -1071,19 +1143,7 @@ export const webviewMessageHandler = async (
 				// 			: undefined,
 				// 	},
 				// },
-				{
-					key: "chutes",
-					options: { provider: "chutes", apiKey: apiConfiguration.chutesApiKey },
-				},
 			]
-
-			// IO Intelligence is conditional on api key
-			if (apiConfiguration.ioIntelligenceApiKey) {
-				candidates.push({
-					key: "io-intelligence",
-					options: { provider: "io-intelligence", apiKey: apiConfiguration.ioIntelligenceApiKey },
-				})
-			}
 
 			// LiteLLM is conditional on baseUrl+apiKey
 			const litellmApiKey = apiConfiguration.litellmApiKey || message?.values?.litellmApiKey
@@ -1261,21 +1321,6 @@ export const webviewMessageHandler = async (
 			// TODO: Cache like we do for OpenRouter, etc?
 			provider.postMessageToWebview({ type: "vsCodeLmModels", vsCodeLmModels })
 			break
-		case "requestHuggingFaceModels":
-			// TODO: Why isn't this handled by `requestRouterModels` above?
-			try {
-				const { getHuggingFaceModelsWithMetadata } = await import("../../api/providers/fetchers/huggingface")
-				const huggingFaceModelsResponse = await getHuggingFaceModelsWithMetadata()
-
-				provider.postMessageToWebview({
-					type: "huggingFaceModels",
-					huggingFaceModels: huggingFaceModelsResponse.models,
-				})
-			} catch (error) {
-				console.error("Failed to fetch Hugging Face models:", error)
-				provider.postMessageToWebview({ type: "huggingFaceModels", huggingFaceModels: [] })
-			}
-			break
 		case "openImage":
 			openImage(message.text!, { values: message.values })
 			break
@@ -1314,6 +1359,44 @@ export const webviewMessageHandler = async (
 			}
 			openFile(filePath, message.values as { create?: boolean; content?: string; line?: number })
 			break
+		case "readFileContent": {
+			const relPath = message.text || ""
+			if (!relPath) {
+				provider.postMessageToWebview({
+					type: "fileContent",
+					fileContent: { path: relPath, content: null, error: "No path provided" },
+				})
+				break
+			}
+			try {
+				const cwd = getCurrentCwd()
+				if (!cwd) {
+					provider.postMessageToWebview({
+						type: "fileContent",
+						fileContent: { path: relPath, content: null, error: "No workspace path available" },
+					})
+					break
+				}
+				const absPath = path.resolve(cwd, relPath)
+				// Workspace-boundary validation: prevent path traversal attacks
+				if (isPathOutsideWorkspace(absPath)) {
+					provider.postMessageToWebview({
+						type: "fileContent",
+						fileContent: { path: relPath, content: null, error: "Path is outside workspace" },
+					})
+					break
+				}
+				const content = await fs.readFile(absPath, "utf-8")
+				provider.postMessageToWebview({ type: "fileContent", fileContent: { path: relPath, content } })
+			} catch (err) {
+				const errorMsg = err instanceof Error ? err.message : String(err)
+				provider.postMessageToWebview({
+					type: "fileContent",
+					fileContent: { path: relPath, content: null, error: errorMsg },
+				})
+			}
+			break
+		}
 		case "openMention":
 			openMention(getCurrentCwd(), message.text)
 			break
@@ -1358,69 +1441,6 @@ export const webviewMessageHandler = async (
 			// Cancel any pending auto-approval timeout for the current task
 			provider.getCurrentTask()?.cancelAutoApprovalTimeout()
 			await provider.postStateToWebview()
-			break
-		case "killBrowserSession":
-			{
-				const task = provider.getCurrentTask()
-				if (task?.browserSession) {
-					await task.browserSession.closeBrowser()
-					await provider.postStateToWebview()
-				}
-			}
-			break
-		case "openBrowserSessionPanel":
-			{
-				// Toggle the Browser Session panel (open if closed, close if open)
-				const panelManager = BrowserSessionPanelManager.getInstance(provider)
-				await panelManager.toggle()
-			}
-			break
-		case "showBrowserSessionPanelAtStep":
-			{
-				const panelManager = BrowserSessionPanelManager.getInstance(provider)
-
-				// If this is a launch action, reset the manual close flag
-				if (message.isLaunchAction) {
-					panelManager.resetManualCloseFlag()
-				}
-
-				// Show panel if:
-				// 1. Manual click (forceShow) - always show
-				// 2. Launch action - always show and reset flag
-				// 3. Auto-open for non-launch action - only if user hasn't manually closed
-				if (message.forceShow || message.isLaunchAction || panelManager.shouldAllowAutoOpen()) {
-					// Ensure panel is shown and populated
-					await panelManager.show()
-
-					// Navigate to a specific step if provided
-					// For launch actions: navigate to step 0
-					// For manual clicks: navigate to the clicked step
-					// For auto-opens of regular actions: don't navigate, let BrowserSessionRow's
-					// internal auto-advance logic handle it (only advances if user is on most recent step)
-					if (typeof message.stepIndex === "number" && message.stepIndex >= 0) {
-						await panelManager.navigateToStep(message.stepIndex)
-					}
-				}
-			}
-			break
-		case "refreshBrowserSessionPanel":
-			{
-				// Re-send the latest browser session snapshot to the panel
-				const panelManager = BrowserSessionPanelManager.getInstance(provider)
-				const task = provider.getCurrentTask()
-				if (task) {
-					const messages = task.clineMessages || []
-					const browserSessionStartIndex = messages.findIndex(
-						(m) =>
-							m.ask === "browser_action_launch" ||
-							(m.say === "browser_session_status" && m.text?.includes("opened")),
-					)
-					const browserSessionMessages =
-						browserSessionStartIndex !== -1 ? messages.slice(browserSessionStartIndex) : []
-					const isBrowserSessionActive = task.browserSession?.isSessionActive() ?? false
-					await panelManager.updateBrowserSession(browserSessionMessages, isBrowserSessionActive)
-				}
-			}
 			break
 		case "allowedCommands": {
 			// Validate and sanitize the commands array
@@ -1596,24 +1616,9 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
-		case "remoteControlEnabled":
-			try {
-				await CloudService.instance.updateUserSettings({ extensionBridgeEnabled: message.bool ?? false })
-			} catch (error) {
-				provider.log(
-					`CloudService#updateUserSettings failed: ${error instanceof Error ? error.message : String(error)}`,
-				)
-			}
-			break
-
 		case "taskSyncEnabled":
 			const enabled = message.bool ?? false
 			const updatedSettings: Partial<UserSettingsConfig> = { taskSyncEnabled: enabled }
-
-			// If disabling task sync, also disable remote control.
-			if (!enabled) {
-				updatedSettings.extensionBridgeEnabled = false
-			}
 
 			try {
 				await CloudService.instance.updateUserSettings(updatedSettings)
@@ -1656,47 +1661,6 @@ export const webviewMessageHandler = async (
 			break
 		case "stopTts":
 			stopTts()
-			break
-		// case "useZgsmCustomConfig":
-		// 	const useZgsmCustomConfig = message.bool ?? false
-		// 	await updateGlobalState("useZgsmCustomConfig", useZgsmCustomConfig)
-		// 	await provider.postStateToWebview()
-		// 	break
-		case "testBrowserConnection":
-			// If no text is provided, try auto-discovery
-			if (!message.text) {
-				// Use testBrowserConnection for auto-discovery
-				const chromeHostUrl = await discoverChromeHostUrl()
-
-				if (chromeHostUrl) {
-					// Send the result back to the webview
-					await provider.postMessageToWebview({
-						type: "browserConnectionResult",
-						success: !!chromeHostUrl,
-						text: `Auto-discovered and tested connection to Chrome: ${chromeHostUrl}`,
-						values: { endpoint: chromeHostUrl },
-					})
-				} else {
-					await provider.postMessageToWebview({
-						type: "browserConnectionResult",
-						success: false,
-						text: "No Chrome instances found on the network. Make sure Chrome is running with remote debugging enabled (--remote-debugging-port=9222).",
-					})
-				}
-			} else {
-				// Test the provided URL
-				const customHostUrl = message.text
-				const hostIsValid = await tryChromeHostUrl(message.text)
-
-				// Send the result back to the webview
-				await provider.postMessageToWebview({
-					type: "browserConnectionResult",
-					success: hostIsValid,
-					text: hostIsValid
-						? `Successfully connected to Chrome: ${customHostUrl}`
-						: "Failed to connect to Chrome",
-				})
-			}
 			break
 
 		case "updateVSCodeSetting": {
@@ -1813,6 +1777,15 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+
+		case "lockApiConfigAcrossModes": {
+			const enabled = message.bool ?? false
+			await provider.context.workspaceState.update("lockApiConfigAcrossModes", enabled)
+
+			await provider.postStateToWebview()
+			break
+		}
+
 		case "toggleApiConfigPin":
 			if (message.text) {
 				const currentPinned = getGlobalState("pinnedApiConfigs") ?? {}
@@ -2428,9 +2401,10 @@ export const webviewMessageHandler = async (
 					const yamlContent = await fs.readFile(fileUri[0].fsPath, "utf-8")
 
 					// Import the mode with the specified source level
-					// Note: "built-in" is not a valid source for importing modes
-					const importSource = message.source === "global" ? "global" : "project"
-					const result = await provider.customModesManager.importModeWithRules(yamlContent, importSource)
+					const result = await provider.customModesManager.importModeWithRules(
+						yamlContent,
+						message.source || "project", // Default to project if not specified
+					)
 
 					if (result.success) {
 						// Update state after importing
@@ -2739,300 +2713,371 @@ export const webviewMessageHandler = async (
 		// }
 
 		case "saveCodeIndexSettingsAtomic": {
-			if (!message.codeIndexSettings) {
-				break
-			}
+			// 	if (!message.codeIndexSettings) {
+			// 		break
+			// 	}
 
-			const settings = message.codeIndexSettings
+			// 	const settings = message.codeIndexSettings
 
-			try {
-				// Check if embedder provider has changed
-				const currentConfig = getGlobalState("codebaseIndexConfig") || {}
-				const embedderProviderChanged =
-					currentConfig.codebaseIndexEmbedderProvider !== settings.codebaseIndexEmbedderProvider
+			// 	try {
+			// 		// Check if embedder provider has changed
+			// 		const currentConfig = getGlobalState("codebaseIndexConfig") || {}
+			// 		const embedderProviderChanged =
+			// 			currentConfig.codebaseIndexEmbedderProvider !== settings.codebaseIndexEmbedderProvider
 
-				// Save global state settings atomically
-				const globalStateConfig = {
-					...currentConfig,
-					codebaseIndexEnabled: settings.codebaseIndexEnabled,
-					codebaseIndexQdrantUrl: settings.codebaseIndexQdrantUrl,
-					codebaseIndexEmbedderProvider: settings.codebaseIndexEmbedderProvider,
-					codebaseIndexEmbedderBaseUrl: settings.codebaseIndexEmbedderBaseUrl,
-					codebaseIndexEmbedderModelId: settings.codebaseIndexEmbedderModelId,
-					codebaseIndexEmbedderModelDimension: settings.codebaseIndexEmbedderModelDimension, // Generic dimension
-					codebaseIndexOpenAiCompatibleBaseUrl: settings.codebaseIndexOpenAiCompatibleBaseUrl,
-					codebaseIndexBedrockRegion: settings.codebaseIndexBedrockRegion,
-					codebaseIndexBedrockProfile: settings.codebaseIndexBedrockProfile,
-					codebaseIndexSearchMaxResults: settings.codebaseIndexSearchMaxResults,
-					codebaseIndexSearchMinScore: settings.codebaseIndexSearchMinScore,
-					codebaseIndexOpenRouterSpecificProvider: settings.codebaseIndexOpenRouterSpecificProvider,
-				}
+			// 		// Save global state settings atomically
+			// 		const globalStateConfig = {
+			// 			...currentConfig,
+			// 			codebaseIndexEnabled: settings.codebaseIndexEnabled,
+			// 			codebaseIndexQdrantUrl: settings.codebaseIndexQdrantUrl,
+			// 			codebaseIndexEmbedderProvider: settings.codebaseIndexEmbedderProvider,
+			// 			codebaseIndexEmbedderBaseUrl: settings.codebaseIndexEmbedderBaseUrl,
+			// 			codebaseIndexEmbedderModelId: settings.codebaseIndexEmbedderModelId,
+			// 			codebaseIndexEmbedderModelDimension: settings.codebaseIndexEmbedderModelDimension, // Generic dimension
+			// 			codebaseIndexOpenAiCompatibleBaseUrl: settings.codebaseIndexOpenAiCompatibleBaseUrl,
+			// 			codebaseIndexBedrockRegion: settings.codebaseIndexBedrockRegion,
+			// 			codebaseIndexBedrockProfile: settings.codebaseIndexBedrockProfile,
+			// 			codebaseIndexSearchMaxResults: settings.codebaseIndexSearchMaxResults,
+			// 			codebaseIndexSearchMinScore: settings.codebaseIndexSearchMinScore,
+			// 			codebaseIndexOpenRouterSpecificProvider: settings.codebaseIndexOpenRouterSpecificProvider,
+			// 		}
 
-				// Save global state first
-				await updateGlobalState("codebaseIndexConfig", globalStateConfig)
+			// 		// Save global state first
+			// 		await updateGlobalState("codebaseIndexConfig", globalStateConfig)
 
-				// Save secrets directly using context proxy
-				if (settings.codeIndexOpenAiKey !== undefined) {
-					await provider.contextProxy.storeSecret("codeIndexOpenAiKey", settings.codeIndexOpenAiKey)
-				}
-				if (settings.codeIndexQdrantApiKey !== undefined) {
-					await provider.contextProxy.storeSecret("codeIndexQdrantApiKey", settings.codeIndexQdrantApiKey)
-				}
-				if (settings.codebaseIndexOpenAiCompatibleApiKey !== undefined) {
-					await provider.contextProxy.storeSecret(
-						"codebaseIndexOpenAiCompatibleApiKey",
-						settings.codebaseIndexOpenAiCompatibleApiKey,
-					)
-				}
-				if (settings.codebaseIndexGeminiApiKey !== undefined) {
-					await provider.contextProxy.storeSecret(
-						"codebaseIndexGeminiApiKey",
-						settings.codebaseIndexGeminiApiKey,
-					)
-				}
-				if (settings.codebaseIndexMistralApiKey !== undefined) {
-					await provider.contextProxy.storeSecret(
-						"codebaseIndexMistralApiKey",
-						settings.codebaseIndexMistralApiKey,
-					)
-				}
-				if (settings.codebaseIndexVercelAiGatewayApiKey !== undefined) {
-					await provider.contextProxy.storeSecret(
-						"codebaseIndexVercelAiGatewayApiKey",
-						settings.codebaseIndexVercelAiGatewayApiKey,
-					)
-				}
-				if (settings.codebaseIndexOpenRouterApiKey !== undefined) {
-					await provider.contextProxy.storeSecret(
-						"codebaseIndexOpenRouterApiKey",
-						settings.codebaseIndexOpenRouterApiKey,
-					)
-				}
+			// 		// Save secrets directly using context proxy
+			// 		if (settings.codeIndexOpenAiKey !== undefined) {
+			// 			await provider.contextProxy.storeSecret("codeIndexOpenAiKey", settings.codeIndexOpenAiKey)
+			// 		}
+			// 		if (settings.codeIndexQdrantApiKey !== undefined) {
+			// 			await provider.contextProxy.storeSecret("codeIndexQdrantApiKey", settings.codeIndexQdrantApiKey)
+			// 		}
+			// 		if (settings.codebaseIndexOpenAiCompatibleApiKey !== undefined) {
+			// 			await provider.contextProxy.storeSecret(
+			// 				"codebaseIndexOpenAiCompatibleApiKey",
+			// 				settings.codebaseIndexOpenAiCompatibleApiKey,
+			// 			)
+			// 		}
+			// 		if (settings.codebaseIndexGeminiApiKey !== undefined) {
+			// 			await provider.contextProxy.storeSecret(
+			// 				"codebaseIndexGeminiApiKey",
+			// 				settings.codebaseIndexGeminiApiKey,
+			// 			)
+			// 		}
+			// 		if (settings.codebaseIndexMistralApiKey !== undefined) {
+			// 			await provider.contextProxy.storeSecret(
+			// 				"codebaseIndexMistralApiKey",
+			// 				settings.codebaseIndexMistralApiKey,
+			// 			)
+			// 		}
+			// 		if (settings.codebaseIndexVercelAiGatewayApiKey !== undefined) {
+			// 			await provider.contextProxy.storeSecret(
+			// 				"codebaseIndexVercelAiGatewayApiKey",
+			// 				settings.codebaseIndexVercelAiGatewayApiKey,
+			// 			)
+			// 		}
+			// 		if (settings.codebaseIndexOpenRouterApiKey !== undefined) {
+			// 			await provider.contextProxy.storeSecret(
+			// 				"codebaseIndexOpenRouterApiKey",
+			// 				settings.codebaseIndexOpenRouterApiKey,
+			// 			)
+			// 		}
 
-				// Send success response first - settings are saved regardless of validation
-				await provider.postMessageToWebview({
-					type: "codeIndexSettingsSaved",
-					success: true,
-					settings: globalStateConfig,
-				})
+			// 		// Send success response first - settings are saved regardless of validation
+			// 		await provider.postMessageToWebview({
+			// 			type: "codeIndexSettingsSaved",
+			// 			success: true,
+			// 			settings: globalStateConfig,
+			// 		})
 
-				// Update webview state
-				await provider.postStateToWebview()
+			// 		// Update webview state
+			// 		await provider.postStateToWebview()
 
-				// Then handle validation and initialization for the current workspace
-				const currentCodeIndexManager = provider.getCurrentWorkspaceCodeIndexManager()
-				if (currentCodeIndexManager) {
-					// If embedder provider changed, perform proactive validation
-					if (embedderProviderChanged) {
-						try {
-							// Force handleSettingsChange which will trigger validation
-							await currentCodeIndexManager.handleSettingsChange()
-						} catch (error) {
-							// Validation failed - the error state is already set by handleSettingsChange
-							provider.log(
-								`Embedder validation failed after provider change: ${error instanceof Error ? error.message : String(error)}`,
-							)
-							// Send validation error to webview
-							await provider.postMessageToWebview({
-								type: "indexingStatusUpdate",
-								values: currentCodeIndexManager.getCurrentStatus(),
-							})
-							// Exit early - don't try to start indexing with invalid configuration
-							break
-						}
-					} else {
-						// No provider change, just handle settings normally
-						try {
-							await currentCodeIndexManager.handleSettingsChange()
-						} catch (error) {
-							// Log but don't fail - settings are saved
-							provider.log(
-								`Settings change handling error: ${error instanceof Error ? error.message : String(error)}`,
-							)
-						}
-					}
+			// 		// Then handle validation and initialization for the current workspace
+			// 		const currentCodeIndexManager = provider.getCurrentWorkspaceCodeIndexManager()
+			// 		if (currentCodeIndexManager) {
+			// 			// If embedder provider changed, perform proactive validation
+			// 			if (embedderProviderChanged) {
+			// 				try {
+			// 					// Force handleSettingsChange which will trigger validation
+			// 					await currentCodeIndexManager.handleSettingsChange()
+			// 				} catch (error) {
+			// 					// Validation failed - the error state is already set by handleSettingsChange
+			// 					provider.log(
+			// 						`Embedder validation failed after provider change: ${error instanceof Error ? error.message : String(error)}`,
+			// 					)
+			// 					// Send validation error to webview
+			// 					await provider.postMessageToWebview({
+			// 						type: "indexingStatusUpdate",
+			// 						values: currentCodeIndexManager.getCurrentStatus(),
+			// 					})
+			// 					// Exit early - don't try to start indexing with invalid configuration
+			// 					break
+			// 				}
+			// 			} else {
+			// 				// No provider change, just handle settings normally
+			// 				try {
+			// 					await currentCodeIndexManager.handleSettingsChange()
+			// 				} catch (error) {
+			// 					// Log but don't fail - settings are saved
+			// 					provider.log(
+			// 						`Settings change handling error: ${error instanceof Error ? error.message : String(error)}`,
+			// 					)
+			// 				}
+			// 			}
 
-					// Wait a bit more to ensure everything is ready
-					await new Promise((resolve) => setTimeout(resolve, 200))
+			// 			// Wait a bit more to ensure everything is ready
+			// 			await new Promise((resolve) => setTimeout(resolve, 200))
 
-					// Auto-start indexing if now enabled and configured
-					if (currentCodeIndexManager.isFeatureEnabled && currentCodeIndexManager.isFeatureConfigured) {
-						if (!currentCodeIndexManager.isInitialized) {
-							try {
-								await currentCodeIndexManager.initialize(provider.contextProxy)
-								provider.log(`Code index manager initialized after settings save`)
-							} catch (error) {
-								provider.log(
-									`Code index initialization failed: ${error instanceof Error ? error.message : String(error)}`,
-								)
-								// Send error status to webview
-								await provider.postMessageToWebview({
-									type: "indexingStatusUpdate",
-									values: currentCodeIndexManager.getCurrentStatus(),
-								})
-							}
-						}
-					}
-				} else {
-					// No workspace open - send error status
-					provider.log("Cannot save code index settings: No workspace folder open")
-					await provider.postMessageToWebview({
-						type: "indexingStatusUpdate",
-						values: {
-							systemStatus: "Error",
-							message: t("embeddings:orchestrator.indexingRequiresWorkspace"),
-							processedItems: 0,
-							totalItems: 0,
-							currentItemUnit: "items",
-						},
-					})
-				}
-			} catch (error) {
-				provider.log(`Error saving code index settings: ${error.message || error}`)
-				await provider.postMessageToWebview({
-					type: "codeIndexSettingsSaved",
-					success: false,
-					error: error.message || "Failed to save settings",
-				})
-			}
+			// 			// Auto-start indexing if now enabled and configured
+			// 			if (currentCodeIndexManager.isFeatureEnabled && currentCodeIndexManager.isFeatureConfigured) {
+			// 				if (!currentCodeIndexManager.isInitialized) {
+			// 					try {
+			// 						await currentCodeIndexManager.initialize(provider.contextProxy)
+			// 						provider.log(`Code index manager initialized after settings save`)
+			// 					} catch (error) {
+			// 						provider.log(
+			// 							`Code index initialization failed: ${error instanceof Error ? error.message : String(error)}`,
+			// 						)
+			// 						// Send error status to webview
+			// 						await provider.postMessageToWebview({
+			// 							type: "indexingStatusUpdate",
+			// 							values: currentCodeIndexManager.getCurrentStatus(),
+			// 						})
+			// 					}
+			// 				}
+			// 			}
+			// 		} else {
+			// 			// No workspace open - send error status
+			// 			provider.log("Cannot save code index settings: No workspace folder open")
+			// 			await provider.postMessageToWebview({
+			// 				type: "indexingStatusUpdate",
+			// 				values: {
+			// 					systemStatus: "Error",
+			// 					message: t("embeddings:orchestrator.indexingRequiresWorkspace"),
+			// 					processedItems: 0,
+			// 					totalItems: 0,
+			// 					currentItemUnit: "items",
+			// 				},
+			// 			})
+			// 		}
+			// 	} catch (error) {
+			// 		provider.log(`Error saving code index settings: ${error.message || error}`)
+			// 		await provider.postMessageToWebview({
+			// 			type: "codeIndexSettingsSaved",
+			// 			success: false,
+			// 			error: error.message || "Failed to save settings",
+			// 		})
+			// 	}
 			break
 		}
 
 		case "requestIndexingStatus": {
-			const manager = provider.getCurrentWorkspaceCodeIndexManager()
-			if (!manager) {
-				// No workspace open - send error status
-				provider.postMessageToWebview({
-					type: "indexingStatusUpdate",
-					values: {
-						systemStatus: "Error",
-						message: t("embeddings:orchestrator.indexingRequiresWorkspace"),
-						processedItems: 0,
-						totalItems: 0,
-						currentItemUnit: "items",
-						workerspacePath: undefined,
-					},
-				})
-				return
-			}
+			// const manager = provider.getCurrentWorkspaceCodeIndexManager()
+			// if (!manager) {
+			// 	// No workspace open - send error status
+			// 	provider.postMessageToWebview({
+			// 		type: "indexingStatusUpdate",
+			// 		values: {
+			// 			systemStatus: "Error",
+			// 			message: t("embeddings:orchestrator.indexingRequiresWorkspace"),
+			// 			processedItems: 0,
+			// 			totalItems: 0,
+			// 			currentItemUnit: "items",
+			// 			workerspacePath: undefined,
+			// 		},
+			// 	})
+			// 	return
+			// }
 
-			const status = manager
-				? manager.getCurrentStatus()
-				: {
-						systemStatus: "Standby",
-						message: "No workspace folder open",
-						processedItems: 0,
-						totalItems: 0,
-						currentItemUnit: "items",
-						workspacePath: undefined,
-					}
+			// const status = manager
+			// 	? manager.getCurrentStatus()
+			// 	: {
+			// 			systemStatus: "Standby",
+			// 			message: "No workspace folder open",
+			// 			processedItems: 0,
+			// 			totalItems: 0,
+			// 			currentItemUnit: "items",
+			// 			workspacePath: undefined,
+			// 		}
 
-			provider.postMessageToWebview({
-				type: "indexingStatusUpdate",
-				values: status,
-			})
+			// provider.postMessageToWebview({
+			// 	type: "indexingStatusUpdate",
+			// 	values: status,
+			// })
 			break
 		}
 		case "requestCodeIndexSecretStatus": {
-			// Check if secrets are set using the VSCode context directly for async access
-			const hasOpenAiKey = !!(await provider.context.secrets.get("codeIndexOpenAiKey"))
-			const hasQdrantApiKey = !!(await provider.context.secrets.get("codeIndexQdrantApiKey"))
-			const hasOpenAiCompatibleApiKey = !!(await provider.context.secrets.get(
-				"codebaseIndexOpenAiCompatibleApiKey",
-			))
-			const hasGeminiApiKey = !!(await provider.context.secrets.get("codebaseIndexGeminiApiKey"))
-			const hasMistralApiKey = !!(await provider.context.secrets.get("codebaseIndexMistralApiKey"))
-			const hasVercelAiGatewayApiKey = !!(await provider.context.secrets.get(
-				"codebaseIndexVercelAiGatewayApiKey",
-			))
-			const hasOpenRouterApiKey = !!(await provider.context.secrets.get("codebaseIndexOpenRouterApiKey"))
+			// // Check if secrets are set using the VSCode context directly for async access
+			// const hasOpenAiKey = !!(await provider.context.secrets.get("codeIndexOpenAiKey"))
+			// const hasQdrantApiKey = !!(await provider.context.secrets.get("codeIndexQdrantApiKey"))
+			// const hasOpenAiCompatibleApiKey = !!(await provider.context.secrets.get(
+			// 	"codebaseIndexOpenAiCompatibleApiKey",
+			// ))
+			// const hasGeminiApiKey = !!(await provider.context.secrets.get("codebaseIndexGeminiApiKey"))
+			// const hasMistralApiKey = !!(await provider.context.secrets.get("codebaseIndexMistralApiKey"))
+			// const hasVercelAiGatewayApiKey = !!(await provider.context.secrets.get(
+			// 	"codebaseIndexVercelAiGatewayApiKey",
+			// ))
+			// const hasOpenRouterApiKey = !!(await provider.context.secrets.get("codebaseIndexOpenRouterApiKey"))
 
-			provider.postMessageToWebview({
-				type: "codeIndexSecretStatus",
-				values: {
-					hasOpenAiKey,
-					hasQdrantApiKey,
-					hasOpenAiCompatibleApiKey,
-					hasGeminiApiKey,
-					hasMistralApiKey,
-					hasVercelAiGatewayApiKey,
-					hasOpenRouterApiKey,
-				},
-			})
+			// provider.postMessageToWebview({
+			// 	type: "codeIndexSecretStatus",
+			// 	values: {
+			// 		hasOpenAiKey,
+			// 		hasQdrantApiKey,
+			// 		hasOpenAiCompatibleApiKey,
+			// 		hasGeminiApiKey,
+			// 		hasMistralApiKey,
+			// 		hasVercelAiGatewayApiKey,
+			// 		hasOpenRouterApiKey,
+			// 	},
+			// })
 			break
 		}
 		case "startIndexing": {
-			try {
-				const manager = provider.getCurrentWorkspaceCodeIndexManager()
-				if (!manager) {
-					// No workspace open - send error status
-					provider.postMessageToWebview({
-						type: "indexingStatusUpdate",
-						values: {
-							systemStatus: "Error",
-							message: t("embeddings:orchestrator.indexingRequiresWorkspace"),
-							processedItems: 0,
-							totalItems: 0,
-							currentItemUnit: "items",
-						},
-					})
-					provider.log("Cannot start indexing: No workspace folder open")
-					return
-				}
-				if (manager.isFeatureEnabled && manager.isFeatureConfigured) {
-					// Mimic extension startup behavior: initialize first, which will
-					// check if Qdrant container is active and reuse existing collection
-					await manager.initialize(provider.contextProxy)
+			// try {
+			// 	const manager = provider.getCurrentWorkspaceCodeIndexManager()
+			// 	if (!manager) {
+			// 		provider.postMessageToWebview({
+			// 			type: "indexingStatusUpdate",
+			// 			values: {
+			// 				systemStatus: "Error",
+			// 				message: t("embeddings:orchestrator.indexingRequiresWorkspace"),
+			// 				processedItems: 0,
+			// 				totalItems: 0,
+			// 				currentItemUnit: "items",
+			// 			},
+			// 		})
+			// 		provider.log("Cannot start indexing: No workspace folder open")
+			// 		return
+			// 	}
 
-					// Only call startIndexing if we're in a state that requires it
-					// (e.g., Standby or Error). If already Indexed or Indexing, the
-					// initialize() call above will have already started the watcher.
-					const currentState = manager.state
-					if (currentState === "Standby" || currentState === "Error") {
-						// startIndexing now handles error recovery internally
-						manager.startIndexing()
+			// 	// "Start Indexing" implicitly enables the workspace
+			// 	await manager.setWorkspaceEnabled(true)
 
-						// If startIndexing recovered from error, we need to reinitialize
-						if (!manager.isInitialized) {
-							await manager.initialize(provider.contextProxy)
-							// Try starting again after initialization
-							if (manager.state === "Standby" || manager.state === "Error") {
-								manager.startIndexing()
-							}
-						}
-					}
-				}
-			} catch (error) {
-				provider.log(`Error starting indexing: ${error instanceof Error ? error.message : String(error)}`)
-			}
+			// 	if (manager.isFeatureEnabled && manager.isFeatureConfigured) {
+			// 		await manager.initialize(provider.contextProxy)
+
+			// 		const currentState = manager.state
+			// 		if (currentState === "Standby" || currentState === "Error") {
+			// 			manager.startIndexing()
+
+			// 			if (!manager.isInitialized) {
+			// 				await manager.initialize(provider.contextProxy)
+			// 				if (manager.state === "Standby" || manager.state === "Error") {
+			// 					manager.startIndexing()
+			// 				}
+			// 			}
+			// 		}
+			// 	}
+			// } catch (error) {
+			// 	provider.log(`Error starting indexing: ${error instanceof Error ? error.message : String(error)}`)
+			// }
+			break
+		}
+		case "stopIndexing": {
+			// try {
+			// 	const manager = provider.getCurrentWorkspaceCodeIndexManager()
+			// 	if (!manager) {
+			// 		provider.log("Cannot stop indexing: No workspace folder open")
+			// 		return
+			// 	}
+			// 	manager.stopIndexing()
+			// 	provider.postMessageToWebview({
+			// 		type: "indexingStatusUpdate",
+			// 		values: manager.getCurrentStatus(),
+			// 	})
+			// } catch (error) {
+			// 	provider.log(`Error stopping indexing: ${error instanceof Error ? error.message : String(error)}`)
+			// }
+			break
+		}
+		case "toggleWorkspaceIndexing": {
+			// try {
+			// 	const manager = provider.getCurrentWorkspaceCodeIndexManager()
+			// 	if (!manager) {
+			// 		provider.log("Cannot toggle workspace indexing: No workspace folder open")
+			// 		return
+			// 	}
+			// 	const enabled = message.bool ?? false
+			// 	await manager.setWorkspaceEnabled(enabled)
+			// 	if (enabled && manager.isFeatureEnabled && manager.isFeatureConfigured) {
+			// 		await manager.initialize(provider.contextProxy)
+			// 		manager.startIndexing()
+			// 	} else if (!enabled) {
+			// 		manager.stopIndexing()
+			// 	}
+			// 	provider.postMessageToWebview({
+			// 		type: "indexingStatusUpdate",
+			// 		values: manager.getCurrentStatus(),
+			// 	})
+			// } catch (error) {
+			// 	provider.log(
+			// 		`Error toggling workspace indexing: ${error instanceof Error ? error.message : String(error)}`,
+			// 	)
+			// }
+			break
+		}
+		case "setAutoEnableDefault": {
+			// try {
+			// 	const manager = provider.getCurrentWorkspaceCodeIndexManager()
+			// 	if (!manager) {
+			// 		provider.log("Cannot set auto-enable default: No workspace folder open")
+			// 		return
+			// 	}
+			// 	// Capture prior state for every manager before persisting the global change
+			// 	const allManagers = CodeIndexManager.getAllInstances()
+			// 	const priorStates = new Map(allManagers.map((m) => [m, m.isWorkspaceEnabled]))
+			// 	await manager.setAutoEnableDefault(message.bool ?? true)
+			// 	// Apply stop/start to every affected manager
+			// 	for (const m of allManagers) {
+			// 		const wasEnabled = priorStates.get(m)!
+			// 		const isNowEnabled = m.isWorkspaceEnabled
+			// 		if (wasEnabled && !isNowEnabled) {
+			// 			m.stopIndexing()
+			// 		} else if (!wasEnabled && isNowEnabled && m.isFeatureEnabled && m.isFeatureConfigured) {
+			// 			await m.initialize(provider.contextProxy)
+			// 			m.startIndexing()
+			// 		}
+			// 	}
+			// 	provider.postMessageToWebview({
+			// 		type: "indexingStatusUpdate",
+			// 		values: manager.getCurrentStatus(),
+			// 	})
+			// } catch (error) {
+			// 	provider.log(
+			// 		`Error setting auto-enable default: ${error instanceof Error ? error.message : String(error)}`,
+			// 	)
+			// }
 			break
 		}
 		case "clearIndexData": {
-			try {
-				const manager = provider.getCurrentWorkspaceCodeIndexManager()
-				if (!manager) {
-					provider.log("Cannot clear index data: No workspace folder open")
-					provider.postMessageToWebview({
-						type: "indexCleared",
-						values: {
-							success: false,
-							error: t("embeddings:orchestrator.indexingRequiresWorkspace"),
-						},
-					})
-					return
-				}
-				await manager.clearIndexData()
-				provider.postMessageToWebview({ type: "indexCleared", values: { success: true } })
-			} catch (error) {
-				provider.log(`Error clearing index data: ${error instanceof Error ? error.message : String(error)}`)
-				provider.postMessageToWebview({
-					type: "indexCleared",
-					values: {
-						success: false,
-						error: error instanceof Error ? error.message : String(error),
-					},
-				})
-			}
+			// try {
+			// 	const manager = provider.getCurrentWorkspaceCodeIndexManager()
+			// 	if (!manager) {
+			// 		provider.log("Cannot clear index data: No workspace folder open")
+			// 		provider.postMessageToWebview({
+			// 			type: "indexCleared",
+			// 			values: {
+			// 				success: false,
+			// 				error: t("embeddings:orchestrator.indexingRequiresWorkspace"),
+			// 			},
+			// 		})
+			// 		return
+			// 	}
+			// 	await manager.clearIndexData()
+			// 	provider.postMessageToWebview({ type: "indexCleared", values: { success: true } })
+			// } catch (error) {
+			// 	provider.log(`Error clearing index data: ${error instanceof Error ? error.message : String(error)}`)
+			// 	provider.postMessageToWebview({
+			// 		type: "indexCleared",
+			// 		values: {
+			// 			success: false,
+			// 			error: error instanceof Error ? error.message : String(error),
+			// 		},
+			// 	})
+			// }
 			break
 		}
 		case "zgsmPollCodebaseIndexStatus": {
@@ -3239,17 +3284,7 @@ export const webviewMessageHandler = async (
 		}
 		case "requestCommands": {
 			try {
-				const { getCommands } = await import("../../services/command/commands")
-				const commands = await getCommands(getCurrentCwd())
-
-				const commandList = commands.map((command) => ({
-					name: command.name,
-					source: command.source,
-					filePath: command.filePath,
-					description: command.description,
-					argumentHint: command.argumentHint,
-				}))
-
+				const commandList = await getDiscoveredCommands()
 				await provider.postMessageToWebview({ type: "commands", commands: commandList })
 			} catch (error) {
 				provider.log(`Error fetching commands: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`)
@@ -3294,8 +3329,9 @@ export const webviewMessageHandler = async (
 		case "openCommandFile": {
 			try {
 				if (message.text) {
+					const state = await provider.getState()
 					const { getCommand } = await import("../../services/command/commands")
-					const command = await getCommand(getCurrentCwd(), message.text)
+					const command = await getCommand(getCurrentCwd(), message.text, state.language)
 
 					if (command && command.filePath) {
 						openFile(command.filePath)
@@ -3314,8 +3350,9 @@ export const webviewMessageHandler = async (
 		case "deleteCommand": {
 			try {
 				if (message.text && message.values?.source) {
+					const state = await provider.getState()
 					const { getCommand } = await import("../../services/command/commands")
-					const command = await getCommand(getCurrentCwd(), message.text)
+					const command = await getCommand(getCurrentCwd(), message.text, state.language)
 
 					if (command && command.filePath) {
 						// Delete the command file
@@ -3431,8 +3468,9 @@ export const webviewMessageHandler = async (
 				openFile(filePath)
 
 				// Refresh commands list
+				const state = await provider.getState()
 				const { getCommands } = await import("../../services/command/commands")
-				const commands = await getCommands(getCurrentCwd() || "")
+				const commands = await getCommands(getCurrentCwd() || "", state.language)
 				const commandList = commands.map((command) => ({
 					name: command.name,
 					source: command.source,

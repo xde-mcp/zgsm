@@ -13,14 +13,12 @@ import { extractTextFromFileWithMetadata, type ExtractTextResult } from "../../i
 import { diagnosticsToProblemsString } from "../../integrations/diagnostics"
 import { DEFAULT_LINE_LIMIT } from "../prompts/tools/native-tools/read_file"
 
-import { UrlContentFetcher } from "../../services/browser/UrlContentFetcher"
-
 import { FileContextTracker } from "../context-tracking/FileContextTracker"
 
 import { RooIgnoreController } from "../ignore/RooIgnoreController"
 import { getCommand, type Command } from "../../services/command/commands"
-
-import { t } from "../../i18n"
+import { buildSkillResult, resolveSkillContentForMode, type SkillLookup } from "../../services/skills/skillInvocation"
+import type { SkillContent } from "../../shared/skills"
 
 /**
  * Maximum number of files to read from a folder mention.
@@ -33,34 +31,6 @@ export const MAX_FOLDER_FILES_TO_READ = 10
  * This is approximately 100KB which should be safe for most context windows.
  */
 export const MAX_FOLDER_CONTENT_SIZE = 100_000
-
-function getUrlErrorMessage(error: unknown): string {
-	const errorMessage = error instanceof Error ? error.message : String(error)
-
-	// Check for common error patterns and return appropriate message
-	if (errorMessage.includes("timeout")) {
-		return t("common:errors.url_timeout")
-	}
-	if (errorMessage.includes("net::ERR_NAME_NOT_RESOLVED")) {
-		return t("common:errors.url_not_found")
-	}
-	if (errorMessage.includes("net::ERR_INTERNET_DISCONNECTED")) {
-		return t("common:errors.no_internet")
-	}
-	if (errorMessage.includes("net::ERR_ABORTED")) {
-		return t("common:errors.url_request_aborted")
-	}
-	if (errorMessage.includes("403") || errorMessage.includes("Forbidden")) {
-		return t("common:errors.url_forbidden")
-	}
-	if (errorMessage.includes("404") || errorMessage.includes("Not Found")) {
-		return t("common:errors.url_page_not_found")
-	}
-
-	// Default error message
-	return t("common:errors.url_fetch_failed", { error: errorMessage })
-}
-
 export async function openMention(cwd: string, mention?: string): Promise<void> {
 	if (!mention) {
 		return
@@ -140,15 +110,18 @@ ${result.content}`
 export async function parseMentions(
 	text: string,
 	cwd: string,
-	urlContentFetcher: UrlContentFetcher,
 	fileContextTracker?: FileContextTracker,
 	rooIgnoreController?: RooIgnoreController,
 	showRooIgnoredFiles: boolean = false,
 	includeDiagnosticMessages: boolean = true,
 	maxDiagnosticMessages: number = 50,
+	skillsManager?: SkillLookup,
+	currentMode: string = "code",
+	language?: string,
 ): Promise<ParseMentionsResult> {
 	const mentions: Set<string> = new Set()
 	const validCommands: Map<string, Command> = new Map()
+	const validSkills: Map<string, SkillContent> = new Map()
 	const contentBlocks: MentionContentBlock[] = []
 	let commandMode: string | undefined // Track mode from the first slash command that has one
 
@@ -159,30 +132,42 @@ export async function parseMentions(
 	const commandExistenceChecks = await Promise.all(
 		Array.from(uniqueCommandNames).map(async (commandName) => {
 			try {
-				const command = await getCommand(cwd, commandName)
-				return { commandName, command }
+				const command = language
+					? await getCommand(cwd, commandName, language)
+					: await getCommand(cwd, commandName)
+				if (command) {
+					return { commandName, command, skillContent: null }
+				}
+
+				const skillContent = await resolveSkillContentForMode(skillsManager, commandName, currentMode)
+				return { commandName, command: undefined, skillContent }
 			} catch (error) {
 				// If there's an error checking command existence, treat it as non-existent
-				return { commandName, command: undefined }
+				return { commandName, command: undefined, skillContent: null }
 			}
 		}),
 	)
 
 	// Store valid commands for later use and capture the first mode found
-	for (const { commandName, command } of commandExistenceChecks) {
+	for (const { commandName, command, skillContent } of commandExistenceChecks) {
 		if (command) {
 			validCommands.set(commandName, command)
 			// Capture the mode from the first command that has one
 			if (!commandMode && command.mode) {
 				commandMode = command.mode
 			}
+			continue
+		}
+
+		if (skillContent) {
+			validSkills.set(commandName, skillContent)
 		}
 	}
 
 	// Only replace text for commands that actually exist (keep "see below" for commands)
 	let parsedText = text
 	for (const [match, commandName] of commandMatches) {
-		if (validCommands.has(commandName)) {
+		if (validCommands.has(commandName) || validSkills.has(commandName)) {
 			parsedText = parsedText.replace(match, `Command '${commandName}' (see below for command content)`)
 		}
 	}
@@ -192,8 +177,7 @@ export async function parseMentions(
 	parsedText = parsedText.replace(mentionRegexGlobal, (match, mention) => {
 		mentions.add(mention)
 		if (mention.startsWith("http")) {
-			// Keep old style for URLs (still XML-based)
-			return `'${mention}' (see below for site content)`
+			return `'${mention}'`
 		} else if (mention.startsWith("/")) {
 			// Clean path reference - no "see below" since we format like tool results
 			const mentionPath = mention.slice(1)
@@ -210,49 +194,8 @@ export async function parseMentions(
 		return match
 	})
 
-	const urlMention = Array.from(mentions).find((mention) => mention.startsWith("http"))
-	let launchBrowserError: Error | undefined
-	if (urlMention) {
-		try {
-			await urlContentFetcher.launchBrowser()
-		} catch (error) {
-			launchBrowserError = error
-			const errorMessage = error instanceof Error ? error.message : String(error)
-			vscode.window.showErrorMessage(`Error fetching content for ${urlMention}: ${errorMessage}`)
-		}
-	}
-
 	for (const mention of mentions) {
-		if (mention.startsWith("http")) {
-			let result: string
-			if (launchBrowserError) {
-				const errorMessage =
-					launchBrowserError instanceof Error ? launchBrowserError.message : String(launchBrowserError)
-				result = `Error fetching content: ${errorMessage}`
-			} else {
-				try {
-					const markdown = await urlContentFetcher.urlToMarkdown(mention)
-					result = markdown
-				} catch (error) {
-					console.error(`Error fetching URL ${mention}:`, error)
-
-					// Get raw error message for AI
-					const rawErrorMessage = error instanceof Error ? error.message : String(error)
-
-					// Get localized error message for UI notification
-					const localizedErrorMessage = getUrlErrorMessage(error)
-
-					vscode.window.showErrorMessage(
-						t("common:errors.url_fetch_error_with_url", { url: mention, error: localizedErrorMessage }),
-					)
-
-					// Send raw error message to AI model
-					result = `Error fetching content: ${rawErrorMessage}`
-				}
-			}
-			// URLs still use XML format (appended to text for backwards compat)
-			parsedText += `\n\n<url_content url="${mention}">\n${result}\n</url_content>`
-		} else if (mention.startsWith("/")) {
+		if (mention.startsWith("/")) {
 			const mentionPath = mention.slice(1)
 			try {
 				const fileResult = await getFileOrFolderContentWithMetadata(
@@ -317,12 +260,8 @@ export async function parseMentions(
 		}
 	}
 
-	if (urlMention) {
-		try {
-			await urlContentFetcher.closeBrowser()
-		} catch (error) {
-			console.error(`Error closing browser: ${error.message}`)
-		}
+	for (const [skillName, skillContent] of validSkills) {
+		slashCommandHelp += `\n\n${buildSkillResult(skillName, undefined, skillContent)}`
 	}
 
 	return {

@@ -83,7 +83,7 @@ export const WITTY_LOADING_PHRASES: Record<RandomLoadingMessageLanguage, string[
 		"🧠 Untangling neural nets...",
 		"🐛 Just a sec, I'm debugging reality...",
 		"💎 Compiling brilliance...",
-		"⏳ Loading wait.exe...",
+		"⏳ Loading...",
 		"☕️ Converting coffee into code...",
 		"🔍 Looking for a misplaced semicolon...",
 		"⚙️ Greasin' the cogs of the machine...",

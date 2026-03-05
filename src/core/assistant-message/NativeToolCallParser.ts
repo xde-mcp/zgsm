@@ -513,6 +513,7 @@ export class NativeToolCallParser {
 					nativeArgs = {
 						command: partialArgs.command,
 						cwd: partialArgs.cwd,
+						timeout: partialArgs.timeout,
 					}
 				}
 				break
@@ -544,24 +545,22 @@ export class NativeToolCallParser {
 				}
 				break
 
+			case "costrict_checkpoint":
+				if (partialArgs.action !== undefined) {
+					nativeArgs = {
+						action: partialArgs.action,
+						message: partialArgs.message,
+						commit_hash: partialArgs.commit_hash,
+						files: partialArgs.files,
+					}
+				}
+				break
+
 			case "apply_diff":
 				if (partialArgs.path !== undefined || partialArgs.diff !== undefined) {
 					nativeArgs = {
 						path: partialArgs.path,
 						diff: partialArgs.diff,
-					}
-				}
-				break
-
-			case "browser_action":
-				if (partialArgs.action !== undefined) {
-					nativeArgs = {
-						action: partialArgs.action,
-						url: partialArgs.url,
-						coordinate: partialArgs.coordinate,
-						size: partialArgs.size,
-						text: partialArgs.text,
-						path: partialArgs.path,
 					}
 				}
 				break
@@ -662,11 +661,18 @@ export class NativeToolCallParser {
 				}
 				break
 
+			case "edit":
 			case "search_and_replace":
-				if (partialArgs.path !== undefined || partialArgs.operations !== undefined) {
+				if (
+					partialArgs.file_path !== undefined ||
+					partialArgs.old_string !== undefined ||
+					partialArgs.new_string !== undefined
+				) {
 					nativeArgs = {
-						path: partialArgs.path,
-						operations: partialArgs.operations,
+						file_path: partialArgs.file_path,
+						old_string: partialArgs.old_string,
+						new_string: partialArgs.new_string,
+						replace_all: this.coerceOptionalBoolean(partialArgs.replace_all),
 					}
 				}
 				break
@@ -701,6 +707,31 @@ export class NativeToolCallParser {
 						mode: partialArgs.mode,
 						message: partialArgs.message,
 						todos: partialArgs.todos,
+					}
+				}
+				break
+
+			case "file_outline":
+				if (partialArgs.file_path !== undefined) {
+					nativeArgs = {
+						file_path: partialArgs.file_path,
+						include_docstrings: this.coerceOptionalBoolean(partialArgs.include_docstrings),
+					}
+				}
+				break
+
+			case "sequential_thinking":
+				if (partialArgs.thought !== undefined || partialArgs.nextThoughtNeeded !== undefined) {
+					nativeArgs = {
+						thought: partialArgs.thought,
+						nextThoughtNeeded: partialArgs.nextThoughtNeeded,
+						thoughtNumber: partialArgs.thoughtNumber,
+						totalThoughts: partialArgs.totalThoughts,
+						isRevision: this.coerceOptionalBoolean(partialArgs.isRevision),
+						needsMoreThoughts: this.coerceOptionalBoolean(partialArgs.needsMoreThoughts),
+						branchFromThought: this.coerceOptionalNumber(partialArgs.branchFromThought),
+						revisesThought: this.coerceOptionalNumber(partialArgs.revisesThought),
+						branchId: partialArgs.branchId,
 					}
 				}
 				break
@@ -888,6 +919,7 @@ export class NativeToolCallParser {
 						nativeArgs = {
 							command: normalizedArgs.command,
 							cwd: normalizedArgs.cwd,
+							timeout: normalizedArgs.timeout,
 						} as NativeArgsFor<TName>
 					}
 					break
@@ -901,15 +933,18 @@ export class NativeToolCallParser {
 					}
 					break
 
+				case "edit":
 				case "search_and_replace":
 					if (
-						normalizedArgs.path !== undefined &&
-						normalizedArgs.operations !== undefined &&
-						Array.isArray(normalizedArgs.operations)
+						normalizedArgs.file_path !== undefined &&
+						normalizedArgs.old_string !== undefined &&
+						normalizedArgs.new_string !== undefined
 					) {
 						nativeArgs = {
-							path: normalizedArgs.path,
-							operations: normalizedArgs.operations,
+							file_path: normalizedArgs.file_path,
+							old_string: normalizedArgs.old_string,
+							new_string: normalizedArgs.new_string,
+							replace_all: this.coerceOptionalBoolean(normalizedArgs.replace_all),
 						} as NativeArgsFor<TName>
 					}
 					break
@@ -936,17 +971,13 @@ export class NativeToolCallParser {
 					}
 					break
 
-				case "browser_action":
-					if (normalizedArgs.action !== undefined) {
-						nativeArgs = {
-							action: fixBrowserLaunchAction(normalizedArgs),
-							url: normalizedArgs.url,
-							coordinate: normalizedArgs.coordinate,
-							size: normalizedArgs.size,
-							text: normalizedArgs.text,
-							path: normalizedArgs.path,
-						} as NativeArgsFor<TName>
-					}
+				case "costrict_checkpoint":
+					nativeArgs = {
+						action: normalizedArgs.action || "list",
+						message: normalizedArgs.message,
+						commit_hash: normalizedArgs.commit_hash,
+						files: normalizedArgs.files,
+					} as NativeArgsFor<TName>
 					break
 
 				case "codebase_search":

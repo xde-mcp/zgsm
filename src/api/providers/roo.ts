@@ -133,11 +133,11 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<string> {
 			this.currentReasoningDetails = []
 
 			const headers: Record<string, string> = {
-				"X-Costrict-App-Version": Package.version,
+				"X-Roo-App-Version": Package.version,
 			}
 
 			if (metadata?.taskId) {
-				headers["X-Costrict-Task-ID"] = metadata.taskId
+				headers["X-Roo-Task-ID"] = metadata.taskId
 			}
 
 			const stream = await this.createStream(systemPrompt, messages, metadata, { headers })
@@ -212,7 +212,7 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<string> {
 								if (detail.format !== undefined) existing.format = detail.format
 								if (detail.signature !== undefined) existing.signature = detail.signature
 							} else {
-								// Start new reasoning detail accumulation - sanitize ID to remove invalid characters
+								// Start new reasoning detail accumulation
 								reasoningDetailsAccumulator.set(key, {
 									type: detail.type,
 									text: detail.text,
@@ -333,10 +333,10 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<string> {
 			throw error
 		}
 	}
-	override async completePrompt(prompt: string, systemPrompt?: string, metadata?: any): Promise<string> {
+	override async completePrompt(prompt: string): Promise<string> {
 		// Update API key before making request to ensure we use the latest session token
 		this.client.apiKey = this.options.rooApiKey ?? getSessionToken()
-		return super.completePrompt(prompt, systemPrompt, metadata)
+		return super.completePrompt(prompt)
 	}
 
 	private async loadDynamicModels(baseURL: string, apiKey?: string): Promise<void> {

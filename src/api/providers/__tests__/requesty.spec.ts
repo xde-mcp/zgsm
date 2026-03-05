@@ -59,8 +59,8 @@ describe("RequestyHandler", () => {
 			apiKey: mockOptions.requestyApiKey,
 			defaultHeaders: {
 				"HTTP-Referer": "https://github.com/zgsm-ai/zgsm",
-				"X-Title": "Costrict",
 				"X-Costrict-Version": `${Package.version}`,
+				"X-Title": "Costrict",
 			},
 		})
 	})
@@ -74,8 +74,8 @@ describe("RequestyHandler", () => {
 			apiKey: mockOptions.requestyApiKey,
 			defaultHeaders: {
 				"HTTP-Referer": "https://github.com/zgsm-ai/zgsm",
-				"X-Title": "Costrict",
 				"X-Costrict-Version": `${Package.version}`,
+				"X-Title": "Costrict",
 			},
 		})
 	})

@@ -5,6 +5,7 @@ import { type ModelInfo, type ModelRecord } from "@roo-code/types"
 import { ApiHandlerOptions, RouterName } from "../../shared/api"
 
 import { BaseProvider } from "./base-provider"
+import { getModels, getModelsFromCache } from "./fetchers/modelCache"
 
 import { DEFAULT_HEADERS } from "./constants"
 
@@ -55,8 +56,6 @@ export abstract class RouterProvider extends BaseProvider {
 	}
 
 	public async fetchModel() {
-		const { getModels } = await import("./fetchers/modelCache")
-
 		this.models = await getModels({ provider: this.name, apiKey: this.client.apiKey, baseUrl: this.client.baseURL })
 		return this.getModel()
 	}
@@ -71,16 +70,7 @@ export abstract class RouterProvider extends BaseProvider {
 
 		// Fall back to global cache (synchronous disk/memory cache)
 		// This ensures models are available before fetchModel() is called
-		// Use dynamic import to avoid circular dependency
-		let cachedModels: ModelRecord | undefined
-		try {
-			const { getModelsFromCache } = require("./fetchers/modelCache")
-			cachedModels = getModelsFromCache(this.name)
-		} catch (error) {
-			// If import fails, continue without cache
-			cachedModels = undefined
-		}
-
+		const cachedModels = getModelsFromCache(this.name)
 		if (cachedModels?.[id]) {
 			// Also populate instance models for future calls
 			this.models = cachedModels

@@ -33,10 +33,7 @@ export async function getSkillsSection(
 		.map((skill) => {
 			const name = escapeXml(skill.name)
 			const description = escapeXml(skill.description)
-			// Only include location for file-based skills (not built-in)
-			// Built-in skills are loaded via the skill tool by name, not by path
-			const isFileBasedSkill = skill.source !== "built-in" && skill.path !== "built-in"
-			const locationLine = isFileBasedSkill ? `\n    <location>${escapeXml(skill.path)}</location>` : ""
+			const locationLine = `\n    <location>${escapeXml(skill.path)}</location>`
 			return `  <skill>\n    <name>${name}</name>\n    <description>${description}</description>${locationLine}\n  </skill>`
 		})
 		.join("\n")
@@ -77,6 +74,7 @@ Step 2: Branching Decision
 CONSTRAINTS:
 - Do NOT load every skill up front.
 - Load skills ONLY after a skill is selected.
+- Do NOT reload a skill whose instructions already appear in this conversation.
 - Do NOT skip this check.
 - FAILURE to perform this check is an error.
 </mandatory_skill_check>

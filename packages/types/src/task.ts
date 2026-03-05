@@ -89,6 +89,7 @@ export type TaskProviderEvents = {
  */
 
 export interface CreateTaskOptions {
+	taskId?: string
 	enableCheckpoints?: boolean
 	consecutiveMistakeLimit?: number
 	experiments?: Record<string, boolean>
@@ -98,6 +99,9 @@ export interface CreateTaskOptions {
 	zgsmWorkflowMode?: string
 	/** Initial status for the task's history item (e.g., "active" for child tasks) */
 	initialStatus?: "active" | "delegated" | "completed"
+	/** Whether to start the task loop immediately (default: true).
+	 *  When false, the caller must invoke `task.start()` manually. */
+	startTask?: boolean
 }
 
 export enum TaskStatus {

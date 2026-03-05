@@ -258,7 +258,7 @@ export class MiniMaxHandler extends BaseProvider implements SingleCompletionHand
 					content:
 						typeof message.content === "string"
 							? [{ type: "text", text: message.content, cache_control: cacheControl }]
-							: (message?.content || []).map((content, contentIndex) =>
+							: message.content.map((content, contentIndex) =>
 									contentIndex === message.content.length - 1
 										? { ...content, cache_control: cacheControl }
 										: content,
@@ -289,16 +289,21 @@ export class MiniMaxHandler extends BaseProvider implements SingleCompletionHand
 		}
 	}
 
-	async completePrompt(prompt: string) {
+	async completePrompt(prompt: string, systemPrompt?: string, metadata?: any) {
 		const { id: model, temperature } = this.getModel()
 
-		const message = await this.client.messages.create({
-			model,
-			max_tokens: 16_384,
-			temperature: temperature ?? 1.0,
-			messages: [{ role: "user", content: prompt }],
-			stream: false,
-		})
+		const message = await this.client.messages.create(
+			{
+				model,
+				max_tokens: 16_384,
+				temperature: temperature ?? 1.0,
+				messages: [{ role: "user", content: prompt }],
+				stream: false,
+			},
+			{
+				signal: metadata?.signal,
+			},
+		)
 
 		const content = message.content.find(({ type }) => type === "text")
 		return content?.type === "text" ? content.text : ""

@@ -321,7 +321,7 @@ export class QwenCodeHandler extends BaseProvider implements SingleCompletionHan
 		return { id, info }
 	}
 
-	async completePrompt(prompt: string, systemPrompt?: string, metadata?: any): Promise<string> {
+	async completePrompt(prompt: string, systemPrompt?: string, metadata?: any) {
 		await this.ensureAuthenticated()
 		const client = this.ensureClient()
 		const model = this.getModel()
@@ -333,7 +333,9 @@ export class QwenCodeHandler extends BaseProvider implements SingleCompletionHan
 		}
 
 		const response = await this.callApiWithRetry(() =>
-			client.chat.completions.create(requestOptions, { signal: metadata?.signal }),
+			client.chat.completions.create(requestOptions, {
+				signal: metadata?.signal ?? undefined,
+			}),
 		)
 
 		return response.choices[0]?.message.content || ""

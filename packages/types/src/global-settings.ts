@@ -123,7 +123,6 @@ export const globalSettingsSchema = z.object({
 	alwaysAllowWriteOutsideWorkspace: z.boolean().optional(),
 	alwaysAllowWriteProtected: z.boolean().optional(),
 	writeDelayMs: z.number().min(0).optional(),
-	alwaysAllowBrowser: z.boolean().optional(),
 	requestDelaySeconds: z.number().optional(),
 	alwaysAllowMcp: z.boolean().optional(),
 	alwaysAllowModeSwitch: z.boolean().optional(),
@@ -169,13 +168,6 @@ export const globalSettingsSchema = z.object({
 	 */
 	maxDiagnosticMessages: z.number().optional(),
 
-	browserToolEnabled: z.boolean().optional(),
-	browserViewportSize: z.string().optional(),
-	screenshotQuality: z.number().optional(),
-	remoteBrowserEnabled: z.boolean().optional(),
-	remoteBrowserHost: z.string().optional(),
-	cachedChromeHostUrl: z.string().optional(),
-
 	enableCheckpoints: z.boolean().optional(),
 	checkpointTimeout: z
 		.number()
@@ -205,6 +197,7 @@ export const globalSettingsSchema = z.object({
 	terminalZshOhMy: z.boolean().optional(),
 	terminalZshP10k: z.boolean().optional(),
 	terminalZdotdir: z.boolean().optional(),
+	execaShellPath: z.string().optional(),
 
 	diagnosticsEnabled: z.boolean().optional(),
 
@@ -301,19 +294,14 @@ export const SECRET_STATE_KEYS = [
 	"ollamaApiKey",
 	"geminiApiKey",
 	"openAiNativeApiKey",
-	"cerebrasApiKey",
 	"deepSeekApiKey",
-	"doubaoApiKey",
 	"moonshotApiKey",
 	"mistralApiKey",
 	"minimaxApiKey",
-	"unboundApiKey",
 	"requestyApiKey",
+	"unboundApiKey",
 	"xaiApiKey",
-	"groqApiKey",
-	"chutesApiKey",
 	"litellmApiKey",
-	"deepInfraApiKey",
 	"codeIndexOpenAiKey",
 	"codeIndexQdrantApiKey",
 	"codebaseIndexOpenAiCompatibleApiKey",
@@ -321,12 +309,9 @@ export const SECRET_STATE_KEYS = [
 	"codebaseIndexMistralApiKey",
 	"codebaseIndexVercelAiGatewayApiKey",
 	"codebaseIndexOpenRouterApiKey",
-	"huggingFaceApiKey",
 	"sambaNovaApiKey",
 	"zaiApiKey",
 	"fireworksApiKey",
-	"featherlessApiKey",
-	"ioIntelligenceApiKey",
 	"vercelAiGatewayApiKey",
 	"basetenApiKey",
 ] as const
@@ -380,7 +365,6 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	alwaysAllowWriteOutsideWorkspace: false,
 	alwaysAllowWriteProtected: false,
 	writeDelayMs: 1000,
-	alwaysAllowBrowser: true,
 	requestDelaySeconds: 10,
 	alwaysAllowMcp: true,
 	alwaysAllowModeSwitch: true,
@@ -392,11 +376,6 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	commandExecutionTimeout: 20,
 	commandTimeoutAllowlist: [],
 	preventCompletionWithOpenTodos: false,
-
-	browserToolEnabled: false,
-	browserViewportSize: "900x600",
-	screenshotQuality: 75,
-	remoteBrowserEnabled: false,
 
 	ttsEnabled: false,
 	ttsSpeed: 1,

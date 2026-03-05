@@ -4,9 +4,10 @@ import process from "process"
 import { getShell } from "../../utils/shell"
 
 import type { RooTerminal } from "./types"
+import { BaseTerminal } from "./BaseTerminal"
 import { BaseTerminalProcess } from "./BaseTerminalProcess"
 import { getIdeaShellEnvWithUpdatePath } from "../../utils/ideaShellEnvLoader"
-import { isJetbrainsPlatform } from "../../utils/platform"
+import { isCliPatform, isJetbrainsPlatform } from "../../utils/platform"
 import { t } from "../../i18n"
 import delay from "delay"
 import { isGbkEncodedCommand } from "./constants"
@@ -43,7 +44,7 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 		try {
 			this.isHot = true
 			this.subprocess = execa({
-				shell: getShell(),
+				shell: !isCliPatform() ? getShell() : BaseTerminal.getExecaShellPath() || true,
 				cwd: this.terminal.getCurrentWorkingDirectory(),
 				all: true,
 				encoding: "buffer",

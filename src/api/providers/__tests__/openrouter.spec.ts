@@ -141,8 +141,8 @@ describe("OpenRouterHandler", () => {
 			apiKey: mockOptions.openRouterApiKey,
 			defaultHeaders: {
 				"HTTP-Referer": "https://github.com/zgsm-ai/zgsm",
-				"X-Title": "Costrict",
 				"X-Costrict-Version": `${Package.version}`,
+				"X-Title": "Costrict",
 			},
 		})
 	})
@@ -589,7 +589,7 @@ describe("OpenRouterHandler", () => {
 					messages: [{ role: "user", content: "test prompt" }],
 					stream: false,
 				},
-				{ headers: { "x-anthropic-beta": "fine-grained-tool-streaming-2025-05-14" }, signal: undefined },
+				{ headers: { "x-anthropic-beta": "fine-grained-tool-streaming-2025-05-14" } },
 			)
 		})
 

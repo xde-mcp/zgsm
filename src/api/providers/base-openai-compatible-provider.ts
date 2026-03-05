@@ -219,7 +219,7 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 		}
 	}
 
-	async completePrompt(prompt: string, systemPrompt?: string, metadata?: any): Promise<string> {
+	async completePrompt(prompt: string): Promise<string> {
 		const { id: modelId, info: modelInfo } = this.getModel()
 
 		const params: OpenAI.Chat.Completions.ChatCompletionCreateParams = {
@@ -233,7 +233,7 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 		}
 
 		try {
-			const response = await this.client.chat.completions.create(params, { signal: metadata?.signal })
+			const response = await this.client.chat.completions.create(params)
 
 			// Check for provider-specific error responses (e.g., MiniMax base_resp)
 			const responseAny = response as any

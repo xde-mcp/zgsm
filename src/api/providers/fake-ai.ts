@@ -78,8 +78,4 @@ export class FakeAIHandler implements ApiHandler, SingleCompletionHandler {
 	completePrompt(prompt: string, systemPrompt?: string, metadata?: any): Promise<string> {
 		return this.ai.completePrompt(prompt, systemPrompt, metadata)
 	}
-
-	isAiSdkProvider(): boolean {
-		return false
-	}
 }

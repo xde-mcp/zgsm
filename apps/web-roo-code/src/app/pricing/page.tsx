@@ -97,7 +97,7 @@ const pricingTiers: PricingTier[] = [
 		description: "For AI-forward engineers",
 		featuresIntro: "Go beyond the extension with",
 		features: [
-			"Access to Cloud Agents: fully autonomous development you can kick off from Github and the web",
+			"Access to Cloud Agents: fully autonomous development you can kick off from GitHub and the web",
 			"Access to the Roo Code Router",
 			"Follow your tasks from anywhere",
 			"Share tasks with friends and co-workers",
@@ -291,11 +291,7 @@ export default function PricingPage() {
 								<li>To pay for Cloud Agents running time (${PRICE_CREDITS}/hour)</li>
 								<li>
 									To pay for AI model inference costs (
-									<a
-										href="/provider"
-										target="_blank"
-										rel="noopener noreferrer"
-										className="underline">
+									<a href="/provider" target="_blank" rel="noopener noreferrer" className="underline">
 										varies by model
 									</a>
 									)

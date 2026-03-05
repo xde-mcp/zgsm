@@ -5,19 +5,19 @@ const isJetbrains = isJetbrainsPlatform()
 
 export const renderModes = {
 	noLimit: {
-		limit: 0,
+		limit: 1,
 		interval: 5,
 	},
 	fast: {
-		limit: 0,
+		limit: 2,
 		interval: isJetbrains ? 25 : 10,
 	},
 	medium: {
-		limit: 0,
+		limit: 3,
 		interval: isJetbrains ? 50 : 20,
 	},
 	slow: {
-		limit: 0,
+		limit: 4,
 		interval: isJetbrains ? 100 : 40,
 	},
 }

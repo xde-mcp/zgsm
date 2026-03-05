@@ -39,7 +39,7 @@ function logError(message) {
 }
 
 async function main() {
-	console.log(`\n${BOLD}🔧 Roo Code - Install Extension${RESET}\n`)
+	console.log(`\n${BOLD}🔧 CoStrict - Install Extension${RESET}\n`)
 
 	// Build vsix to temp directory
 	log(`Building vsix to ${VSIX_PATH}...`)

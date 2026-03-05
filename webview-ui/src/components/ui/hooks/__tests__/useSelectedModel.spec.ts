@@ -61,9 +61,7 @@ describe("useSelectedModel", () => {
 						"test-model": baseModelInfo,
 					},
 					requesty: {},
-					unbound: {},
 					litellm: {},
-					"io-intelligence": {},
 				},
 				isLoading: false,
 				isError: false,
@@ -124,9 +122,7 @@ describe("useSelectedModel", () => {
 						},
 					},
 					requesty: {},
-					unbound: {},
 					litellm: {},
-					"io-intelligence": {},
 				},
 				isLoading: false,
 				isError: false,
@@ -191,9 +187,7 @@ describe("useSelectedModel", () => {
 						"test-model": baseModelInfo,
 					},
 					requesty: {},
-					unbound: {},
 					litellm: {},
-					"io-intelligence": {},
 				},
 				isLoading: false,
 				isError: false,
@@ -245,9 +239,7 @@ describe("useSelectedModel", () => {
 				data: {
 					openrouter: { "test-model": baseModelInfo },
 					requesty: {},
-					unbound: {},
 					litellm: {},
-					"io-intelligence": {},
 				},
 				isLoading: false,
 				isError: false,
@@ -288,9 +280,7 @@ describe("useSelectedModel", () => {
 						},
 					},
 					requesty: {},
-					unbound: {},
 					litellm: {},
-					"io-intelligence": {},
 				},
 				isLoading: false,
 				isError: false,
@@ -350,7 +340,7 @@ describe("useSelectedModel", () => {
 
 		it("should NOT set loading when openrouter provider metadata is loading but provider is static (anthropic)", () => {
 			mockUseRouterModels.mockReturnValue({
-				data: { openrouter: {}, requesty: {}, unbound: {}, litellm: {}, "io-intelligence": {} },
+				data: { openrouter: {}, requesty: {}, litellm: {} },
 				isLoading: false,
 				isError: false,
 			} as any)
@@ -482,15 +472,45 @@ describe("useSelectedModel", () => {
 		})
 	})
 
+	describe("anthropic provider with 1M context", () => {
+		beforeEach(() => {
+			mockUseRouterModels.mockReturnValue({
+				data: undefined,
+				isLoading: false,
+				isError: false,
+			} as any)
+
+			mockUseOpenRouterModelProviders.mockReturnValue({
+				data: undefined,
+				isLoading: false,
+				isError: false,
+			} as any)
+		})
+
+		it("should apply 1M pricing tier for Claude Sonnet 4.6 when enabled", () => {
+			const apiConfiguration: ProviderSettings = {
+				apiProvider: "anthropic",
+				apiModelId: "claude-sonnet-4-6",
+				anthropicBeta1MContext: true,
+			}
+
+			const wrapper = createWrapper()
+			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
+
+			expect(result.current.id).toBe("claude-sonnet-4-6")
+			expect(result.current.info?.contextWindow).toBe(1_000_000)
+			expect(result.current.info?.inputPrice).toBe(6.0)
+			expect(result.current.info?.outputPrice).toBe(22.5)
+		})
+	})
+
 	describe("bedrock provider with 1M context", () => {
 		beforeEach(() => {
 			mockUseRouterModels.mockReturnValue({
 				data: {
 					openrouter: {},
 					requesty: {},
-					unbound: {},
 					litellm: {},
-					"io-intelligence": {},
 				},
 				isLoading: false,
 				isError: false,
@@ -546,6 +566,52 @@ describe("useSelectedModel", () => {
 		})
 	})
 
+	describe("bedrock provider with custom ARN", () => {
+		beforeEach(() => {
+			mockUseRouterModels.mockReturnValue({
+				data: {
+					openrouter: {},
+					requesty: {},
+					litellm: {},
+				},
+				isLoading: false,
+				isError: false,
+			} as any)
+
+			mockUseOpenRouterModelProviders.mockReturnValue({
+				data: {},
+				isLoading: false,
+				isError: false,
+			} as any)
+		})
+
+		it("should enable supportsPromptCache for custom-arn model", () => {
+			const apiConfiguration: ProviderSettings = {
+				apiProvider: "bedrock",
+				apiModelId: "custom-arn",
+			}
+
+			const wrapper = createWrapper()
+			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
+
+			expect(result.current.id).toBe("custom-arn")
+			expect(result.current.info?.supportsPromptCache).toBe(true)
+		})
+
+		it("should enable supportsImages for custom-arn model", () => {
+			const apiConfiguration: ProviderSettings = {
+				apiProvider: "bedrock",
+				apiModelId: "custom-arn",
+			}
+
+			const wrapper = createWrapper()
+			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
+
+			expect(result.current.id).toBe("custom-arn")
+			expect(result.current.info?.supportsImages).toBe(true)
+		})
+	})
+
 	describe("litellm provider", () => {
 		beforeEach(() => {
 			mockUseOpenRouterModelProviders.mockReturnValue({
@@ -560,9 +626,7 @@ describe("useSelectedModel", () => {
 				data: {
 					openrouter: {},
 					requesty: {},
-					unbound: {},
 					litellm: {},
-					"io-intelligence": {},
 				},
 				isLoading: false,
 				isError: false,
@@ -588,7 +652,6 @@ describe("useSelectedModel", () => {
 				data: {
 					openrouter: {},
 					requesty: {},
-					unbound: {},
 					litellm: {
 						"existing-model": {
 							maxTokens: 4096,
@@ -597,7 +660,6 @@ describe("useSelectedModel", () => {
 							supportsPromptCache: false,
 						},
 					},
-					"io-intelligence": {},
 				},
 				isLoading: false,
 				isError: false,
@@ -631,11 +693,9 @@ describe("useSelectedModel", () => {
 				data: {
 					openrouter: {},
 					requesty: {},
-					unbound: {},
 					litellm: {
 						"custom-model": customModelInfo,
 					},
-					"io-intelligence": {},
 				},
 				isLoading: false,
 				isError: false,
@@ -661,9 +721,7 @@ describe("useSelectedModel", () => {
 				data: {
 					openrouter: {},
 					requesty: {},
-					unbound: {},
 					litellm: {},
-					"io-intelligence": {},
 				},
 				isLoading: false,
 				isError: false,

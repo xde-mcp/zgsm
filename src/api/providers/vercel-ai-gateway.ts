@@ -120,7 +120,9 @@ export class VercelAiGatewayHandler extends RouterProvider implements SingleComp
 
 			requestOptions.max_completion_tokens = info.maxTokens
 
-			const response = await this.client.chat.completions.create(requestOptions, { signal: metadata?.signal })
+			const response = await this.client.chat.completions.create(requestOptions, {
+				signal: metadata?.signal,
+			})
 			return response.choices[0]?.message.content || ""
 		} catch (error) {
 			if (error instanceof Error) {

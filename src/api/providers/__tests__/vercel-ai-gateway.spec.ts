@@ -9,7 +9,6 @@ import OpenAI from "openai"
 import { VercelAiGatewayHandler } from "../vercel-ai-gateway"
 import { ApiHandlerOptions } from "../../../shared/api"
 import { vercelAiGatewayDefaultModelId, VERCEL_AI_GATEWAY_DEFAULT_TEMPERATURE } from "@roo-code/types"
-import { Package } from "../../../shared/package"
 
 // Mock dependencies
 vitest.mock("openai")
@@ -96,11 +95,11 @@ describe("VercelAiGatewayHandler", () => {
 		expect(OpenAI).toHaveBeenCalledWith({
 			baseURL: "https://ai-gateway.vercel.sh/v1",
 			apiKey: mockOptions.vercelAiGatewayApiKey,
-			defaultHeaders: expect.objectContaining({
+			defaultHeaders: {
 				"HTTP-Referer": "https://github.com/zgsm-ai/zgsm",
-				"X-Costrict-Version": Package.version,
 				"X-Title": "Costrict",
-			}),
+				"X-Costrict-Version": expect.any(String),
+			},
 		})
 	})
 
@@ -518,7 +517,9 @@ describe("VercelAiGatewayHandler", () => {
 					temperature: VERCEL_AI_GATEWAY_DEFAULT_TEMPERATURE,
 					max_completion_tokens: 64000,
 				}),
-				{ signal: undefined },
+				expect.objectContaining({
+					signal: undefined,
+				}),
 			)
 		})
 
@@ -533,9 +534,15 @@ describe("VercelAiGatewayHandler", () => {
 
 			expect(mockCreate).toHaveBeenCalledWith(
 				expect.objectContaining({
+					model: "anthropic/claude-sonnet-4",
+					messages: [{ role: "user", content: "Test prompt" }],
+					stream: false,
 					temperature: customTemp,
+					max_completion_tokens: 64000,
 				}),
-				{ signal: undefined },
+				expect.objectContaining({
+					signal: undefined,
+				}),
 			)
 		})
 
@@ -582,9 +589,15 @@ describe("VercelAiGatewayHandler", () => {
 
 			expect(mockCreate).toHaveBeenCalledWith(
 				expect.objectContaining({
+					model: "anthropic/claude-sonnet-4",
+					messages: [{ role: "user", content: "Test" }],
+					stream: false,
 					temperature: 0.9,
+					max_completion_tokens: 64000,
 				}),
-				{ signal: undefined },
+				expect.objectContaining({
+					signal: undefined,
+				}),
 			)
 		})
 	})

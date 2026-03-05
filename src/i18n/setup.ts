@@ -23,7 +23,10 @@ if (!isTestEnv) {
 			const ALLOW_LANGUAGES = Object.keys(ZGSM_LANGUAGES)
 
 			const languages = languageDirs
-				.filter((dirent: { isDirectory: () => boolean }) => dirent.isDirectory())
+				.filter(
+					(dirent: { isDirectory: () => boolean; name: string }) =>
+						dirent.isDirectory() && !dirent.name.startsWith("."),
+				)
 				.map((dirent: { name: string }) => dirent.name)
 				.filter((language: string) => ALLOW_LANGUAGES.includes(language))
 
@@ -32,7 +35,13 @@ if (!isTestEnv) {
 				const langPath = path.join(localesDir, language)
 
 				// Find all JSON files in the language directory
-				const files = fs.readdirSync(langPath).filter((file: string) => file.endsWith(".json"))
+				const files = fs
+					.readdirSync(langPath, { withFileTypes: true })
+					.filter(
+						(dirent: { isFile: () => boolean; name: string }) =>
+							dirent.isFile() && dirent.name.endsWith(".json") && !dirent.name.startsWith("."),
+					)
+					.map((dirent: { name: string }) => dirent.name)
 
 				// Initialize language in translations object
 				if (!translations[language]) {

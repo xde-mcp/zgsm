@@ -43,13 +43,9 @@ describe("Model Validation Functions", () => {
 		litellm: {},
 		ollama: {},
 		lmstudio: {},
-		deepinfra: {},
-		"io-intelligence": {},
 		"vercel-ai-gateway": {},
 		zgsm: {},
-		huggingface: {},
 		// roo: {},
-		chutes: {},
 	}
 
 	const allowAllOrganization: OrganizationAllowList = {

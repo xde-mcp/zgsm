@@ -603,10 +603,12 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		let response
 
 		try {
-			response = await this.client.chat.completions.create(completionParams, {
-				...requestOptions,
-				signal: metadata?.signal,
-			})
+			response = await this.client.chat.completions.create(
+				completionParams,
+				Object.assign(requestOptions ?? {}, {
+					signal: metadata?.signal ?? undefined,
+				}),
+			)
 		} catch (error) {
 			// Try to parse as OpenRouter error structure using Zod
 			const parseResult = OpenRouterErrorResponseSchema.safeParse(error)

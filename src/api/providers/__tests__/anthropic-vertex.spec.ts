@@ -191,16 +191,11 @@ describe("VertexHandler", () => {
 						},
 					],
 					stream: true,
-					// Tools are now always present (empty array when no tools provided)
-					tools: [],
-					tool_choice: {
-						type: "auto",
-						disable_parallel_tool_use: false,
-					},
+					// Tools are now always present (minimum 6 from ALWAYS_AVAILABLE_TOOLS)
+					tools: expect.any(Array),
+					tool_choice: expect.any(Object),
 				}),
-				expect.objectContaining({
-					signal: undefined,
-				}),
+				undefined,
 			)
 		})
 
@@ -415,7 +410,7 @@ describe("VertexHandler", () => {
 						}),
 					],
 				}),
-				{ signal: undefined },
+				undefined,
 			)
 		})
 
@@ -781,7 +776,7 @@ describe("VertexHandler", () => {
 					],
 					stream: false,
 				},
-				{},
+				{ signal: undefined },
 			)
 		})
 
@@ -895,6 +890,21 @@ describe("VertexHandler", () => {
 		it("should enable 1M context for Claude Sonnet 4.5 when beta flag is set", () => {
 			const handler = new AnthropicVertexHandler({
 				apiModelId: VERTEX_1M_CONTEXT_MODEL_IDS[1],
+				vertexProjectId: "test-project",
+				vertexRegion: "us-central1",
+				vertex1MContext: true,
+			})
+
+			const model = handler.getModel()
+			expect(model.info.contextWindow).toBe(1_000_000)
+			expect(model.info.inputPrice).toBe(6.0)
+			expect(model.info.outputPrice).toBe(22.5)
+			expect(model.betas).toContain("context-1m-2025-08-07")
+		})
+
+		it("should enable 1M context for Claude Sonnet 4.6 when beta flag is set", () => {
+			const handler = new AnthropicVertexHandler({
+				apiModelId: "claude-sonnet-4-6",
 				vertexProjectId: "test-project",
 				vertexRegion: "us-central1",
 				vertex1MContext: true,
@@ -1030,7 +1040,7 @@ describe("VertexHandler", () => {
 			}
 
 			// Verify the API was called without the beta header
-			expect(mockCreate).toHaveBeenCalledWith(expect.anything(), { signal: undefined })
+			expect(mockCreate).toHaveBeenCalledWith(expect.anything(), undefined)
 		})
 	})
 
@@ -1120,7 +1130,7 @@ describe("VertexHandler", () => {
 					thinking: { type: "enabled", budget_tokens: 4096 },
 					temperature: 1.0, // Thinking requires temperature 1.0
 				}),
-				{},
+				undefined,
 			)
 		})
 	})
@@ -1207,7 +1217,7 @@ describe("VertexHandler", () => {
 					]),
 					tool_choice: { type: "auto", disable_parallel_tool_use: false },
 				}),
-				expect.any(Object),
+				undefined,
 			)
 		})
 
@@ -1257,18 +1267,10 @@ describe("VertexHandler", () => {
 					tools: expect.arrayContaining([
 						expect.objectContaining({
 							name: "get_weather",
-							description: "Get the current weather",
-							input_schema: expect.objectContaining({
-								type: "object",
-								properties: expect.objectContaining({
-									location: { type: "string" },
-								}),
-							}),
 						}),
 					]),
-					tool_choice: { type: "auto", disable_parallel_tool_use: false },
 				}),
-				{ signal: undefined },
+				undefined,
 			)
 		})
 

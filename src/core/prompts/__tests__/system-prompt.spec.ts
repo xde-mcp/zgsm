@@ -255,7 +255,6 @@ describe("SYSTEM_PROMPT", () => {
 			false, // supportsImages
 			undefined, // mcpHub
 			undefined, // diffStrategy
-			undefined, // browserViewportSize
 			defaultModeSlug, // mode
 			undefined, // customModePrompts
 			undefined, // customModes
@@ -268,26 +267,6 @@ describe("SYSTEM_PROMPT", () => {
 		expect(prompt).toMatchFileSnapshot("./__snapshots__/system-prompt/consistent-system-prompt.snap")
 	})
 
-	it("should include browser actions when supportsImages is true", async () => {
-		const prompt = await SYSTEM_PROMPT(
-			mockContext,
-			"/test/path",
-			true, // supportsImages
-			undefined, // mcpHub
-			undefined, // diffStrategy
-			"1280x800", // browserViewportSize
-			defaultModeSlug, // mode
-			undefined, // customModePrompts
-			undefined, // customModes,
-			undefined, // globalCustomInstructions
-			experiments,
-			undefined, // language
-			undefined, // rooIgnoreInstructions
-		)
-
-		expect(prompt).toMatchFileSnapshot("./__snapshots__/system-prompt/with-computer-use-support.snap")
-	})
-
 	it("should include MCP server info when mcpHub is provided", async () => {
 		mockMcpHub = createMockMcpHub(true)
 
@@ -297,7 +276,6 @@ describe("SYSTEM_PROMPT", () => {
 			false,
 			mockMcpHub, // mcpHub
 			undefined, // diffStrategy
-			undefined, // browserViewportSize
 			defaultModeSlug, // mode
 			undefined, // customModePrompts
 			undefined, // customModes,
@@ -317,7 +295,6 @@ describe("SYSTEM_PROMPT", () => {
 			false,
 			undefined, // explicitly undefined mcpHub
 			undefined, // diffStrategy
-			undefined, // browserViewportSize
 			defaultModeSlug, // mode
 			undefined, // customModePrompts
 			undefined, // customModes,
@@ -328,26 +305,6 @@ describe("SYSTEM_PROMPT", () => {
 		)
 
 		expect(prompt).toMatchFileSnapshot("./__snapshots__/system-prompt/with-undefined-mcp-hub.snap")
-	})
-
-	it("should handle different browser viewport sizes", async () => {
-		const prompt = await SYSTEM_PROMPT(
-			mockContext,
-			"/test/path",
-			false,
-			undefined, // mcpHub
-			undefined, // diffStrategy
-			"900x600", // different viewport size
-			defaultModeSlug, // mode
-			undefined, // customModePrompts
-			undefined, // customModes,
-			undefined, // globalCustomInstructions
-			experiments,
-			undefined, // language
-			undefined, // rooIgnoreInstructions
-		)
-
-		expect(prompt).toMatchFileSnapshot("./__snapshots__/system-prompt/with-different-viewport-size.snap")
 	})
 
 	it("should include vscode language in custom instructions", async () => {
@@ -386,7 +343,6 @@ describe("SYSTEM_PROMPT", () => {
 			false,
 			undefined, // mcpHub
 			undefined, // diffStrategy
-			undefined, // browserViewportSize
 			defaultModeSlug, // mode
 			undefined, // customModePrompts
 			undefined, // customModes
@@ -446,7 +402,6 @@ describe("SYSTEM_PROMPT", () => {
 			false,
 			undefined, // mcpHub
 			undefined, // diffStrategy
-			undefined, // browserViewportSize
 			"custom-mode", // mode
 			undefined, // customModePrompts
 			customModes, // customModes
@@ -481,7 +436,6 @@ describe("SYSTEM_PROMPT", () => {
 			false,
 			undefined, // mcpHub
 			undefined, // diffStrategy
-			undefined, // browserViewportSize
 			defaultModeSlug as Mode, // mode
 			customModePrompts, // customModePrompts
 			undefined, // customModes
@@ -511,7 +465,6 @@ describe("SYSTEM_PROMPT", () => {
 			false,
 			undefined, // mcpHub
 			undefined, // diffStrategy
-			undefined, // browserViewportSize
 			defaultModeSlug as Mode, // mode
 			customModePrompts, // customModePrompts
 			undefined, // customModes
@@ -538,7 +491,6 @@ describe("SYSTEM_PROMPT", () => {
 			false,
 			undefined, // mcpHub
 			undefined, // diffStrategy
-			undefined, // browserViewportSize
 			defaultModeSlug, // mode
 			undefined, // customModePrompts
 			undefined, // customModes
@@ -567,8 +519,7 @@ describe("SYSTEM_PROMPT", () => {
 			false,
 			undefined, // mcpHub
 			undefined, // diffStrategy
-			undefined, // browserViewportSize
-			"architect", // mode
+			"architect", // mode - architect mode references update_todo_list in customInstructions
 			undefined, // customModePrompts
 			undefined, // customModes
 			undefined, // globalCustomInstructions
@@ -596,8 +547,7 @@ describe("SYSTEM_PROMPT", () => {
 			false,
 			undefined, // mcpHub
 			undefined, // diffStrategy
-			undefined, // browserViewportSize
-			"architect", // mode
+			"architect", // mode - architect mode references update_todo_list in customInstructions
 			undefined, // customModePrompts
 			undefined, // customModes
 			undefined, // globalCustomInstructions
@@ -625,7 +575,6 @@ describe("SYSTEM_PROMPT", () => {
 			false,
 			undefined, // mcpHub
 			undefined, // diffStrategy
-			undefined, // browserViewportSize
 			defaultModeSlug, // mode
 			undefined, // customModePrompts
 			undefined, // customModes

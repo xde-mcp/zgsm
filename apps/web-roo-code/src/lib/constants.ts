@@ -21,7 +21,7 @@ export const EXTERNAL_LINKS = {
 	MARKETPLACE: "https://marketplace.visualstudio.com/items?itemName=zgsm-ai.zgsm",
 	SECURITY: "https://trust.roocode.com",
 	EVALS: "https://roocode.com/evals",
-	BLOG: "https://blog.roocode.com",
+	BLOG_SUBSTACK: "https://blog.roocode.com",
 	OFFICE_HOURS_PODCAST: "https://www.youtube.com/@RooCodeYT/podcasts",
 	FAQ: "https://roocode.com/#faq",
 	TESTIMONIALS: "https://roocode.com/#testimonials",
@@ -35,4 +35,5 @@ export const EXTERNAL_LINKS = {
 
 export const INTERNAL_LINKS = {
 	PRIVACY_POLICY_WEBSITE: "/privacy",
+	BLOG: "/blog",
 }

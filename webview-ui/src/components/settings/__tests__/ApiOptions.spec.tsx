@@ -625,5 +625,90 @@ describe("ApiOptions", () => {
 
 	// 		expect(screen.queryByTestId("roo-balance-display")).not.toBeInTheDocument()
 	// 	})
+
+	// 	it("pins roo provider to the top when not on welcome screen", () => {
+	// 		// Mock useExtensionState to ensure no filtering
+	// 		const useExtensionStateMock = vi.spyOn(ExtensionStateContext, "useExtensionState")
+	// 		useExtensionStateMock.mockReturnValue({
+	// 			cloudIsAuthenticated: false,
+	// 			organizationAllowList: { providers: {} },
+	// 		} as any)
+
+	// 		renderApiOptions({
+	// 			apiConfiguration: {},
+	// 			fromWelcomeView: false,
+	// 		})
+
+	// 		const providerSelectContainer = screen.getByTestId("provider-select")
+	// 		const providerSelect = providerSelectContainer.querySelector("select") as HTMLSelectElement
+	// 		const options = Array.from(providerSelect.querySelectorAll("option"))
+
+	// 		// Filter out the placeholder option (empty value)
+	// 		const providerOptions = options.filter((opt) => opt.value !== "")
+
+	// 		// Find the roo option
+	// 		const rooOption = providerOptions.find((opt) => opt.value === "roo")
+
+	// 		// If roo is available, verify it's pinned to the top
+	// 		if (rooOption) {
+	// 			expect(providerOptions[0].value).toBe("roo")
+	// 		}
+
+	// 		useExtensionStateMock.mockRestore()
+	// 	})
+
+	// 	it("filters out roo provider on welcome screen", () => {
+	// 		// Mock useExtensionState to ensure no filtering
+	// 		const useExtensionStateMock = vi.spyOn(ExtensionStateContext, "useExtensionState")
+	// 		useExtensionStateMock.mockReturnValue({
+	// 			cloudIsAuthenticated: false,
+	// 			organizationAllowList: { providers: {} },
+	// 		} as any)
+
+	// 		renderApiOptions({
+	// 			apiConfiguration: {},
+	// 			fromWelcomeView: true,
+	// 		})
+
+	// 		const providerSelectContainer = screen.getByTestId("provider-select")
+	// 		const providerSelect = providerSelectContainer.querySelector("select") as HTMLSelectElement
+	// 		const options = Array.from(providerSelect.querySelectorAll("option"))
+
+	// 		// Filter out the placeholder option (empty value)
+	// 		const providerOptions = options.filter((opt) => opt.value !== "")
+
+	// 		// Check that roo is NOT in the list when on welcome screen
+	// 		const rooOption = providerOptions.find((opt) => opt.value === "roo")
+	// 		expect(rooOption).toBeUndefined()
+
+	// 		useExtensionStateMock.mockRestore()
+	// 	})
 	// })
+
+	it("renders retired provider message and hides provider-specific forms", () => {
+		renderApiOptions({
+			apiConfiguration: {
+				apiProvider: "groq",
+			},
+		})
+
+		expect(screen.getByTestId("retired-provider-message")).toHaveTextContent(
+			"settings:providers.retiredProviderMessage",
+		)
+		expect(screen.queryByTestId("litellm-provider")).not.toBeInTheDocument()
+	})
+
+	it("does not reintroduce retired providers into active provider options", () => {
+		renderApiOptions({
+			apiConfiguration: {
+				apiProvider: "groq",
+			},
+		})
+
+		const providerSelectContainer = screen.getByTestId("provider-select")
+		const providerSelect = providerSelectContainer.querySelector("select") as HTMLSelectElement
+		const providerOptions = Array.from(providerSelect.querySelectorAll("option")).map((option) => option.value)
+
+		expect(providerOptions).not.toContain("groq")
+	})
 })

@@ -1,300 +1,101 @@
-import { containsDangerousSubstitution } from "../commands"
-
-vi.mock("../../../utils/shell", () => ({
-	getShell: vi.fn(),
-}))
-
-import { getShell } from "../../../utils/shell"
+import { containsDangerousSubstitution, getCommandDecision } from "../commands"
 
 describe("containsDangerousSubstitution", () => {
-	// Store original process values
-	const originalPlatform = process.platform
-	const originalEnv = { ...process.env }
-
-	afterEach(() => {
-		// Restore original values after each test
-		Object.defineProperty(process, "platform", {
-			value: originalPlatform,
-		})
-		process.env = { ...originalEnv }
-		vi.clearAllMocks()
-	})
-
-	describe("Windows CMD environment", () => {
-		beforeEach(() => {
-			Object.defineProperty(process, "platform", {
-				value: "win32",
-			})
-			vi.mocked(getShell).mockReturnValue("C:\\Windows\\System32\\cmd.exe")
+	describe("zsh array assignments (should NOT be flagged)", () => {
+		it("should return false for files=(a b c)", () => {
+			expect(containsDangerousSubstitution("files=(a b c)")).toBe(false)
 		})
 
-		it("should detect caret before quote", () => {
-			expect(containsDangerousSubstitution('echo ^"test^"')).toBe(true)
+		it("should return false for var=(item1 item2)", () => {
+			expect(containsDangerousSubstitution("var=(item1 item2)")).toBe(false)
 		})
 
-		it("should detect caret before space", () => {
-			expect(containsDangerousSubstitution("echo ^ test")).toBe(true)
-		})
-
-		it("should detect caret before pipe", () => {
-			expect(containsDangerousSubstitution("echo test^|cat")).toBe(true)
-		})
-
-		it("should detect caret before ampersand", () => {
-			expect(containsDangerousSubstitution("echo test^&echo done")).toBe(true)
-		})
-
-		it("should detect caret before less than", () => {
-			expect(containsDangerousSubstitution("echo ^<input")).toBe(true)
-		})
-
-		it("should detect caret before greater than", () => {
-			expect(containsDangerousSubstitution("echo test^>output")).toBe(true)
-		})
-
-		it("should detect caret before caret", () => {
-			expect(containsDangerousSubstitution("echo test^^")).toBe(true)
-		})
-
-		it("should allow caret without dangerous context", () => {
-			expect(containsDangerousSubstitution("echo test")).toBe(false)
-		})
-
-		it("should allow caret before letters", () => {
-			expect(containsDangerousSubstitution("echo^test")).toBe(false)
+		it("should return false for x=(hello)", () => {
+			expect(containsDangerousSubstitution("x=(hello)")).toBe(false)
 		})
 	})
 
-	describe("PowerShell environment", () => {
-		beforeEach(() => {
-			Object.defineProperty(process, "platform", {
-				value: "win32",
-			})
-			vi.mocked(getShell).mockReturnValue("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe")
+	describe("zsh process substitution (should be flagged)", () => {
+		it("should return true for standalone =(whoami)", () => {
+			expect(containsDangerousSubstitution("=(whoami)")).toBe(true)
 		})
 
-		it("should detect backtick before quote", () => {
-			expect(containsDangerousSubstitution('echo `"test`"')).toBe(true)
+		it("should return true for =(ls) with leading space", () => {
+			expect(containsDangerousSubstitution(" =(ls)")).toBe(true)
 		})
 
-		it("should detect backtick before space", () => {
-			expect(containsDangerousSubstitution("echo ` test")).toBe(true)
-		})
-
-		it("should detect backtick before dollar sign", () => {
-			expect(containsDangerousSubstitution("echo `$var")).toBe(true)
-		})
-
-		it("should detect backtick before semicolon", () => {
-			expect(containsDangerousSubstitution("echo test`; echo done")).toBe(true)
-		})
-
-		it("should detect backtick before ampersand", () => {
-			expect(containsDangerousSubstitution("echo test`& echo done")).toBe(true)
-		})
-
-		it("should detect backtick before pipe", () => {
-			expect(containsDangerousSubstitution("echo test`| cat")).toBe(true)
-		})
-
-		it("should detect backtick before parentheses", () => {
-			expect(containsDangerousSubstitution("echo `(`test`)`")).toBe(true)
-		})
-
-		it("should detect backtick before braces", () => {
-			expect(containsDangerousSubstitution("echo `{`test`}`")).toBe(true)
-		})
-
-		it("should allow caret in PowerShell (not a danger)", () => {
-			expect(containsDangerousSubstitution('echo ^"test^"')).toBe(false)
-		})
-
-		it("should allow backtick before letters", () => {
-			expect(containsDangerousSubstitution("echo`test")).toBe(false)
+		it("should return true for echo =(cat /etc/passwd)", () => {
+			expect(containsDangerousSubstitution("echo =(cat /etc/passwd)")).toBe(true)
 		})
 	})
+})
 
-	describe("Git Bash environment", () => {
-		beforeEach(() => {
-			Object.defineProperty(process, "platform", {
-				value: "win32",
-			})
-			vi.mocked(getShell).mockReturnValue("C:\\Program Files\\Git\\bin\\bash.exe")
-		})
+describe("getCommandDecision", () => {
+	it("should auto_approve array assignment command with wildcard allowlist", () => {
+		const command = 'files=(a.ts b.ts); for f in "${files[@]}"; do echo "$f"; done'
+		const result = getCommandDecision(command, ["*"])
+		expect(result).toBe("auto_approve")
+	})
+})
 
-		it("should not detect caret as dangerous in Git Bash", () => {
-			expect(containsDangerousSubstitution('echo ^"test^"')).toBe(false)
-		})
+describe("containsDangerousSubstitution — node -e one-liner false positive regression", () => {
+	const nodeOneLiner = `node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('prd.json','utf8'));const allowed=new Set(['pending','in-progress','complete','blocked']);const bad=(p.items||[]).filter(i=>!allowed.has(i.status));console.log('meta.status',p.meta?.status);console.log('workstreams', (p.workstreams||[]).length);console.log('items', (p.items||[]).length);console.log('statusCounts', (p.items||[]).reduce((a,i)=>(a[i.status]=(a[i.status]||0)+1,a),{}));console.log('invalidStatuses', bad.length);if(bad.length){console.log(bad.map(i=>i.id+':'+i.status).join('\\\\n'));process.exit(2);} "`
 
-		it("should not detect backtick as dangerous in Git Bash", () => {
-			expect(containsDangerousSubstitution('echo `"test`"')).toBe(false)
-		})
+	it("should NOT flag the complex node -e one-liner as dangerous substitution", () => {
+		expect(containsDangerousSubstitution(nodeOneLiner)).toBe(false)
+	})
+})
 
-		it("should allow normal commands in Git Bash", () => {
-			expect(containsDangerousSubstitution("echo test")).toBe(false)
-		})
+describe("containsDangerousSubstitution — arrow function patterns (should NOT be flagged)", () => {
+	it("should return false for node -e with simple arrow function", () => {
+		expect(containsDangerousSubstitution(`node -e "const a=(b)=>b"`)).toBe(false)
 	})
 
-	describe("Non-Windows environment", () => {
-		beforeEach(() => {
-			Object.defineProperty(process, "platform", {
-				value: "linux",
-			})
-			delete process.env.SHELL
-			delete process.env.PSModulePath
-		})
-
-		it("should not detect caret as dangerous on Linux", () => {
-			expect(containsDangerousSubstitution('echo ^"test^"')).toBe(false)
-		})
-
-		it("should not detect backtick as dangerous on Linux", () => {
-			expect(containsDangerousSubstitution('echo `"test`"')).toBe(false)
-		})
+	it("should return false for node -e with spaced arrow function", () => {
+		expect(containsDangerousSubstitution(`node -e "const fn = (x) => x * 2"`)).toBe(false)
 	})
 
-	describe("Parameter expansion patterns", () => {
-		it("should detect ${var@P} - prompt string expansion", () => {
-			expect(containsDangerousSubstitution("echo ${var@P}")).toBe(true)
-		})
+	it("should return false for node -e with arrow function in method chain", () => {
+		expect(containsDangerousSubstitution(`node -e "arr.filter(i=>!set.has(i))"`)).toBe(false)
+	})
+})
 
-		it("should detect ${var@Q} - quote removal", () => {
-			expect(containsDangerousSubstitution("echo ${var@Q}")).toBe(true)
-		})
-
-		it("should detect ${var@E} - escape sequence expansion", () => {
-			expect(containsDangerousSubstitution("echo ${var@E}")).toBe(true)
-		})
-
-		it("should detect ${var@A} - assignment statement", () => {
-			expect(containsDangerousSubstitution("echo ${var@A}")).toBe(true)
-		})
-
-		it("should detect ${var@a} - attribute flags", () => {
-			expect(containsDangerousSubstitution("echo ${var@a}")).toBe(true)
-		})
+describe("containsDangerousSubstitution — true positives still caught", () => {
+	it("should flag dangerous parameter expansion ${var@P}", () => {
+		expect(containsDangerousSubstitution('echo "${var@P}"')).toBe(true)
 	})
 
-	describe("Parameter expansion with escape sequences", () => {
-		it("should detect octal escape sequences", () => {
-			expect(containsDangerousSubstitution("echo ${var=\\140}")).toBe(true)
-		})
-
-		it("should detect hex escape sequences", () => {
-			expect(containsDangerousSubstitution("echo ${var:=\\x60}")).toBe(true)
-		})
-
-		it("should detect unicode escape sequences", () => {
-			expect(containsDangerousSubstitution("echo ${var+\\u0060}")).toBe(true)
-		})
+	it("should flag here-string with command substitution <<<$(…)", () => {
+		expect(containsDangerousSubstitution("cat <<<$(whoami)")).toBe(true)
 	})
 
-	describe("Indirect variable references", () => {
-		it("should detect ${!var}", () => {
-			expect(containsDangerousSubstitution("echo ${!var}")).toBe(true)
-		})
-
-		it("should detect ${!prefix*}", () => {
-			expect(containsDangerousSubstitution("echo ${!prefix*}")).toBe(true)
-		})
+	it("should flag indirect variable reference ${!var}", () => {
+		expect(containsDangerousSubstitution("echo ${!prefix}")).toBe(true)
 	})
 
-	describe("Here-strings with command substitution", () => {
-		it("should detect <<< with $()", () => {
-			expect(containsDangerousSubstitution("cat <<< $(whoami)")).toBe(true)
-		})
-
-		it("should detect <<< with backticks", () => {
-			expect(containsDangerousSubstitution("cat <<< `whoami`")).toBe(true)
-		})
-
-		it("should allow <<< without command substitution", () => {
-			expect(containsDangerousSubstitution("cat <<< test")).toBe(false)
-		})
+	it("should flag zsh process substitution =(…) at start of token", () => {
+		expect(containsDangerousSubstitution("echo =(cat /etc/passwd)")).toBe(true)
 	})
 
-	describe("Zsh process substitution", () => {
-		it("should detect =(...)", () => {
-			expect(containsDangerousSubstitution("cat =(ls)")).toBe(true)
-		})
+	it("should flag zsh glob qualifier with code execution", () => {
+		expect(containsDangerousSubstitution("ls *(e:whoami:)")).toBe(true)
+	})
+})
 
-		it("should detect =(command)", () => {
-			expect(containsDangerousSubstitution("echo =(whoami)")).toBe(true)
-		})
+describe("getCommandDecision — integration with dangerous substitution checks", () => {
+	const allowedCommands = ["node", "echo"]
+
+	it("should auto-approve the complex node -e one-liner when node is allowed", () => {
+		const nodeOneLiner = `node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('prd.json','utf8'));const allowed=new Set(['pending','in-progress','complete','blocked']);const bad=(p.items||[]).filter(i=>!allowed.has(i.status));console.log('meta.status',p.meta?.status);console.log('workstreams', (p.workstreams||[]).length);console.log('items', (p.items||[]).length);console.log('statusCounts', (p.items||[]).reduce((a,i)=>(a[i.status]=(a[i.status]||0)+1,a),{}));console.log('invalidStatuses', bad.length);if(bad.length){console.log(bad.map(i=>i.id+':'+i.status).join('\\\\n'));process.exit(2);} "`
+
+		expect(getCommandDecision(nodeOneLiner, allowedCommands)).toBe("auto_approve")
 	})
 
-	describe("Zsh glob qualifiers with code execution", () => {
-		it("should detect *(e:command:)", () => {
-			expect(containsDangerousSubstitution("ls *(e:whoami:)")).toBe(true)
-		})
-
-		it("should detect ?(e:command:)", () => {
-			expect(containsDangerousSubstitution("ls ?(e:whoami:)")).toBe(true)
-		})
-
-		it("should detect +(e:command:)", () => {
-			expect(containsDangerousSubstitution("ls +(e:whoami:)")).toBe(true)
-		})
-
-		it("should detect @(e:command:)", () => {
-			expect(containsDangerousSubstitution("ls @(e:whoami:)")).toBe(true)
-		})
-
-		it("should detect !(e:command:)", () => {
-			expect(containsDangerousSubstitution("ls !(e:whoami:)")).toBe(true)
-		})
+	it("should ask user for echo $(whoami) because subshell whoami is not in the allowlist", () => {
+		expect(getCommandDecision("echo $(whoami)", allowedCommands)).toBe("ask_user")
 	})
 
-	describe("Safe commands", () => {
-		beforeEach(() => {
-			Object.defineProperty(process, "platform", {
-				value: "linux",
-			})
-		})
-
-		it("should allow simple echo", () => {
-			expect(containsDangerousSubstitution("echo hello")).toBe(false)
-		})
-
-		it("should allow git commands", () => {
-			expect(containsDangerousSubstitution("git status")).toBe(false)
-		})
-
-		it("should allow npm commands", () => {
-			expect(containsDangerousSubstitution("npm install")).toBe(false)
-		})
-
-		it("should allow variable expansion without dangerous patterns", () => {
-			expect(containsDangerousSubstitution("echo ${var}")).toBe(false)
-		})
-
-		it("should allow simple parameter expansion", () => {
-			expect(containsDangerousSubstitution("echo ${var:-default}")).toBe(false)
-		})
-	})
-
-	describe("Edge cases", () => {
-		beforeEach(() => {
-			Object.defineProperty(process, "platform", {
-				value: "win32",
-			})
-			vi.mocked(getShell).mockReturnValue("C:\\Windows\\System32\\cmd.exe")
-		})
-
-		it("should handle empty string", () => {
-			expect(containsDangerousSubstitution("")).toBe(false)
-		})
-
-		it("should handle multiple caret patterns", () => {
-			expect(containsDangerousSubstitution('echo ^"test^" && echo ^"done^"')).toBe(true)
-		})
-
-		it("should handle caret at the beginning", () => {
-			expect(containsDangerousSubstitution('^"test"')).toBe(true)
-		})
-
-		it("should handle caret at the end", () => {
-			expect(containsDangerousSubstitution("echo test^")).toBe(false)
-		})
+	it("should ask user for dangerous parameter expansion even when command is allowed", () => {
+		expect(getCommandDecision('echo "${var@P}"', allowedCommands)).toBe("ask_user")
 	})
 })

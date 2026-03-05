@@ -1,8 +1,14 @@
-import { Anthropic } from "@anthropic-ai/sdk"
+import Anthropic from "@anthropic-ai/sdk"
+
 import { parseMentions, ParseMentionsResult, MentionContentBlock } from "./index"
-import { UrlContentFetcher } from "../../services/browser/UrlContentFetcher"
 import { FileContextTracker } from "../context-tracking/FileContextTracker"
 import { Task } from "../task/Task"
+import type { SkillLookup } from "../../services/skills/skillInvocation"
+
+// Internal aliases for the Anthropic content block subtypes used during processing.
+type TextPart = Anthropic.Messages.TextBlockParam
+type ImagePart = Anthropic.Messages.ImageBlockParam
+type ToolResultPart = Anthropic.Messages.ToolResultBlockParam
 
 export interface ProcessUserContentMentionsResult {
 	content: Anthropic.Messages.ContentBlockParam[]
@@ -10,11 +16,11 @@ export interface ProcessUserContentMentionsResult {
 }
 
 /**
- * Converts MentionContentBlocks to Anthropic text blocks.
+ * Converts MentionContentBlocks to TextPart blocks.
  * Each file/folder mention becomes a separate text block formatted
  * to look like a read_file tool result.
  */
-function contentBlocksToAnthropicBlocks(contentBlocks: MentionContentBlock[]): Anthropic.Messages.TextBlockParam[] {
+function contentBlocksToTextParts(contentBlocks: MentionContentBlock[]): TextPart[] {
 	return contentBlocks.map((block) => ({
 		type: "text" as const,
 		text: block.content,
@@ -31,34 +37,58 @@ function contentBlocksToAnthropicBlocks(contentBlocks: MentionContentBlock[]): A
 export async function processUserContentMentions({
 	userContent,
 	cwd,
-	urlContentFetcher,
 	fileContextTracker,
 	rooIgnoreController,
 	cline,
 	showRooIgnoredFiles = false,
 	includeDiagnosticMessages = true,
 	maxDiagnosticMessages = 50,
+	skillsManager,
+	currentMode = "code",
+	language,
 }: {
 	userContent: Anthropic.Messages.ContentBlockParam[]
 	cwd: string
-	urlContentFetcher: UrlContentFetcher
 	fileContextTracker: FileContextTracker
 	rooIgnoreController?: any
 	showRooIgnoredFiles?: boolean
 	cline?: Task
 	includeDiagnosticMessages?: boolean
 	maxDiagnosticMessages?: number
+	skillsManager?: SkillLookup
+	currentMode?: string
+	language?: string
 }): Promise<ProcessUserContentMentionsResult> {
 	// Track the first mode found from slash commands
 	let commandMode: string | undefined
+	const parseMentionsWithContext = (text: string) =>
+		language
+			? parseMentions(
+					text,
+					cwd,
+					fileContextTracker,
+					rooIgnoreController,
+					showRooIgnoredFiles,
+					includeDiagnosticMessages,
+					maxDiagnosticMessages,
+					skillsManager,
+					currentMode,
+					language,
+				)
+			: parseMentions(
+					text,
+					cwd,
+					fileContextTracker,
+					rooIgnoreController,
+					showRooIgnoredFiles,
+					includeDiagnosticMessages,
+					maxDiagnosticMessages,
+					skillsManager,
+					currentMode,
+				)
 
-	// Process userContent array, which contains various block types:
-	// TextBlockParam, ImageBlockParam, ToolUseBlockParam, and ToolResultBlockParam.
-	// We need to apply parseMentions() to:
-	// 1. All TextBlockParam's text (first user message)
-	// 2. ToolResultBlockParam's content/context text arrays if it contains
-	// "<user_message>" - we place all user generated content in this tag
-	// so it can effectively be used as a marker for when we should parse mentions.
+	// Process userContent array, which contains text and image parts.
+	// We need to apply parseMentions() to TextPart's text that contains "<user_message>".
 	const content = (
 		await Promise.all(
 			userContent?.map(async (block) => {
@@ -66,16 +96,7 @@ export async function processUserContentMentions({
 
 				if (block.type === "text") {
 					if (shouldProcessMentions(block.text)) {
-						const result = await parseMentions(
-							block.text,
-							cwd,
-							urlContentFetcher,
-							fileContextTracker,
-							rooIgnoreController,
-							showRooIgnoredFiles,
-							includeDiagnosticMessages,
-							maxDiagnosticMessages,
-						)
+						const result = await parseMentionsWithContext(block.text)
 						// Capture the first mode found
 						if (!commandMode && result.mode) {
 							commandMode = result.mode
@@ -85,7 +106,7 @@ export async function processUserContentMentions({
 						// 1. User's text (with @ mentions replaced by clean paths)
 						// 2. File/folder content blocks (formatted like read_file results)
 						// 3. Slash command help (if any)
-						const blocks: Anthropic.Messages.ContentBlockParam[] = [
+						const blocks: Array<TextPart | ImagePart> = [
 							{
 								...block,
 								text: result.text,
@@ -94,7 +115,7 @@ export async function processUserContentMentions({
 
 						// Add file/folder content as separate blocks
 						if (result.contentBlocks.length > 0) {
-							blocks.push(...contentBlocksToAnthropicBlocks(result.contentBlocks))
+							blocks.push(...contentBlocksToTextParts(result.contentBlocks))
 						}
 
 						if (result.slashCommandHelp) {
@@ -110,16 +131,7 @@ export async function processUserContentMentions({
 				} else if (block.type === "tool_result") {
 					if (typeof block.content === "string") {
 						if (shouldProcessMentions(block.content)) {
-							const result = await parseMentions(
-								block.content,
-								cwd,
-								urlContentFetcher,
-								fileContextTracker,
-								rooIgnoreController,
-								showRooIgnoredFiles,
-								includeDiagnosticMessages,
-								maxDiagnosticMessages,
-							)
+							const result = await parseMentionsWithContext(block.content)
 							// Capture the first mode found
 							if (!commandMode && result.mode) {
 								commandMode = result.mode
@@ -160,16 +172,7 @@ export async function processUserContentMentions({
 							await Promise.all(
 								block?.content?.map(async (contentBlock) => {
 									if (contentBlock.type === "text" && shouldProcessMentions(contentBlock.text)) {
-										const result = await parseMentions(
-											contentBlock.text,
-											cwd,
-											urlContentFetcher,
-											fileContextTracker,
-											rooIgnoreController,
-											showRooIgnoredFiles,
-											includeDiagnosticMessages,
-											maxDiagnosticMessages,
-										)
+										const result = await parseMentionsWithContext(contentBlock.text)
 										// Capture the first mode found
 										if (!commandMode && result.mode) {
 											commandMode = result.mode
@@ -211,10 +214,12 @@ export async function processUserContentMentions({
 					return block
 				}
 
+				// Legacy backward compat: tool_result / tool-result blocks from older formats
+				// are passed through unchanged (tool results are now in separate RooToolMessages).
 				return block
 			}),
 		)
 	).flat()
 
-	return { content, mode: commandMode }
+	return { content: content as Anthropic.Messages.ContentBlockParam[], mode: commandMode }
 }

@@ -1,13 +1,6 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 
-import type {
-	ClineAsk,
-	ToolProgressStatus,
-	ToolGroup,
-	ToolName,
-	BrowserActionParams,
-	GenerateImageParams,
-} from "@roo-code/types"
+import type { ClineAsk, ToolProgressStatus, ToolGroup, ToolName, GenerateImageParams } from "@roo-code/types"
 
 export type ToolResponse = string | Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam>
 
@@ -60,6 +53,15 @@ export const toolParamNames = [
 	"query",
 	"args",
 	"skill", // skill tool parameter
+	"thought", // sequential_thinking parameter
+	"thoughtNumber", // sequential_thinking parameter
+	"totalThoughts", // sequential_thinking parameter
+	"nextThoughtNeeded", // sequential_thinking parameter
+	"isRevision", // sequential_thinking parameter
+	"revisesThought", // sequential_thinking parameter
+	"branchFromThought", // sequential_thinking parameter
+	"branchId", // sequential_thinking parameter
+	"needsMoreThoughts", // sequential_thinking parameter
 	"start_line",
 	"end_line",
 	"todos",
@@ -73,7 +75,9 @@ export const toolParamNames = [
 	"file_path", // search_replace and edit_file parameter
 	"old_string", // search_replace and edit_file parameter
 	"new_string", // search_replace and edit_file parameter
+	"replace_all", // edit tool parameter for replacing all occurrences
 	"expected_replacements", // edit_file parameter for multiple occurrences
+	"timeout", // execute_command parameter
 	"artifact_id", // read_command_output parameter
 	"search", // read_command_output parameter for grep-like search
 	"offset", // read_command_output and read_file parameter
@@ -88,6 +92,8 @@ export const toolParamNames = [
 	// read_file legacy format parameter (backward compatibility)
 	"files",
 	"line_ranges",
+	// checkpoint tool parameters
+	"commit_hash",
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -100,10 +106,22 @@ export type NativeToolArgs = {
 	access_mcp_resource: { server_name: string; uri: string }
 	read_file: import("@roo-code/types").ReadFileToolParams
 	read_command_output: { artifact_id: string; search?: string; offset?: number; limit?: number }
+	sequential_thinking: {
+		thought: string
+		nextThoughtNeeded: boolean
+		thoughtNumber: number
+		totalThoughts: number
+		isRevision?: boolean
+		revisesThought?: number
+		branchFromThought?: number
+		branchId?: string
+		needsMoreThoughts?: boolean
+	}
 	attempt_completion: { result: string }
-	execute_command: { command: string; cwd?: string }
+	execute_command: { command: string; cwd?: string; timeout?: number | null }
 	apply_diff: { path: string; diff: string }
-	search_and_replace: { path: string; operations: Array<{ search: string; replace: string }> }
+	edit: { file_path: string; old_string: string; new_string: string; replace_all?: boolean }
+	search_and_replace: { file_path: string; old_string: string; new_string: string; replace_all?: boolean }
 	search_replace: { file_path: string; old_string: string; new_string: string }
 	edit_file: { file_path: string; old_string: string; new_string: string; expected_replacements?: number }
 	apply_patch: { patch: string }
@@ -122,16 +140,25 @@ export type NativeToolArgs = {
 			allow_multiple?: boolean
 		}>
 	}
-	browser_action: BrowserActionParams
+	file_outline: {
+		file_path: string
+		include_docstrings?: boolean
+	}
 	codebase_search: { query: string; path?: string }
 	generate_image: GenerateImageParams
 	run_slash_command: { command: string; args?: string }
-	skill: { skill: string; args?: string | null }
+	skill: { skill: string; args?: string }
 	search_files: { path: string; regex: string; file_pattern?: string | null }
 	switch_mode: { mode_slug: string; reason: string }
 	update_todo_list: { todos: string }
 	use_mcp_tool: { server_name: string; tool_name: string; arguments?: Record<string, unknown> }
 	write_to_file: { path: string; content: string }
+	costrict_checkpoint: {
+		action: "commit" | "list" | "show_diff" | "restore" | "revert"
+		message?: string
+		commit_hash?: string
+		files?: string[]
+	}
 	// Add more tools as they are migrated to native protocol
 }
 
@@ -185,7 +212,7 @@ export interface McpToolUse {
 export interface ExecuteCommandToolUse extends ToolUse<"execute_command"> {
 	name: "execute_command"
 	// Pick<Record<ToolParamName, string>, "command"> makes "command" required, but Partial<> makes it optional
-	params: Partial<Pick<Record<ToolParamName, string>, "command" | "cwd">>
+	params: Partial<Pick<Record<ToolParamName, string>, "command" | "cwd" | "timeout">>
 }
 
 export interface ReadFileToolUse extends ToolUse<"read_file"> {
@@ -229,11 +256,6 @@ export interface ListFilesToolUse extends ToolUse<"list_files"> {
 	params: Partial<Pick<Record<ToolParamName, string>, "path" | "recursive">>
 }
 
-export interface BrowserActionToolUse extends ToolUse<"browser_action"> {
-	name: "browser_action"
-	params: Partial<Pick<Record<ToolParamName, string>, "action" | "url" | "coordinate" | "text" | "size" | "path">>
-}
-
 export interface UseMcpToolToolUse extends ToolUse<"use_mcp_tool"> {
 	name: "use_mcp_tool"
 	params: Partial<Pick<Record<ToolParamName, string>, "server_name" | "tool_name" | "arguments">>
@@ -252,6 +274,11 @@ export interface AskFollowupQuestionToolUse extends ToolUse<"ask_followup_questi
 export interface AskMultipleChoiceToolUse extends ToolUse<"ask_multiple_choice"> {
 	name: "ask_multiple_choice"
 	params: Partial<Pick<Record<ToolParamName, string>, "title" | "questions">>
+}
+
+export interface CostrictCheckpointToolUse extends ToolUse<"costrict_checkpoint"> {
+	name: "costrict_checkpoint"
+	params: Partial<Pick<Record<ToolParamName, string>, "action" | "message" | "commit_hash" | "files">>
 }
 
 export interface AttemptCompletionToolUse extends ToolUse<"attempt_completion"> {
@@ -295,15 +322,16 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	execute_command: "run commands",
 	read_file: "read files",
 	read_command_output: "read command output",
+	sequential_thinking: "sequential thinking",
 	write_to_file: "write files",
 	apply_diff: "apply changes",
+	edit: "edit files",
 	search_and_replace: "apply changes using search and replace",
 	search_replace: "apply single search and replace",
 	edit_file: "edit files using search and replace",
 	apply_patch: "apply patches using codex format",
 	search_files: "search files",
 	list_files: "list files",
-	browser_action: "use a browser",
 	use_mcp_tool: "use mcp tools",
 	access_mcp_resource: "access mcp resources",
 	ask_followup_question: "ask questions",
@@ -318,19 +346,18 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	generate_image: "generate images",
 	custom_tool: "use custom tools",
 	fake_tool_call: "use tool calls",
+	file_outline: "file outline",
+	costrict_checkpoint: "manage costrict checkpoints",
 } as const
 
 // Define available tool groups.
 export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 	read: {
-		tools: ["ask_multiple_choice", "read_file", "search_files", "list_files", "codebase_search"],
+		tools: ["read_file", "search_files", "list_files", "codebase_search"],
 	},
 	edit: {
 		tools: ["apply_diff", "write_to_file", "generate_image"],
-		customTools: ["search_and_replace", "search_replace", "edit_file", "apply_patch"],
-	},
-	browser: {
-		tools: ["browser_action"],
+		customTools: ["edit", "search_replace", "edit_file", "apply_patch"],
 	},
 	command: {
 		tools: ["execute_command", "read_command_output"],
@@ -341,6 +368,15 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 	modes: {
 		tools: ["switch_mode", "new_task"],
 		alwaysAvailable: true,
+	},
+	question: {
+		tools: ["ask_multiple_choice"],
+	},
+	sequential_thinking: {
+		tools: ["sequential_thinking"],
+	},
+	file_outline: {
+		tools: ["file_outline"],
 	},
 }
 
@@ -354,6 +390,7 @@ export const ALWAYS_AVAILABLE_TOOLS: ToolName[] = [
 	"update_todo_list",
 	"run_slash_command",
 	"skill",
+	"costrict_checkpoint",
 ] as const
 
 /**
@@ -372,6 +409,7 @@ export const TOOL_ALIASES: Record<string, ToolName> = {
 	apply: "apply_diff",
 	search: "search_files",
 	list: "list_files",
+	search_and_replace: "edit",
 } as const
 
 export type DiffResult =

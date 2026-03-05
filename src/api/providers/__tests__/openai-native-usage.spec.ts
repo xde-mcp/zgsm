@@ -1,12 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest"
-import { TelemetryService } from "@roo-code/telemetry"
-
-// Mock the services that cause import chain issues
-vi.mock("../../../services/code-index/service-factory", () => ({}))
-vi.mock("../../../services/code-index/manager", () => ({}))
-vi.mock("../../../core/webview/ClineProvider", () => ({}))
-vi.mock("../../../core/costrict/codelens/CodeLensCallbacks", () => ({}))
-
+import { describe, it, expect, beforeEach } from "vitest"
 import { OpenAiNativeHandler } from "../openai-native"
 import { openAiNativeModels } from "@roo-code/types"
 

@@ -4,7 +4,7 @@ import DynamicTextArea from "react-textarea-autosize"
 import { ReviewTaskStatus } from "@roo/codeReview"
 import { VolumeX, Image, WandSparkles, SendHorizontal, ListEnd, Square } from "lucide-react"
 
-import type { ExtensionMessage, RouterModels } from "@roo-code/types"
+import type { ExtensionMessage, ProviderName, RouterModels } from "@roo-code/types"
 
 import { mentionRegex, mentionRegexGlobal, commandRegexGlobal, unescapeSpaces } from "@roo/context-mentions"
 import { WebviewMessage } from "@roo/WebviewMessage"
@@ -61,9 +61,6 @@ interface ChatTextAreaProps {
 	// Edit mode props
 	isEditMode?: boolean
 	onCancel?: () => void
-	// Browser session status
-	isBrowserSessionActive?: boolean
-	showBrowserDockToggle?: boolean
 	// Stop/Queue functionality
 	isStreaming?: boolean
 	onStop?: () => void
@@ -73,7 +70,7 @@ interface ChatTextAreaProps {
 export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 	(
 		{
-			inputValue,
+			inputValue = '',
 			setInputValue,
 			// selectApiConfigDisabled,
 			placeholderText,
@@ -89,8 +86,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			hoverPreviewMap,
 			isEditMode = false,
 			onCancel,
-			isBrowserSessionActive = false,
-			showBrowserDockToggle = false,
 			isStreaming = false,
 			onStop,
 			onEnqueueMessage,
@@ -119,14 +114,19 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			reviewTask,
 			automaticallyFocus,
 			ttsEnabled,
+			// lockApiConfigAcrossModes,
 		} = useExtensionState()
 		const selectedProviderModels = useMemo(() => {
 			if (!apiConfiguration?.apiProvider) return []
 
-			const models = MODELS_BY_PROVIDER[apiConfiguration.apiProvider]
+			const models = MODELS_BY_PROVIDER[apiConfiguration.apiProvider as ProviderName]
 			if (!models) return []
 
-			const filteredModels = filterModels(models, apiConfiguration.apiProvider, organizationAllowList)
+			const filteredModels = filterModels(
+				models,
+				apiConfiguration.apiProvider as ProviderName,
+				organizationAllowList,
+			)
 
 			const modelOptions = filteredModels
 				? Object.keys(filteredModels).map((modelId) => ({
@@ -574,7 +574,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					const charAfterIsWhitespace =
 						charAfterCursor === " " || charAfterCursor === "\n" || charAfterCursor === "\r\n"
 
-					// Checks if char before cusor is whitespace after a mention.
+					// Checks if char before cursor is whitespace after a mention.
 					if (
 						charBeforeIsWhitespace &&
 						// "$" is added to ensure the match occurs at the end of the string.
@@ -1029,6 +1029,11 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		// 	vscode.postMessage({ type: "loadApiConfigurationById", text: value })
 		// }, [])
 
+		// const handleToggleLockApiConfig = useCallback(() => {
+		// 	const newValue = !lockApiConfigAcrossModes
+		// 	vscode.postMessage({ type: "lockApiConfigAcrossModes", bool: newValue })
+		// }, [lockApiConfigAcrossModes])
+
 		return (
 			<div
 				className={cn(
@@ -1335,11 +1340,11 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 										<Image className="w-4 h-4" />
 									</button>
 								</StandardTooltip>
-								<div
+								{/* <div
 									className="hidden"
 									data-browser-session-active={isBrowserSessionActive}
 									data-show-browser-dock-toggle={showBrowserDockToggle}
-								/>
+								/> */}
 								{/* Queue button - shown when streaming and user has typed content */}
 								{!isEditMode && isStreaming && hasInputContent && onEnqueueMessage && (
 									<StandardTooltip content={t("chat:enqueueMessage")}>
@@ -1470,6 +1475,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							onChange={handleModeChange}
 							triggerClassName="min-w-[28px] text-ellipsis overflow-hidden flex-shrink"
 							modeShortcutText={modeShortcutText}
+							isStreaming={isStreaming}
 							isReviewing={mode === "review" && reviewTask.status === ReviewTaskStatus.RUNNING}
 							customModes={customModes}
 							customModePrompts={customModePrompts}
@@ -1484,6 +1490,8 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							listApiConfigMeta={listApiConfigMeta || []}
 							pinnedApiConfigs={pinnedApiConfigs}
 							togglePinnedApiConfig={togglePinnedApiConfig}
+							lockApiConfigAcrossModes={!!lockApiConfigAcrossModes}
+							onToggleLockApiConfig={handleToggleLockApiConfig}
 						/> */}
 						{apiConfiguration && (
 							<ProviderRenderer

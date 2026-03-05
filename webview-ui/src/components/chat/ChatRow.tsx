@@ -32,7 +32,7 @@ import { Button, StandardTooltip } from "@src/components/ui"
 import { ToolUseBlock, ToolUseBlockHeader } from "../common/ToolUseBlock"
 import UpdateTodoListToolBlock from "./UpdateTodoListToolBlock"
 import { TodoChangeDisplay } from "./TodoChangeDisplay"
-import CodeAccordian from "../common/CodeAccordian"
+import CodeAccordion from "../common/CodeAccordion"
 import MarkdownBlock from "../common/MarkdownBlock"
 import { ReasoningBlock } from "./ReasoningBlock"
 import Thumbnails from "../common/Thumbnails"
@@ -78,7 +78,7 @@ import {
 	TerminalSquare,
 	MessageCircle,
 	Repeat2,
-	TimerReset,
+	RotateCcw,
 	Split,
 	ArrowRight,
 	Check,
@@ -173,11 +173,12 @@ const ChatRow = memo(
 		)
 
 		useEffect(() => {
+			const isHeightValid = height !== 0 && height !== Infinity
 			// used for partials, command output, etc.
 			// NOTE: it's important we don't distinguish between partial or complete here since our scroll effects in chatview need to handle height change during partial -> complete
 			const isInitialRender = prevHeightRef.current === 0 // prevents scrolling when new element is added since we already scroll for that
 			// height starts off at Infinity
-			if (isLast && height !== 0 && height !== Infinity && height !== prevHeightRef.current) {
+			if (isLast && isHeightValid && height !== prevHeightRef.current) {
 				if (!isInitialRender) {
 					onHeightChange(height > prevHeightRef.current)
 				}
@@ -235,7 +236,7 @@ export const ChatRowContent = ({
 	const [editMode, setEditMode] = useState<Mode>(mode || "code")
 	const [editImages, setEditImages] = useState<string[]>([])
 	const { copyWithFeedback } = useCopyToClipboard()
-	const userEditRef = useRef<HTMLDivElement>(null)
+	// const userEditRef = useRef<HTMLDivElement>(null)
 	const collapseWithoutScrollEnabled = collapseMarkdownWithoutScroll ?? true
 	const deleteMessageTs = useMemo(
 		() => (clineMessages.findIndex((m) => m.ts === message.ts) > 1 ? message.ts : -1),
@@ -352,7 +353,7 @@ export const ChatRowContent = ({
 		return []
 	}, [message.text, message.say])
 
-	// When resuming task, last wont be api_req_failed but a resume_task
+	// When resuming task, last won't be api_req_failed but a resume_task
 	// message, so api_req_started will show loading spinner. That's why we just
 	// remove the last api_req_started that failed without streaming anything.
 	const apiRequestFailedMessage =
@@ -551,6 +552,14 @@ export const ChatRowContent = ({
 		return (tool.content ?? tool.diff) as string | undefined
 	}, [tool])
 
+	const onJumpToCreatedFile = useMemo(() => {
+		if (!tool || tool.tool !== "newFileCreated" || !tool.path) {
+			return undefined
+		}
+
+		return () => vscode.postMessage({ type: "openFile", text: "./" + tool.path })
+	}, [tool])
+
 	const followUpData = useMemo(() => {
 		if (message.type === "ask" && message.ask === "followup" && !message.partial) {
 			return safeJsonParse<FollowUpData>(message.text)
@@ -594,6 +603,14 @@ export const ChatRowContent = ({
 		switch (tool.tool as string) {
 			case "editedExistingFile":
 			case "appliedDiff":
+			case "newFileCreated":
+			case "searchAndReplace":
+			case "search_and_replace":
+			case "search_replace":
+			case "edit":
+			case "edit_file":
+			case "apply_patch":
+			case "apply_diff":
 				// Check if this is a batch diff request
 				if (message.type === "ask" && tool.batchDiffs && Array.isArray(tool.batchDiffs)) {
 					return (
@@ -619,7 +636,7 @@ export const ChatRowContent = ({
 									style={{ color: "var(--vscode-editorWarning-foreground)", marginBottom: "-1.5px" }}
 								/>
 							) : (
-								toolIcon(tool.tool === "appliedDiff" ? "diff" : "edit")
+								toolIcon("diff")
 							)}
 							{message.partial && isLast ? (
 								<span style={{ fontWeight: "bold" }}>
@@ -636,14 +653,15 @@ export const ChatRowContent = ({
 							)}
 						</div>
 						<div className="pl-6">
-							<CodeAccordian
+							<CodeAccordion
 								path={tool.path}
-								code={unifiedDiff ?? tool.content ?? tool.diff}
+								code={unifiedDiff ?? tool.content ?? tool.diff ?? ""}
 								language="diff"
 								progressStatus={message.progressStatus}
 								isLoading={message.partial && isLast}
 								isExpanded={isExpanded}
 								onToggleExpand={handleToggleExpand}
+								onJumpToFile={onJumpToCreatedFile}
 								diffStats={tool.diffStats}
 							/>
 						</div>
@@ -680,52 +698,12 @@ export const ChatRowContent = ({
 							)}
 						</div>
 						<div className="pl-6">
-							<CodeAccordian
+							<CodeAccordion
 								path={tool.path}
 								code={unifiedDiff ?? tool.diff}
 								language="diff"
 								progressStatus={message.progressStatus}
 								isLoading={message.partial && isLast}
-								isExpanded={isExpanded}
-								onToggleExpand={handleToggleExpand}
-								diffStats={tool.diffStats}
-							/>
-						</div>
-					</>
-				)
-			case "searchAndReplace":
-				return (
-					<>
-						<div style={headerStyle}>
-							{message.partial && isLast ? null : tool.isProtected ? (
-								<span
-									className="codicon codicon-lock"
-									style={{ color: "var(--vscode-editorWarning-foreground)", marginBottom: "-1.5px" }}
-								/>
-							) : (
-								toolIcon("replace")
-							)}
-							{message.partial && isLast ? (
-								<span style={{ fontWeight: "bold" }}>
-									<RandomLoadingMessage language={language as RandomLoadingMessageLanguage} />
-								</span>
-							) : (
-								<span style={{ fontWeight: "bold" }}>
-									{tool.isProtected && message.type === "ask"
-										? t("chat:fileOperations.wantsToEditProtected")
-										: message.type === "ask"
-											? t("chat:fileOperations.wantsToSearchReplace")
-											: t("chat:fileOperations.didSearchReplace")}
-								</span>
-							)}
-						</div>
-						<div className="pl-6">
-							<CodeAccordian
-								path={tool.path}
-								code={unifiedDiff ?? tool.diff}
-								language="diff"
-								progressStatus={message.progressStatus}
-								isLoading={message.partial}
 								isExpanded={isExpanded}
 								onToggleExpand={handleToggleExpand}
 								diffStats={tool.diffStats}
@@ -762,50 +740,6 @@ export const ChatRowContent = ({
 
 				return <TodoChangeDisplay previousTodos={previousTodos} newTodos={todos} />
 			}
-			case "newFileCreated":
-				return (
-					<>
-						<div style={headerStyle}>
-							{message.partial && isLast ? null : tool.isProtected ? (
-								<span
-									className="codicon codicon-lock"
-									style={{ color: "var(--vscode-editorWarning-foreground)", marginBottom: "-1.5px" }}
-								/>
-							) : (
-								toolIcon("new-file")
-							)}
-							{message.partial && isLast ? (
-								<span style={{ fontWeight: "bold" }}>
-									<RandomLoadingMessage language={language as RandomLoadingMessageLanguage} />
-								</span>
-							) : (
-								<span style={{ fontWeight: "bold" }}>
-									{tool.isProtected
-										? t("chat:fileOperations.wantsToEditProtected")
-										: t("chat:fileOperations.wantsToCreate")}
-								</span>
-							)}
-						</div>
-						<div className="pl-6">
-							<CodeAccordian
-								path={tool.path}
-								code={unifiedDiff ?? ""}
-								language="diff"
-								isLoading={message.partial}
-								isExpanded={isExpanded}
-								onToggleExpand={handleToggleExpand}
-								onJumpToFile={() =>
-									vscode.postMessage({
-										type: "openFile",
-										text: "./" + tool.path,
-										values: { line: getJumpLine(tool)[0] || 0 },
-									})
-								}
-								diffStats={tool.diffStats}
-							/>
-						</div>
-					</>
-				)
 			case "readFile":
 				// Check if this is a batch file permission request
 				const isBatchRequest = message.type === "ask" && tool.batchFiles && Array.isArray(tool.batchFiles)
@@ -961,7 +895,7 @@ export const ChatRowContent = ({
 							</span>
 						</div>
 						<div className="pl-6">
-							<CodeAccordian
+							<CodeAccordion
 								path={tool.path}
 								code={tool.content}
 								language="shell-session"
@@ -987,7 +921,7 @@ export const ChatRowContent = ({
 							</span>
 						</div>
 						<div className="pl-6">
-							<CodeAccordian
+							<CodeAccordion
 								path={tool.path}
 								code={tool.content}
 								language="shellsession"
@@ -1027,7 +961,7 @@ export const ChatRowContent = ({
 							</span>
 						</div>
 						<div className="pl-6">
-							<CodeAccordian
+							<CodeAccordion
 								path={tool.path! + (tool.filePattern ? `/(${tool.filePattern})` : "")}
 								code={tool.content}
 								language="shellsession"
@@ -1356,9 +1290,7 @@ export const ChatRowContent = ({
 						<>
 							{/* header Info */}
 							<div
-								className={`group text-sm transition-opacity ${
-									isApiRequestInProgress ? "opacity-100" : "opacity-40 hover:opacity-100"
-								}`}
+								className={`group text-sm transition-opacity`}
 								style={{
 									...headerStyle,
 									marginBottom:
@@ -1395,8 +1327,10 @@ export const ChatRowContent = ({
 												? t("common:confirmation.deleteMessageOrRollback")
 												: t("common:confirmation.deleteMessage")
 										}>
-										<TimerReset
-											className="size-5 mt-[3px] cursor-pointer"
+										<RotateCcw
+											className={`size-4 mt-[3px] cursor-pointer ${
+												isApiRequestInProgress ? "opacity-100" : "opacity-60 hover:opacity-100"
+											}`}
 											style={{
 												color: "rgba(0, 188, 255, 1)",
 											}}
@@ -1601,30 +1535,28 @@ export const ChatRowContent = ({
 					return null // we should never see this message type
 				case "text": {
 					const resultText = `${message?.text ?? ""}`
-					const loadingMessage = !resultText?.trim() && isLast && isStreaming
-
-					if (loadingMessage) {
-						return (
-							<div className="group text-sm transition-opacity opacity-100" style={headerStyle}>
-								<ProgressIndicator />
-								<span style={{ color: normalColor }}>
-									<RandomLoadingMessage language={language as RandomLoadingMessageLanguage} />
-								</span>
-							</div>
-						)
-					}
+					const loadingMessage = isLast && message.partial
 					if (!resultText?.trim()) {
-						return <div className="ml-2 pl-4 pb-1">{t("chat:emptyCompletionResult")}</div>
+						return <div className="ml-2 mb-0 pl-4 pb-1">{t("chat:emptyCompletionResult")}</div>
 					}
 					return (
 						<div className="group">
-							<div style={headerStyle}>
-								<MessageCircle className="w-4 shrink-0" aria-label="Speech bubble icon" />
-								<span style={{ fontWeight: "bold" }}>{t("chat:text.rooSaid")}</span>
-								{message.ts ? format(new Date(message.ts), "yyyy-MM-dd HH:mm:ss") : ""}
-								<div style={{ flexGrow: 1 }} />
-								<OpenMarkdownPreviewButton markdown={message.text} />
-							</div>
+							{loadingMessage ? (
+								<div className="group text-sm transition-opacity opacity-100" style={headerStyle}>
+									<ProgressIndicator />
+									<span style={{ color: normalColor }}>
+										<RandomLoadingMessage language={language as RandomLoadingMessageLanguage} />
+									</span>
+								</div>
+							) : (
+								<div style={headerStyle}>
+									<MessageCircle className="w-4 shrink-0" aria-label="Speech bubble icon" />
+									<span style={{ fontWeight: "bold" }}>{t("chat:text.rooSaid")}</span>
+									{message.ts ? format(new Date(message.ts), "yyyy-MM-dd HH:mm:ss") : ""}
+									<div style={{ flexGrow: 1 }} />
+									<OpenMarkdownPreviewButton markdown={message.text} />
+								</div>
+							)}
 							<div className="pl-6">
 								<Markdown
 									collapseWithoutScroll={collapseWithoutScrollEnabled}
@@ -1760,8 +1692,8 @@ export const ChatRowContent = ({
 				case "user_feedback_diff":
 					const tool = safeJsonParse<ClineSayTool>(message.text)
 					return (
-						<div ref={userEditRef} style={{ marginTop: -10, width: "100%" }}>
-							<CodeAccordian
+						<div style={{ marginTop: -10, width: "100%" }}>
+							<CodeAccordion
 								code={tool?.diff}
 								language="diff"
 								isFeedback={true}
@@ -1830,6 +1762,7 @@ export const ChatRowContent = ({
 										query: searchQuery,
 										flag: t("settings:experimental.CHAT_SEARCH.placeholder"),
 									})}
+									partial={message.partial}
 								/>
 							</div>
 						</div>
@@ -2044,10 +1977,6 @@ export const ChatRowContent = ({
 							<ImageBlock imageUri={imageInfo.imageUri} imagePath={imageInfo.imagePath} />
 						</div>
 					)
-				case "browser_action":
-				case "browser_action_result":
-					// Handled by BrowserSessionRow; prevent raw JSON (action/result) from rendering here
-					return null
 				case "too_many_tools_warning": {
 					const warningData = safeJsonParse<{
 						toolCount: number
@@ -2202,6 +2131,7 @@ export const ChatRowContent = ({
 								</div>
 								<div style={{ color: "var(--vscode-charts-green)", paddingTop: 10 }}>
 									<Markdown
+										collapseWithoutScroll={collapseWithoutScrollEnabled}
 										markdown={HighlightedPlainText({
 											message: message || {},
 											query: searchQuery,

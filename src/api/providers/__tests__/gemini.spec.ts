@@ -10,30 +10,6 @@ vitest.mock("@roo-code/telemetry", () => ({
 	},
 }))
 
-// Mock the AI SDK functions
-const mockStreamText = vitest.fn()
-const mockGenerateText = vitest.fn()
-
-vitest.mock("ai", async (importOriginal) => {
-	const original = await importOriginal<typeof import("ai")>()
-	return {
-		...original,
-		streamText: (...args: unknown[]) => mockStreamText(...args),
-		generateText: (...args: unknown[]) => mockGenerateText(...args),
-	}
-})
-
-// Mock createGoogleGenerativeAI to capture constructor options
-const mockCreateGoogleGenerativeAI = vitest.fn().mockReturnValue(() => ({}))
-
-vitest.mock("@ai-sdk/google", async (importOriginal) => {
-	const original = await importOriginal<typeof import("@ai-sdk/google")>()
-	return {
-		...original,
-		createGoogleGenerativeAI: (...args: unknown[]) => mockCreateGoogleGenerativeAI(...args),
-	}
-})
-
 import { Anthropic } from "@anthropic-ai/sdk"
 
 import { type ModelInfo, geminiDefaultModelId, ApiProviderError } from "@roo-code/types"
@@ -49,53 +25,32 @@ describe("GeminiHandler", () => {
 	beforeEach(() => {
 		// Reset mocks
 		mockCaptureException.mockClear()
-		mockStreamText.mockClear()
-		mockGenerateText.mockClear()
-		mockCreateGoogleGenerativeAI.mockClear()
-		mockCreateGoogleGenerativeAI.mockReturnValue(() => ({}))
+
+		// Create mock functions
+		const mockGenerateContentStream = vitest.fn()
+		const mockGenerateContent = vitest.fn()
+		const mockGetGenerativeModel = vitest.fn()
 
 		handler = new GeminiHandler({
 			apiKey: "test-key",
 			apiModelId: GEMINI_MODEL_NAME,
 			geminiApiKey: "test-key",
 		})
+
+		// Replace the client with our mock
+		handler["client"] = {
+			models: {
+				generateContentStream: mockGenerateContentStream,
+				generateContent: mockGenerateContent,
+				getGenerativeModel: mockGetGenerativeModel,
+			},
+		} as any
 	})
 
 	describe("constructor", () => {
 		it("should initialize with provided config", () => {
 			expect(handler["options"].geminiApiKey).toBe("test-key")
 			expect(handler["options"].apiModelId).toBe(GEMINI_MODEL_NAME)
-		})
-
-		it("should pass undefined baseURL when googleGeminiBaseUrl is empty string", () => {
-			mockCreateGoogleGenerativeAI.mockClear()
-			new GeminiHandler({
-				apiModelId: GEMINI_MODEL_NAME,
-				geminiApiKey: "test-key",
-				googleGeminiBaseUrl: "",
-			})
-			expect(mockCreateGoogleGenerativeAI).toHaveBeenCalledWith(expect.objectContaining({ baseURL: undefined }))
-		})
-
-		it("should pass undefined baseURL when googleGeminiBaseUrl is not provided", () => {
-			mockCreateGoogleGenerativeAI.mockClear()
-			new GeminiHandler({
-				apiModelId: GEMINI_MODEL_NAME,
-				geminiApiKey: "test-key",
-			})
-			expect(mockCreateGoogleGenerativeAI).toHaveBeenCalledWith(expect.objectContaining({ baseURL: undefined }))
-		})
-
-		it("should pass custom baseURL when googleGeminiBaseUrl is a valid URL", () => {
-			mockCreateGoogleGenerativeAI.mockClear()
-			new GeminiHandler({
-				apiModelId: GEMINI_MODEL_NAME,
-				geminiApiKey: "test-key",
-				googleGeminiBaseUrl: "https://custom-gemini.example.com/v1beta",
-			})
-			expect(mockCreateGoogleGenerativeAI).toHaveBeenCalledWith(
-				expect.objectContaining({ baseURL: "https://custom-gemini.example.com/v1beta" }),
-			)
 		})
 	})
 
@@ -114,17 +69,13 @@ describe("GeminiHandler", () => {
 		const systemPrompt = "You are a helpful assistant"
 
 		it("should handle text messages correctly", async () => {
-			// Setup the mock implementation to return an async generator for fullStream
-			// AI SDK text-delta events have a 'text' property (processAiSdkStreamPart casts to this)
-			const mockFullStream = (async function* () {
-				yield { type: "text-delta", text: "Hello" }
-				yield { type: "text-delta", text: " world!" }
-			})()
-
-			mockStreamText.mockReturnValue({
-				fullStream: mockFullStream,
-				usage: Promise.resolve({ inputTokens: 10, outputTokens: 5 }),
-				providerMetadata: Promise.resolve({}),
+			// Setup the mock implementation to return an async generator
+			;(handler["client"].models.generateContentStream as any).mockResolvedValue({
+				[Symbol.asyncIterator]: async function* () {
+					yield { text: "Hello" }
+					yield { text: " world!" }
+					yield { usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5 } }
+				},
 			})
 
 			const stream = handler.createMessage(systemPrompt, mockMessages)
@@ -140,27 +91,21 @@ describe("GeminiHandler", () => {
 			expect(chunks[1]).toEqual({ type: "text", text: " world!" })
 			expect(chunks[2]).toMatchObject({ type: "usage", inputTokens: 10, outputTokens: 5 })
 
-			// Verify the call to streamText
-			expect(mockStreamText).toHaveBeenCalledWith(
+			// Verify the call to generateContentStream
+			expect(handler["client"].models.generateContentStream).toHaveBeenCalledWith(
 				expect.objectContaining({
-					system: systemPrompt,
-					temperature: 1,
+					model: GEMINI_MODEL_NAME,
+					config: expect.objectContaining({
+						temperature: 1,
+						systemInstruction: systemPrompt,
+					}),
 				}),
 			)
 		})
 
 		it("should handle API errors", async () => {
 			const mockError = new Error("Gemini API error")
-			// eslint-disable-next-line require-yield
-			const mockFullStream = (async function* () {
-				throw mockError
-			})()
-
-			mockStreamText.mockReturnValue({
-				fullStream: mockFullStream,
-				usage: Promise.resolve({}),
-				providerMetadata: Promise.resolve({}),
-			})
+			;(handler["client"].models.generateContentStream as any).mockRejectedValue(mockError)
 
 			const stream = handler.createMessage(systemPrompt, mockMessages)
 
@@ -174,26 +119,28 @@ describe("GeminiHandler", () => {
 
 	describe("completePrompt", () => {
 		it("should complete prompt successfully", async () => {
-			mockGenerateText.mockResolvedValue({
+			// Mock the response with text property
+			;(handler["client"].models.generateContent as any).mockResolvedValue({
 				text: "Test response",
-				providerMetadata: {},
 			})
 
 			const result = await handler.completePrompt("Test prompt")
 			expect(result).toBe("Test response")
 
-			// Verify the call to generateText
-			expect(mockGenerateText).toHaveBeenCalledWith(
-				expect.objectContaining({
-					prompt: "Test prompt",
+			// Verify the call to generateContent
+			expect(handler["client"].models.generateContent).toHaveBeenCalledWith({
+				model: GEMINI_MODEL_NAME,
+				contents: [{ role: "user", parts: [{ text: "Test prompt" }] }],
+				config: {
+					httpOptions: undefined,
 					temperature: 1,
-				}),
-			)
+				},
+			})
 		})
 
 		it("should handle API errors", async () => {
 			const mockError = new Error("Gemini API error")
-			mockGenerateText.mockRejectedValue(mockError)
+			;(handler["client"].models.generateContent as any).mockRejectedValue(mockError)
 
 			await expect(handler.completePrompt("Test prompt")).rejects.toThrow(
 				t("common:errors.gemini.generate_complete_prompt", { error: "Gemini API error" }),
@@ -201,9 +148,9 @@ describe("GeminiHandler", () => {
 		})
 
 		it("should handle empty response", async () => {
-			mockGenerateText.mockResolvedValue({
+			// Mock the response with empty text
+			;(handler["client"].models.generateContent as any).mockResolvedValue({
 				text: "",
-				providerMetadata: {},
 			})
 
 			const result = await handler.completePrompt("Test prompt")
@@ -225,6 +172,20 @@ describe("GeminiHandler", () => {
 			})
 			const modelInfo = invalidHandler.getModel()
 			expect(modelInfo.id).toBe(geminiDefaultModelId) // Default model
+		})
+
+		it("should exclude apply_diff and include edit in tool preferences", () => {
+			const modelInfo = handler.getModel()
+			expect(modelInfo.info.excludedTools).toContain("apply_diff")
+			expect(modelInfo.info.includedTools).toContain("edit")
+		})
+
+		it("should not duplicate tool entries if already present", () => {
+			const modelInfo = handler.getModel()
+			const excludedCount = modelInfo.info.excludedTools!.filter((t: string) => t === "apply_diff").length
+			const includedCount = modelInfo.info.includedTools!.filter((t: string) => t === "edit").length
+			expect(excludedCount).toBe(1)
+			expect(includedCount).toBe(1)
 		})
 	})
 
@@ -308,16 +269,7 @@ describe("GeminiHandler", () => {
 
 		it("should capture telemetry on createMessage error", async () => {
 			const mockError = new Error("Gemini API error")
-			// eslint-disable-next-line require-yield
-			const mockFullStream = (async function* () {
-				throw mockError
-			})()
-
-			mockStreamText.mockReturnValue({
-				fullStream: mockFullStream,
-				usage: Promise.resolve({}),
-				providerMetadata: Promise.resolve({}),
-			})
+			;(handler["client"].models.generateContentStream as any).mockRejectedValue(mockError)
 
 			const stream = handler.createMessage(systemPrompt, mockMessages)
 
@@ -345,7 +297,7 @@ describe("GeminiHandler", () => {
 
 		it("should capture telemetry on completePrompt error", async () => {
 			const mockError = new Error("Gemini completion error")
-			mockGenerateText.mockRejectedValue(mockError)
+			;(handler["client"].models.generateContent as any).mockRejectedValue(mockError)
 
 			await expect(handler.completePrompt("Test prompt")).rejects.toThrow()
 
@@ -367,16 +319,7 @@ describe("GeminiHandler", () => {
 
 		it("should still throw the error after capturing telemetry", async () => {
 			const mockError = new Error("Gemini API error")
-			// eslint-disable-next-line require-yield
-			const mockFullStream = (async function* () {
-				throw mockError
-			})()
-
-			mockStreamText.mockReturnValue({
-				fullStream: mockFullStream,
-				usage: Promise.resolve({}),
-				providerMetadata: Promise.resolve({}),
-			})
+			;(handler["client"].models.generateContentStream as any).mockRejectedValue(mockError)
 
 			const stream = handler.createMessage(systemPrompt, mockMessages)
 

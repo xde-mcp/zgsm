@@ -133,7 +133,7 @@ export const Markdown = memo(
 					}>
 					<MarkdownBlock markdown={markdown} />
 				</div>
-				{collapseWithoutScroll && showExpandButton && !isExpanded && !partial && (
+				{collapseWithoutScroll && showExpandButton && !isExpanded && (
 					<div
 						style={{
 							position: "absolute",

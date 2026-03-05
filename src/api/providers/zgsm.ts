@@ -682,10 +682,11 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 					const now = Date.now()
 					// Process in batch when threshold is reached or buffer is too large
 					const shouldFlush =
-						time + this.apiResponseRenderModeInfo.interval <= now ||
+						now - time >= this.apiResponseRenderModeInfo.interval ||
 						contentBuffer.length >= this.apiResponseRenderModeInfo.limit || // Prevent buffer from growing too large
 						this.abortController?.signal.aborted // Flush immediately on abort signal
 
+					time = now
 					if (shouldFlush) {
 						const chunks = flushBuffer()
 						for (const processedChunk of chunks) {
@@ -698,7 +699,6 @@ export class ZgsmAiHandler extends BaseProvider implements SingleCompletionHandl
 								)
 							yield processedChunk
 						}
-						time = now
 					}
 				}
 

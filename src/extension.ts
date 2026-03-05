@@ -20,7 +20,9 @@ if (fs.existsSync(envPath)) {
 
 // import type { CloudUserInfo, AuthState } from "@roo-code/types"
 // import { CloudService, BridgeOrchestrator } from "@roo-code/cloud"
-import { TelemetryService, PostHogTelemetryClient } from "@roo-code/telemetry"
+// import type { CloudUserInfo, AuthState } from "@roo-code/types"
+// import { CloudService } from "@roo-code/cloud"
+import { TelemetryService /* PostHogTelemetryClient */ } from "@roo-code/telemetry"
 import { customToolRegistry } from "@roo-code/core"
 
 import "./utils/path" // Necessary to have access to String.prototype.toPosix.
@@ -210,8 +212,8 @@ export async function activate(context: vscode.ExtensionContext) {
 	// Initialize the provider *before* the CoStrict Cloud service.
 	const provider = new ClineProvider(context, outputChannel, "sidebar", contextProxy, mdmService)
 
-	// // Initialize CoStrict Cloud service.
-	// const postStateListener = () => ClineProvider.getVisibleInstance()?.postStateToWebview()
+	// // Initialize Roo Code Cloud service.
+	// const postStateListener = () => ClineProvider.getVisibleInstance()?.postStateToWebviewWithoutClineMessages()
 
 	// authStateChangedHandler = async (data: { state: AuthState; previousState: AuthState }) => {
 	// 	postStateListener()
@@ -497,14 +499,6 @@ export async function deactivate() {
 	// 		)
 	// 	}
 	// }
-
-	// const bridge = BridgeOrchestrator.getInstance()
-
-	// if (bridge) {
-	// 	await bridge.disconnect()
-	// }
-
-	// Deactivate coworkflow integration
 	deactivateCoworkflowIntegration()
 
 	await McpServerManager.cleanup(extensionContext)

@@ -11,7 +11,6 @@ import React, {
 } from "react"
 import {
 	CheckCheck,
-	SquareMousePointer,
 	GitBranch,
 	Bell,
 	Database,
@@ -71,7 +70,6 @@ import { SectionHeader } from "./SectionHeader"
 // import ApiConfigManager from "./ApiConfigManager"
 import ApiOptions from "./ApiOptions"
 import { AutoApproveSettings } from "./AutoApproveSettings"
-import { BrowserSettings } from "./BrowserSettings"
 import { CheckpointSettings } from "./CheckpointSettings"
 import { NotificationSettings } from "./NotificationSettings"
 import { ContextManagementSettings } from "./ContextManagementSettings"
@@ -108,7 +106,6 @@ export const sectionNames = [
 	"autoApprove",
 	"slashCommands",
 	"skills",
-	"browser",
 	"checkpoints",
 	"notifications",
 	"contextManagement",
@@ -165,7 +162,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		allowedMaxRequests,
 		allowedMaxCost,
 		language,
-		alwaysAllowBrowser,
 		alwaysAllowExecute,
 		alwaysAllowMcp,
 		alwaysAllowModeSwitch,
@@ -175,8 +171,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		alwaysAllowWriteProtected,
 		autoCondenseContext,
 		autoCondenseContextPercent,
-		browserToolEnabled,
-		browserViewportSize,
 		enableCheckpoints,
 		useZgsmCustomConfig,
 		zgsmCodebaseIndexEnabled,
@@ -185,8 +179,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		maxOpenTabsContext,
 		maxWorkspaceFiles,
 		mcpEnabled,
-		remoteBrowserHost,
-		screenshotQuality,
 		soundEnabled,
 		ttsEnabled,
 		ttsSpeed,
@@ -204,7 +196,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		writeDelayMs,
 		showRooIgnoredFiles,
 		enableSubfolderRules,
-		remoteBrowserEnabled,
 		maxImageFileSize,
 		maxTotalImageSize,
 		customSupportPrompts,
@@ -272,9 +263,19 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 
 				const previousValue = prevState.apiConfiguration?.[field]
 
+				// Helper to check if two values are semantically equal
+				const areValuesEqual = (a: any, b: any): boolean => {
+					if (a === b) return true
+					if (a == null && b == null) return true
+					if (typeof a !== typeof b) return false
+					if (typeof a === "object" && typeof b === "object") {
+						return JSON.stringify(a) === JSON.stringify(b)
+					}
+					return false
+				}
+
 				// Only skip change detection for automatic initialization (not user actions)
 				// This prevents the dirty state when the component initializes and auto-syncs values
-				// Treat undefined, null, and empty string as uninitialized states
 				const isInitialSync =
 					!isUserAction &&
 					(previousValue === undefined || previousValue === "" || previousValue === null) &&
@@ -282,7 +283,10 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					value !== "" &&
 					value !== null
 
-				if (!isInitialSync) {
+				// Also skip if it's an automatic sync with semantically equal values
+				const isAutomaticNoOpSync = !isUserAction && areValuesEqual(previousValue, value)
+
+				if (!isInitialSync && !isAutomaticNoOpSync) {
 					setChangeDetected(true)
 				}
 				return { ...prevState, apiConfiguration: { ...prevState.apiConfiguration, [field]: value } }
@@ -398,7 +402,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					alwaysAllowWriteOutsideWorkspace: alwaysAllowWriteOutsideWorkspace ?? undefined,
 					alwaysAllowWriteProtected: alwaysAllowWriteProtected ?? undefined,
 					alwaysAllowExecute: alwaysAllowExecute ?? undefined,
-					alwaysAllowBrowser: alwaysAllowBrowser ?? undefined,
 					alwaysAllowMcp,
 					alwaysAllowModeSwitch,
 					allowedCommands: allowedCommands ?? [],
@@ -410,18 +413,13 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					allowedMaxCost: allowedMaxCost ?? null,
 					autoCondenseContext,
 					autoCondenseContextPercent,
-					browserToolEnabled: browserToolEnabled ?? true,
 					soundEnabled: soundEnabled ?? true,
 					soundVolume: soundVolume ?? 0.5,
 					ttsEnabled,
 					ttsSpeed,
 					enableCheckpoints: enableCheckpoints ?? false,
 					checkpointTimeout: checkpointTimeout ?? DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
-					browserViewportSize: browserViewportSize ?? "900x600",
-					remoteBrowserHost: remoteBrowserEnabled ? remoteBrowserHost : undefined,
-					remoteBrowserEnabled: remoteBrowserEnabled ?? false,
 					writeDelayMs,
-					screenshotQuality: screenshotQuality ?? 75,
 					terminalShellIntegrationTimeout: terminalShellIntegrationTimeout ?? 30_000,
 					terminalShellIntegrationDisabled,
 					terminalCommandDelay,
@@ -578,9 +576,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			{ id: "autoApprove", icon: CheckCheck },
 			{ id: "mcp", icon: Server },
 			{ id: "worktrees", icon: GitBranch },
-			{ id: "contextManagement", icon: Database },
 			{ id: "checkpoints", icon: GitCommitVertical },
-			{ id: "browser", icon: SquareMousePointer },
+			{ id: "contextManagement", icon: Database },
 			{ id: "terminal", icon: SquareTerminal },
 			{ id: "prompts", icon: MessageSquare },
 			{ id: "experimental", icon: FlaskConical },
@@ -687,9 +684,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 						element.scrollIntoView({ behavior: "smooth", block: "center" })
 
 						// Add highlight animation
-						element?.classList?.add("settings-highlight")
+						element?.classList?.add?.("settings-highlight")
 						setTimeout(() => {
-							element?.classList?.remove("settings-highlight")
+							element?.classList?.remove?.("settings-highlight")
 						}, 1500)
 					}
 				}, 100) // Small delay to ensure tab content is rendered
@@ -859,7 +856,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 								alwaysAllowWrite={alwaysAllowWrite}
 								alwaysAllowWriteOutsideWorkspace={alwaysAllowWriteOutsideWorkspace}
 								alwaysAllowWriteProtected={alwaysAllowWriteProtected}
-								alwaysAllowBrowser={alwaysAllowBrowser}
 								alwaysAllowMcp={alwaysAllowMcp}
 								alwaysAllowModeSwitch={alwaysAllowModeSwitch}
 								alwaysAllowSubtasks={alwaysAllowSubtasks}
@@ -879,18 +875,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 
 						{/* Skills Section */}
 						{renderTab === "skills" && <SkillsSettings />}
-
-						{/* Browser Section */}
-						{renderTab === "browser" && (
-							<BrowserSettings
-								browserToolEnabled={browserToolEnabled}
-								browserViewportSize={browserViewportSize}
-								screenshotQuality={screenshotQuality}
-								remoteBrowserHost={remoteBrowserHost}
-								remoteBrowserEnabled={remoteBrowserEnabled}
-								setCachedStateField={setCachedStateField}
-							/>
-						)}
 
 						{/* Checkpoints Section */}
 						{renderTab === "checkpoints" && (
