@@ -113,9 +113,9 @@ export const languages = {
 }
 
 export const extensions = {
-  getExtension: () => ({
-    extensionUri: mockUri.file("/home/test"),
-  }),
+	getExtension: () => ({
+		extensionUri: mockUri.file("/home/test"),
+	}),
 }
 
 export const env = {

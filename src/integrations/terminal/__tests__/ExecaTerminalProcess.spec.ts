@@ -8,7 +8,7 @@ const mockPid = 12345
 // Mocks must be declared before any imports
 vitest.mock("execa", () => {
 	const mockKill = vitest.fn()
-	
+
 	// Create a mock function that can be tracked by vitest
 	const mockExeca = vitest.fn((options: any) => {
 		;(global as any).__capturedExecaOptions = options

@@ -70,7 +70,7 @@ interface ChatTextAreaProps {
 export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 	(
 		{
-			inputValue = '',
+			inputValue = "",
 			setInputValue,
 			// selectApiConfigDisabled,
 			placeholderText,
