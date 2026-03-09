@@ -236,7 +236,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		ttsSpeed: 1.0,
 		enableCheckpoints: true,
 		useZgsmCustomConfig: false,
-		zgsmCodebaseIndexEnabled: true,
+		zgsmCodebaseIndexEnabled: false,
 		zgsmCodeMode: "vibe",
 		checkpointTimeout: DEFAULT_CHECKPOINT_TIMEOUT_SECONDS, // Default to 15 seconds
 		language: (window as any).defaultLanguage || "en", // Default language code
@@ -301,7 +301,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		maxDiagnosticMessages: 50,
 		openRouterImageApiKey: "",
 		openRouterImageGenerationSelectedModel: "",
-		includeCurrentTime: true,
+		includeCurrentTime: false,
 		includeCurrentCost: true,
 		lockApiConfigAcrossModes: false,
 	})
@@ -332,7 +332,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 	const [skills, setSkills] = useState<SkillMetadata[]>([])
 	const [includeTaskHistoryInEnhance, setIncludeTaskHistoryInEnhance] = useState(true)
 	// const [prevCloudIsAuthenticated, setPrevCloudIsAuthenticated] = useState(false)
-	const [includeCurrentTime, setIncludeCurrentTime] = useState(true)
+	const [includeCurrentTime, setIncludeCurrentTime] = useState(false)
 	const [includeCurrentCost, setIncludeCurrentCost] = useState(true)
 	const [notices, setNotices] = useState<
 		Array<{ title: string; type: "always" | "once"; content: string; timestamp: number; expired: number }>

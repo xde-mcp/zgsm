@@ -445,7 +445,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					automaticallyFocus: automaticallyFocus ?? false,
 					collapseMarkdownWithoutScroll: collapseMarkdownWithoutScroll ?? true,
 					enterBehavior: enterBehavior ?? "send",
-					includeCurrentTime: includeCurrentTime ?? true,
+					includeCurrentTime: includeCurrentTime ?? false,
 					includeCurrentCost: includeCurrentCost ?? true,
 					maxGitStatusFiles: maxGitStatusFiles ?? 0,
 					profileThresholds,
@@ -456,7 +456,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					experimentSettings,
 					customSupportPrompts,
 					useZgsmCustomConfig: useZgsmCustomConfig ?? false,
-					zgsmCodebaseIndexEnabled: zgsmCodebaseIndexEnabled ?? true,
+					zgsmCodebaseIndexEnabled: zgsmCodebaseIndexEnabled ?? false,
 					autoCleanup,
 					debug,
 				},
@@ -903,7 +903,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 								maxWorkspaceFiles={maxWorkspaceFiles ?? 300}
 								showRooIgnoredFiles={showRooIgnoredFiles}
 								enableSubfolderRules={enableSubfolderRules}
-								zgsmCodebaseIndexEnabled={zgsmCodebaseIndexEnabled ?? true}
+								zgsmCodebaseIndexEnabled={zgsmCodebaseIndexEnabled ?? false}
 								maxImageFileSize={maxImageFileSize}
 								maxTotalImageSize={maxTotalImageSize}
 								profileThresholds={profileThresholds}
