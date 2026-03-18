@@ -261,8 +261,8 @@ export class CodeReviewService {
 		const boundTaskInstanceIds = new Set<string>()
 		const listenerDisposers: Array<() => void> = []
 
-		// Set timeout based on mode: 1 hour for security-review, 15 minutes for others
-		const timeoutMs = taskMode === "security-review" ? 60 * 60 * 1000 : 15 * 60 * 1000
+		// Set timeout based on mode: 3 hours for security-review, 15 minutes for others
+		const timeoutMs = taskMode === "security-review" ? 180 * 60 * 1000 : 15 * 60 * 1000
 		const timeoutId = setTimeout(() => {
 			void handleTaskFailure(new Error(t("common:review.tip.task_timeout")))
 		}, timeoutMs)
@@ -486,7 +486,7 @@ export class CodeReviewService {
 				clearAbortHandlingTimeout()
 				abortHandlingTimeout = setTimeout(() => {
 					void handleTaskFailure(new Error(t("common:review.tip.task_cancelled")))
-				}, 300)
+				}, 60_000)
 			}
 
 			taskInstance.on(RooCodeEventName.Message, onMessage as any)
