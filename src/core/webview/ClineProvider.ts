@@ -118,6 +118,7 @@ import { ZgsmAuthCommands, ZgsmAuthConfig } from "../costrict/auth"
 import { generateNewSessionClientId, getClientId } from "../../utils/getClientId"
 import { defaultCodebaseIndexEnabled } from "../../services/code-index/constants"
 import { CodeReviewService, ReviewTargetType } from "../costrict/code-review"
+import { getTerminalManager } from "../cli-wrap"
 import { defaultLang } from "../../utils/language"
 import ZgsmCodebaseIndexManager from "../costrict/codebase-index"
 import { sendZgsmCloseWindow } from "../costrict/auth/ipc"
@@ -172,6 +173,12 @@ export class ClineProvider
 	private taskEventListeners: WeakMap<Task, Array<() => void>> = new WeakMap()
 	private currentWorkspacePath: string | undefined
 	private _disposed = false
+	/**
+	 * Tracks which tab is currently active in the Webview.
+	 * When "cs-cli" is active, postStateToWebview calls are suppressed to save resources.
+	 * A fresh state push is triggered when leaving the cs-cli tab.
+	 */
+	private _activeTab: string = "chat"
 
 	private recentTasksCache?: string[]
 	public readonly taskHistoryStore: TaskHistoryStore
@@ -861,6 +868,28 @@ export class ClineProvider
 			return
 		}
 
+		// When the CLI tab is active, forward context directly to the CLI terminal
+		if (visibleProvider.activeTab === "cs-cli") {
+			const { customSupportPrompts } = await visibleProvider.getState()
+			const prompt = supportPrompt.create(promptType as SupportPromptType, params, customSupportPrompts)
+			const terminalManager = getTerminalManager()
+			if (terminalManager.running) {
+				// Use bracketed paste mode so the Ink-based CLI receives the entire
+				// prompt as a single paste event rather than interpreting newlines
+				// as individual Enter keypresses.  Only paste, do not auto-submit.
+				const PASTE_START = "\x1b[200~"
+				const PASTE_END = "\x1b[201~"
+				await terminalManager.write(PASTE_START + prompt + PASTE_END)
+				// Ensure the webview switches to the CLI tab so the user sees the result
+				await visibleProvider.postMessageToWebview({
+					type: "action",
+					action: "switchTab",
+					tab: "cs-cli",
+				})
+				return
+			}
+		}
+
 		const { customSupportPrompts } = await visibleProvider.getState()
 		if (promptType === "ZGSM_CODE_REVIEW") {
 			const reviewInstance = CodeReviewService.getInstance()
@@ -921,6 +950,27 @@ export class ClineProvider
 
 		if (!visibleProvider) {
 			return
+		}
+
+		// When the CLI tab is active, forward context directly to the CLI terminal
+		if (visibleProvider.activeTab === "cs-cli") {
+			const { customSupportPrompts } = await visibleProvider.getState()
+			const prompt = supportPrompt.create(promptType, params, customSupportPrompts)
+			const terminalManager = getTerminalManager()
+			if (terminalManager.running) {
+				// Use bracketed paste mode so the Ink-based CLI receives the entire
+				// prompt as a single paste event rather than interpreting newlines
+				// as individual Enter keypresses.  Only paste, do not auto-submit.
+				const PASTE_START = "\x1b[200~"
+				const PASTE_END = "\x1b[201~"
+				await terminalManager.write(PASTE_START + prompt + PASTE_END)
+				await visibleProvider.postMessageToWebview({
+					type: "action",
+					action: "switchTab",
+					tab: "cs-cli",
+				})
+				return
+			}
 		}
 
 		const { customSupportPrompts } = await visibleProvider.getState()
@@ -2261,7 +2311,34 @@ export class ClineProvider
 		await this.postStateToWebview()
 	}
 
+	/**
+	 * Called by the webview message handler when the user switches tabs.
+	 * When the active tab is "cs-cli", state pushes are suppressed to conserve resources.
+	 * When the user leaves "cs-cli", a fresh state is pushed immediately so the chat UI
+	 * is fully up-to-date when it becomes visible again.
+	 */
+	public setActiveTab(tab: string): void {
+		const wasHibernating = this._activeTab === "cs-cli"
+		this._activeTab = tab
+		const isHibernating = tab === "cs-cli"
+
+		if (wasHibernating && !isHibernating) {
+			// Waking up from cs-cli: push a fresh state so the chat UI is up-to-date
+			this.postStateToWebview().catch((err) => {
+				this.log(`Failed to post state on wake from cs-cli tab: ${err}`, "error")
+			})
+		}
+	}
+
+	public get activeTab(): string {
+		return this._activeTab
+	}
+
 	async postStateToWebview() {
+		// Suppress state pushes while the cs-cli tab is active to save resources
+		if (this._activeTab === "cs-cli") {
+			return
+		}
 		const state = await this.getStateToPostToWebview()
 		this.clineMessagesSeq++
 		state.clineMessagesSeq = this.clineMessagesSeq
@@ -2283,6 +2360,10 @@ export class ClineProvider
 	 *   `taskHistoryUpdated` / `taskHistoryItemUpdated`.
 	 */
 	async postStateToWebviewWithoutTaskHistory(): Promise<void> {
+		// Suppress state pushes while the cs-cli tab is active to save resources
+		if (this._activeTab === "cs-cli") {
+			return
+		}
 		const state = await this.getStateToPostToWebview()
 		this.clineMessagesSeq++
 		state.clineMessagesSeq = this.clineMessagesSeq
@@ -2307,6 +2388,10 @@ export class ClineProvider
 	 *   (cloud auth, org settings, profiles, etc.) without interfering with task message streaming.
 	 */
 	async postStateToWebviewWithoutClineMessages(): Promise<void> {
+		// Suppress state pushes while the cs-cli tab is active to save resources
+		if (this._activeTab === "cs-cli") {
+			return
+		}
 		const state = await this.getStateToPostToWebview()
 		const { clineMessages: _omitMessages, taskHistory: _omitHistory, ...rest } = state
 		this.postMessageToWebview({ type: "state", state: rest })
