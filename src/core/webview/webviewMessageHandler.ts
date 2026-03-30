@@ -856,7 +856,7 @@ export const webviewMessageHandler = async (
 							: []
 
 						await vscode.workspace
-							.getConfiguration(Package.name)
+							.getConfiguration(Package.commandIDPrefix)
 							.update("allowedCommands", newValue, vscode.ConfigurationTarget.Global)
 					} else if (key === "deniedCommands") {
 						const commands = value ?? []
@@ -866,7 +866,7 @@ export const webviewMessageHandler = async (
 							: []
 
 						await vscode.workspace
-							.getConfiguration(Package.name)
+							.getConfiguration(Package.commandIDPrefix)
 							.update("deniedCommands", newValue, vscode.ConfigurationTarget.Global)
 					} else if (key === "ttsEnabled") {
 						newValue = value ?? true
@@ -1144,7 +1144,7 @@ export const webviewMessageHandler = async (
 			} as GetModelsOptions
 
 			if (opt.provider === "costrict") {
-				opt.baseUrl = apiConfiguration?.costrictBaseUrl
+				opt.baseUrl = apiConfiguration?.costrictBaseUrl || CostrictAuthConfig.getInstance().getDefaultApiBaseUrl()
 				opt.apiKey = apiConfiguration?.costrictAccessToken
 				opt.openAiHeaders = apiConfiguration?.openAiHeaders
 			}
@@ -1557,7 +1557,7 @@ export const webviewMessageHandler = async (
 
 			// Also update workspace settings.
 			await vscode.workspace
-				.getConfiguration(Package.name)
+				.getConfiguration(Package.commandIDPrefix)
 				.update("allowedCommands", validCommands, vscode.ConfigurationTarget.Global)
 
 			break
@@ -1573,7 +1573,7 @@ export const webviewMessageHandler = async (
 
 			// Also update workspace settings.
 			await vscode.workspace
-				.getConfiguration(Package.name)
+				.getConfiguration(Package.commandIDPrefix)
 				.update("deniedCommands", validCommands, vscode.ConfigurationTarget.Global)
 
 			break
@@ -2118,7 +2118,7 @@ export const webviewMessageHandler = async (
 				if (message.apiConfiguration.apiProvider === "costrict") {
 					await provider.providerSettingsManager.saveMergeConfig(
 						{
-							costrictBaseUrl: message.apiConfiguration.costrictBaseUrl,
+							costrictBaseUrl: message.apiConfiguration.costrictBaseUrl || CostrictAuthConfig.getInstance().getDefaultApiBaseUrl(),
 						},
 						(name, { apiProvider }) => {
 							return apiProvider === "costrict" && name !== message.text
@@ -2617,7 +2617,7 @@ export const webviewMessageHandler = async (
 		}
 		case "debugSetting": {
 			await vscode.workspace
-				.getConfiguration(Package.name)
+				.getConfiguration(Package.commandIDPrefix)
 				.update("debug", message.bool ?? false, vscode.ConfigurationTarget.Global)
 			updateDefaultDebug(message.bool ?? false)
 			await provider.postStateToWebview()
